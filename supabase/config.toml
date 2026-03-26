@@ -1,11 +1,6 @@
 # Supabase project configuration
 # https://supabase.com/docs/guides/cli/config
 
-[project]
-# Your Supabase project reference (found in Project Settings → General)
-# Set via: supabase link --project-ref <ref>
-# or override with SUPABASE_PROJECT_REF env var
-id = "gccqctjwnrhxxccfawbu"
 
 [api]
 enabled = true
@@ -17,7 +12,7 @@ max_rows = 1000
 [db]
 port = 54322
 shadow_port = 54320
-major_version = 15
+major_version = 17
 
 [studio]
 enabled = true
@@ -40,7 +35,6 @@ enabled = true
 jwt_expiry = 3600
 enable_signup = true
 # Disable email confirmation for dev; enable in production
-enable_confirmations = false
 
 [auth.email]
 enable_signup = true
