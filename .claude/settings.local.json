@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc --noEmit)",
+      "Bash(npm run build)",
+      "Bash(npm install)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(ls \"C:\\\\Users\\\\sbuti\\\\Downloads\\\\Stok-pile\\\\node_modules\\\\.bin\\\\tsc\"*)",
+      "Bash(node --version)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(npm --version)",
+      "Bash(npx vite:*)",
+      "Bash(node -e \"console.log\\(require\\(''C:/Users/sbuti/Downloads/Stok-pile/node_modules/tailwindcss/package.json''\\).version\\)\")",
+      "Bash(node -e \"console.log\\(require\\(''C:/Users/sbuti/Downloads/Stok-pile/src/node_modules/tailwindcss/package.json''\\).version\\)\")",
+      "Bash(find C:UserssbutiDownloadsStok-pile/src/components -maxdepth 1 -name *.tsx -type f)",
+      "Bash(find C:UserssbutiDownloadsStok-pile/src/utils -maxdepth 1 -name *.ts -type f)",
+      "Bash(find C:UserssbutiDownloadsStok-pile/src -maxdepth 1 -name *.ts -type f)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx|json\\)$\")",
+      "Bash(find C:UserssbutiDownloadsStok-pile/src -maxdepth 3 -name *.ts -path */hooks/* -o -path */types/*)",
+      "Bash(xargs wc:*)",
+      "Bash(xargs grep:*)",
+      "Bash(grep -r \"localStorage\\\\|sessionStorage\" C:UserssbutiDownloadsStok-pile/src --include=*.tsx --include=*.ts)",
+      "Bash(grep -r \"subscribe\\\\|channel\\\\|realtime\\\\|on\\\\\\(''''postgres_changes''''\" C:UserssbutiDownloadsStok-pile/src --include=*.tsx --include=*.ts)",
+      "Bash(wc -l \"C:\\\\Users\\\\sbuti\\\\Downloads\\\\Stok-pile/src/components\"/*.tsx)",
+      "Bash(grep -r \"hidden\\\\|lg:\\\\|md:\\\\|sm:\" C:UserssbutiDownloadsStok-pile/src/components --include=*.tsx)",
+      "Bash(grep \"\\\\.tsx$\")",
+      "WebFetch(domain:supergroup.com)",
+      "Bash(npm run:*)",
+      "Bash(grep -r \"throw new Error\\\\|not implemented\\\\|unimplemented\\\\|TODO\\\\|FIXME\" /c/Users/sbuti/Downloads/Stok-pile/src --include=*.ts --include=*.tsx --exclude-dir=node_modules)",
+      "Bash(find /c/Users/sbuti/Downloads/Stok-pile/src/components -name \"*.tsx\" -exec basename {})",
+      "Bash(grep -E \"// TODO|// FIXME|// XXX|/\\\\* TODO|/\\\\* FIXME\" /c/Users/sbuti/Downloads/Stok-pile/src/components/*.tsx /c/Users/sbuti/Downloads/Stok-pile/src/utils/*.ts)",
+      "Bash(find /c/Users/sbuti/Downloads/Stok-pile/build -name *sw* -o -name *service*)",
+      "Bash(grep -r sw.js /c/Users/sbuti/Downloads/Stok-pile/src --include=*.ts --include=*.tsx --include=*.js)",
+      "Bash(gh auth:*)",
+      "Bash(gh api:*)",
+      "Bash(cmd.exe /c \"gh --version\")",
+      "Read(//c/Users/sbuti/AppData/Local/Programs//**)",
+      "Read(//c/Program Files//**)",
+      "Read(//c/Program Files \\(x86\\)//**)",
+      "Bash(git --version)"
+    ]
+  }
+}

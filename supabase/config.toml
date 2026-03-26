@@ -1,0 +1,51 @@
+# Supabase project configuration
+# https://supabase.com/docs/guides/cli/config
+
+[project]
+# Your Supabase project reference (found in Project Settings → General)
+# Set via: supabase link --project-ref <ref>
+# or override with SUPABASE_PROJECT_REF env var
+id = "gccqctjwnrhxxccfawbu"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+smtp_port = 54325
+pop3_port = 54326
+
+[storage]
+enabled = true
+# 10 MB — raised for constitution uploads
+file_size_limit = "10MiB"
+
+[auth]
+enabled = true
+# JWT expiry in seconds (1 hour)
+jwt_expiry = 3600
+enable_signup = true
+# Disable email confirmation for dev; enable in production
+enable_confirmations = false
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+
+[functions.make-server-34d0b231]
+verify_jwt = false   # JWT verification handled inside the function
