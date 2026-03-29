@@ -16,7 +16,10 @@ import { MemberDetailsDialog } from '@/presentation/components/members/MemberDet
 import { EmptyState } from '@/presentation/shared/EmptyState';
 import { ConfirmationDialog } from '@/presentation/shared/ConfirmationDialog';
 import { DeleteGroupDialog } from '@/presentation/components/groups/DeleteGroupDialog';
-import { Copy, ArrowUp, ArrowDown, Loader2, Users, FileText, Upload, Download, Trash2, File, UserX, UserCheck, X } from 'lucide-react';
+import { Copy, ArrowUp, ArrowDown, Loader2, Users, FileText, Upload, Download, Trash2, File, UserX, UserCheck, X, Check, ExternalLink } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/presentation/ui/dropdown-menu';
+import { MoreHorizontal } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
 import type { Group, Member, Constitution } from '@/domain/types';
@@ -41,6 +44,9 @@ export function GroupInfoView({ group, onGroupUpdate }: GroupInfoViewProps) {
   const [showDeleteGroup, setShowDeleteGroup] = useState(false);
   const [deactivateConfirm, setDeactivateConfirm] = useState<{ open: boolean; email: string | null; name: string }>({ open: false, email: null, name: '' });
   const [removeConfirm, setRemoveConfirm] = useState<{ open: boolean; email: string | null; name: string }>({ open: false, email: null, name: '' });
+  const [deleteConstitutionConfirm, setDeleteConstitutionConfirm] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [downloadingConstitution, setDownloadingConstitution] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -141,9 +147,11 @@ export function GroupInfoView({ group, onGroupUpdate }: GroupInfoViewProps) {
     }
   };
 
-  const copyToClipboard = (text: string, label: string) => {
+  const copyToClipboard = (text: string, label: string, fieldKey: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${label} copied to clipboard!`);
+    setCopiedField(fieldKey);
+    setTimeout(() => setCopiedField(null), 2000);
   };
 
   const formatDate = (dateString: string) => {
@@ -214,16 +222,15 @@ export function GroupInfoView({ group, onGroupUpdate }: GroupInfoViewProps) {
 
   const handleConstitutionDownload = async () => {
     if (!constitution?.downloadUrl) return;
-    
-    // Open in new tab
-    window.open(constitution.downloadUrl, '_blank');
+    setDownloadingConstitution(true);
+    try {
+      window.open(constitution.downloadUrl, '_blank');
+    } finally {
+      setTimeout(() => setDownloadingConstitution(false), 1000);
+    }
   };
 
   const handleConstitutionDelete = async () => {
-    if (!confirm('Are you sure you want to delete the constitution? This action cannot be undone.')) {
-      return;
-    }
-
     setDeletingConstitution(true);
     try {
       await api.deleteConstitution(group.id);
@@ -233,6 +240,7 @@ export function GroupInfoView({ group, onGroupUpdate }: GroupInfoViewProps) {
       toast.error(error instanceof Error ? error.message : 'Failed to delete constitution');
     } finally {
       setDeletingConstitution(false);
+      setDeleteConstitutionConfirm(false);
     }
   };
 
@@ -298,10 +306,11 @@ export function GroupInfoView({ group, onGroupUpdate }: GroupInfoViewProps) {
                   {group.id}
                 </code>
                 <button
-                  onClick={() => copyToClipboard(group.id, 'Group ID')}
-                  className="p-2 hover:bg-muted rounded transition-colors"
+                  onClick={() => copyToClipboard(group.id, 'Group ID', 'groupId')}
+                  className={`p-2 rounded transition-colors ${copiedField === 'groupId' ? 'bg-green-100 dark:bg-green-900/30 text-green-600' : 'hover:bg-muted'}`}
+                  title="Copy Group ID"
                 >
-                  <Copy className="h-4 w-4" />
+                  {copiedField === 'groupId' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 </button>
               </div>
             </div>
@@ -313,10 +322,11 @@ export function GroupInfoView({ group, onGroupUpdate }: GroupInfoViewProps) {
                   {group.groupCode}
                 </code>
                 <button
-                  onClick={() => copyToClipboard(group.groupCode, 'Group Code')}
-                  className="p-2 hover:bg-muted rounded transition-colors"
+                  onClick={() => copyToClipboard(group.groupCode, 'Group Code', 'groupCode')}
+                  className={`p-2 rounded transition-colors ${copiedField === 'groupCode' ? 'bg-green-100 dark:bg-green-900/30 text-green-600' : 'hover:bg-muted'}`}
+                  title="Copy Group Code"
                 >
-                  <Copy className="h-4 w-4" />
+                  {copiedField === 'groupCode' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 </button>
               </div>
             </div>
@@ -406,35 +416,50 @@ export function GroupInfoView({ group, onGroupUpdate }: GroupInfoViewProps) {
                   onClick={handleConstitutionDownload}
                   className="flex-1"
                   variant="default"
+                  disabled={downloadingConstitution}
                 >
-                  <Download className="h-4 w-4 mr-2" />
+                  {downloadingConstitution ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                  )}
                   View Constitution
                 </Button>
-                
+
                 {group.userRole === 'admin' && (
                   <>
-                    <Button
-                      onClick={() => fileInputRef.current?.click()}
-                      variant="outline"
-                      disabled={uploadingConstitution}
-                    >
-                      {uploadingConstitution ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Upload className="h-4 w-4" />
-                      )}
-                    </Button>
-                    <Button
-                      onClick={handleConstitutionDelete}
-                      variant="outline"
-                      disabled={deletingConstitution}
-                    >
-                      {deletingConstitution ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onClick={() => fileInputRef.current?.click()}
+                          variant="outline"
+                          disabled={uploadingConstitution}
+                        >
+                          {uploadingConstitution ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Upload className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Replace constitution</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onClick={() => setDeleteConstitutionConfirm(true)}
+                          variant="outline"
+                          disabled={deletingConstitution}
+                        >
+                          {deletingConstitution ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Delete constitution</TooltipContent>
+                    </Tooltip>
                   </>
                 )}
               </div>
@@ -490,9 +515,14 @@ export function GroupInfoView({ group, onGroupUpdate }: GroupInfoViewProps) {
                 <Badge variant="default">
                   {members.filter(m => m.status !== 'inactive').length} Active
                 </Badge>
-                <Badge variant="secondary">
-                  {members.filter(m => m.role === 'admin' && m.status !== 'inactive').length}/3 Admins
-                </Badge>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="secondary" className="cursor-default">
+                      {members.filter(m => m.role === 'admin' && m.status !== 'inactive').length}/3 Admins
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>Groups can have a maximum of 3 admins</TooltipContent>
+                </Tooltip>
                 {members.filter(m => m.status === 'inactive').length > 0 && (
                   <Badge variant="destructive">
                     {members.filter(m => m.status === 'inactive').length} Inactive
@@ -552,7 +582,7 @@ export function GroupInfoView({ group, onGroupUpdate }: GroupInfoViewProps) {
                       : member.email;
 
                     return (
-                      <TableRow key={member.email} className={member.status === 'inactive' ? 'opacity-60' : ''}>
+                      <TableRow key={member.email} className={member.status === 'inactive' ? 'bg-muted/40 text-muted-foreground' : ''}>
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <UserAvatar 
@@ -590,91 +620,111 @@ export function GroupInfoView({ group, onGroupUpdate }: GroupInfoViewProps) {
                         </TableCell>
                         <TableCell>{formatDate(member.joinedAt)}</TableCell>
                         <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <MemberDetailsDialog 
-                              member={member}
-                              groupCreatedBy={group.createdBy}
-                            />
-                            <MemberStatsDialog 
-                              groupId={group.id}
-                              memberEmail={member.email}
-                              memberName={memberName}
-                            />
+                          {/* Desktop: icon buttons with tooltips */}
+                          <div className="hidden md:flex items-center justify-end gap-1">
+                            <MemberDetailsDialog member={member} groupCreatedBy={group.createdBy} />
+                            <MemberStatsDialog groupId={group.id} memberEmail={member.email} memberName={memberName} />
                             {canPromote && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handlePromote(member.email)}
-                                disabled={promotingEmail === member.email}
-                                title="Promote to Admin"
-                              >
-                                {promotingEmail === member.email ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <ArrowUp className="h-4 w-4" />
-                                )}
-                              </Button>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="sm" onClick={() => handlePromote(member.email)} disabled={promotingEmail === member.email}>
+                                    {promotingEmail === member.email ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Promote to admin</TooltipContent>
+                              </Tooltip>
+                            )}
+                            {!canPromote && group.userRole === 'admin' && member.role === 'member' && member.status !== 'inactive' && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="inline-flex">
+                                    <Button variant="ghost" size="sm" disabled><ArrowUp className="h-4 w-4 opacity-40" /></Button>
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>Admin limit reached (3/3). Demote an admin first.</TooltipContent>
+                              </Tooltip>
                             )}
                             {canDemote && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDemote(member.email)}
-                                disabled={demotingEmail === member.email}
-                                title="Demote to Member"
-                              >
-                                {demotingEmail === member.email ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <ArrowDown className="h-4 w-4" />
-                                )}
-                              </Button>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="sm" onClick={() => handleDemote(member.email)} disabled={demotingEmail === member.email}>
+                                    {demotingEmail === member.email ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowDown className="h-4 w-4" />}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Demote to member</TooltipContent>
+                              </Tooltip>
                             )}
                             {canReactivate && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleReactivate(member.email, memberName)}
-                                disabled={reactivatingEmail === member.email}
-                                title="Reactivate Member"
-                              >
-                                {reactivatingEmail === member.email ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <UserCheck className="h-4 w-4 text-green-600" />
-                                )}
-                              </Button>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="sm" onClick={() => handleReactivate(member.email, memberName)} disabled={reactivatingEmail === member.email}>
+                                    {reactivatingEmail === member.email ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4 text-green-600" />}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Reactivate member</TooltipContent>
+                              </Tooltip>
                             )}
                             {canDeactivate && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                disabled={deactivatingEmail === member.email}
-                                title="Deactivate Member"
-                                onClick={() => setDeactivateConfirm({ open: true, email: member.email, name: memberName })}
-                              >
-                                {deactivatingEmail === member.email ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <UserX className="h-4 w-4 text-orange-600" />
-                                )}
-                              </Button>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="sm" disabled={deactivatingEmail === member.email} onClick={() => setDeactivateConfirm({ open: true, email: member.email, name: memberName })}>
+                                    {deactivatingEmail === member.email ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserX className="h-4 w-4 text-orange-600" />}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Deactivate — pauses membership, preserves history</TooltipContent>
+                              </Tooltip>
                             )}
                             {canRemove && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                disabled={removingEmail === member.email}
-                                title="Remove Member"
-                                onClick={() => setRemoveConfirm({ open: true, email: member.email, name: memberName })}
-                              >
-                                {removingEmail === member.email ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <X className="h-4 w-4 text-destructive" />
-                                )}
-                              </Button>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="sm" disabled={removingEmail === member.email} onClick={() => setRemoveConfirm({ open: true, email: member.email, name: memberName })}>
+                                    {removingEmail === member.email ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4 text-destructive" />}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Remove — permanently deletes all membership data</TooltipContent>
+                              </Tooltip>
                             )}
+                          </div>
+
+                          {/* Mobile: dropdown menu */}
+                          <div className="md:hidden">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm"><MoreHorizontal className="h-4 w-4" /></Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <div className="px-1 py-0.5 flex gap-1">
+                                  <MemberDetailsDialog member={member} groupCreatedBy={group.createdBy} />
+                                  <MemberStatsDialog groupId={group.id} memberEmail={member.email} memberName={memberName} />
+                                </div>
+                                {(canPromote || canDemote || canReactivate || canDeactivate || canRemove) && <DropdownMenuSeparator />}
+                                {canPromote && (
+                                  <DropdownMenuItem onClick={() => handlePromote(member.email)}>
+                                    <ArrowUp className="h-4 w-4 mr-2" />Promote to admin
+                                  </DropdownMenuItem>
+                                )}
+                                {canDemote && (
+                                  <DropdownMenuItem onClick={() => handleDemote(member.email)}>
+                                    <ArrowDown className="h-4 w-4 mr-2" />Demote to member
+                                  </DropdownMenuItem>
+                                )}
+                                {canReactivate && (
+                                  <DropdownMenuItem onClick={() => handleReactivate(member.email, memberName)}>
+                                    <UserCheck className="h-4 w-4 mr-2 text-green-600" />Reactivate
+                                  </DropdownMenuItem>
+                                )}
+                                {canDeactivate && (
+                                  <DropdownMenuItem onClick={() => setDeactivateConfirm({ open: true, email: member.email, name: memberName })}>
+                                    <UserX className="h-4 w-4 mr-2 text-orange-600" />Deactivate (pause)
+                                  </DropdownMenuItem>
+                                )}
+                                {canRemove && (
+                                  <DropdownMenuItem className="text-destructive" onClick={() => setRemoveConfirm({ open: true, email: member.email, name: memberName })}>
+                                    <X className="h-4 w-4 mr-2" />Remove permanently
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -725,6 +775,17 @@ export function GroupInfoView({ group, onGroupUpdate }: GroupInfoViewProps) {
         onSuccess={() => {
           if (onGroupUpdate) onGroupUpdate();
         }}
+      />
+
+      {/* Delete Constitution Confirmation */}
+      <ConfirmationDialog
+        open={deleteConstitutionConfirm}
+        onOpenChange={setDeleteConstitutionConfirm}
+        title="Delete Constitution"
+        description="Are you sure you want to delete the constitution? This action cannot be undone."
+        confirmText="Delete"
+        variant="destructive"
+        onConfirm={handleConstitutionDelete}
       />
 
       {/* Deactivate Member Confirmation */}

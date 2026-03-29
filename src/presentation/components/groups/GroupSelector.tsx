@@ -34,9 +34,9 @@ export function GroupSelector({ groups, selectedGroupId, onSelectGroup }: GroupS
               {selectedGroup && (
                 <div className="flex items-center gap-1.5">
                   <span className="truncate">{selectedGroup.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    ({selectedGroup.userRole})
-                  </span>
+                  <Badge variant={selectedGroup.userRole === 'admin' ? 'default' : 'secondary'} className="text-xs py-0 h-4 hidden sm:inline-flex">
+                    {selectedGroup.userRole}
+                  </Badge>
                 </div>
               )}
             </SelectValue>
@@ -46,9 +46,9 @@ export function GroupSelector({ groups, selectedGroupId, onSelectGroup }: GroupS
               <SelectItem key={group.id} value={group.id} className="text-sm">
                 <div className="flex items-center gap-1.5">
                   <span>{group.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    ({group.userRole})
-                  </span>
+                  <Badge variant={group.userRole === 'admin' ? 'default' : 'secondary'} className="text-xs py-0 h-4">
+                    {group.userRole}
+                  </Badge>
                 </div>
               </SelectItem>
             ))}

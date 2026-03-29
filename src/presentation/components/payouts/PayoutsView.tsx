@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/presentation/ui/badge';
 import { Skeleton } from '@/presentation/ui/skeleton';
 import { EmptyState } from '@/presentation/shared/EmptyState';
+import { DatePicker } from '@/presentation/shared/DatePicker';
 import { UserAvatar } from '@/presentation/components/profile/UserAvatar';
 import { Alert, AlertDescription } from '@/presentation/ui/alert';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
@@ -32,7 +33,7 @@ export function PayoutsView({ groupId, isAdmin }: PayoutsViewProps) {
   const [open, setOpen] = useState(false);
   const [recipientEmail, setRecipientEmail] = useState('');
   const [amount, setAmount] = useState('');
-  const [scheduledDate, setScheduledDate] = useState(new Date().toISOString().split('T')[0]);
+  const [scheduledDate, setScheduledDate] = useState<Date>(new Date());
   const [submitting, setSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'scheduled' | 'completed' | 'cancelled'>('all');
@@ -74,14 +75,14 @@ export function PayoutsView({ groupId, isAdmin }: PayoutsViewProps) {
         groupId,
         recipientEmail,
         amount: sanitized,
-        scheduledDate
+        scheduledDate: scheduledDate.toISOString().split('T')[0]
       });
 
       toast.success('Payout scheduled successfully');
       setOpen(false);
       setRecipientEmail('');
       setAmount('');
-      setScheduledDate(new Date().toISOString().split('T')[0]);
+      setScheduledDate(new Date());
       loadData();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to schedule payout');
@@ -242,13 +243,10 @@ export function PayoutsView({ groupId, isAdmin }: PayoutsViewProps) {
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="date">Scheduled Date</Label>
-                          <Input
-                            id="date"
-                            type="date"
-                            value={scheduledDate}
-                            onChange={(e) => setScheduledDate(e.target.value)}
-                            required
+                          <Label>Scheduled Date</Label>
+                          <DatePicker
+                            date={scheduledDate}
+                            onSelect={(d) => d && setScheduledDate(d)}
                             disabled={submitting}
                           />
                         </div>
@@ -351,7 +349,7 @@ export function PayoutsView({ groupId, isAdmin }: PayoutsViewProps) {
               title="No payouts scheduled"
               description={isAdmin
                 ? 'Create your first payout to distribute funds to members'
-                : "Your group admins haven't scheduled any payouts yet."}
+                : "No payouts have been scheduled yet. Ask your group admin to schedule payouts to distribute funds to members."}
               action={isAdmin ? { label: 'Schedule Payout', onClick: () => setOpen(true) } : undefined}
             />
           ) : filteredPayouts.length === 0 ? (

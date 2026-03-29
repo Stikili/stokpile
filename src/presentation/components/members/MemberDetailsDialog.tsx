@@ -37,7 +37,11 @@ export function MemberDetailsDialog({ member, groupCreatedBy }: MemberDetailsDia
       {open && (
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Member Details</DialogTitle>
+            <DialogTitle>
+              {member.fullName && member.fullName !== 'Unknown'
+                ? `${member.fullName} ${member.surname}`
+                : 'Member Details'}
+            </DialogTitle>
             <DialogDescription>
               Complete information about this group member
             </DialogDescription>

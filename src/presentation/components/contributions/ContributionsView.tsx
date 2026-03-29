@@ -289,13 +289,33 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="date">Date</Label>
+                      <Label htmlFor="date">Contribution Date</Label>
                       <DatePicker
                         date={date}
                         onSelect={(d) => d && setDate(d)}
                         disabled={submitting}
                       />
+                      <p className="text-xs text-muted-foreground">Select the date when this contribution was made</p>
                     </div>
+
+                    {/* Real-time duplicate warning */}
+                    {(() => {
+                      const targetEmail = isAdmin && selectedMemberEmail && selectedMemberEmail !== 'self'
+                        ? selectedMemberEmail
+                        : userEmail;
+                      const dateStr = date.toISOString().split('T')[0];
+                      const existing = contributions.find(
+                        c => c.userEmail === targetEmail && c.date.split('T')[0] === dateStr
+                      );
+                      return existing ? (
+                        <Alert variant="destructive">
+                          <Info className="h-4 w-4" />
+                          <AlertDescription>
+                            A contribution of {formatCurrency(existing.amount)} already exists for this member on {formatDate(existing.date)}. You can still submit to add a second one.
+                          </AlertDescription>
+                        </Alert>
+                      ) : null;
+                    })()}
 
                     <Button type="submit" className="w-full" disabled={submitting}>
                       {submitting ? 'Adding...' : 'Add Contribution'}
