@@ -1,44 +1,44 @@
 import { useState, useCallback, lazy, Suspense } from "react";
-import { AuthForm } from "./components/AuthForm";
-import { GroupSelector } from "./components/GroupSelector";
-import { JoinRequestsView } from "./components/JoinRequestsView";
+import { AuthForm } from "@/presentation/components/auth/AuthForm";
+import { GroupSelector } from "@/presentation/components/groups/GroupSelector";
+import { JoinRequestsView } from "@/presentation/components/members/JoinRequestsView";
 
 // Lazy load heavy tab components for code splitting
-const Dashboard = lazy(() => import("./components/Dashboard").then(m => ({ default: m.Dashboard })));
-const ActivityFeed = lazy(() => import("./components/ActivityFeed").then(m => ({ default: m.ActivityFeed })));
-const ContributionsView = lazy(() => import("./components/ContributionsView").then(m => ({ default: m.ContributionsView })));
-const PayoutsView = lazy(() => import("./components/PayoutsView").then(m => ({ default: m.PayoutsView })));
-const MeetingsView = lazy(() => import("./components/MeetingsView").then(m => ({ default: m.MeetingsView })));
-const GroupInfoView = lazy(() => import("./components/GroupInfoView").then(m => ({ default: m.GroupInfoView })));
-import { GroupActionsButtons } from "./components/GroupActionsButtons";
-import { PendingInvitesView } from "./components/PendingInvitesView";
-import { PublicJoinView } from "./components/PublicJoinView";
-import { ProfileMenu } from "./components/ProfileMenu";
-import { MobileNav } from "./components/MobileNav";
-import { QuickActions } from "./components/QuickActions";
+const Dashboard = lazy(() => import("@/presentation/components/dashboard/Dashboard").then(m => ({ default: m.Dashboard })));
+const ActivityFeed = lazy(() => import("@/presentation/components/dashboard/ActivityFeed").then(m => ({ default: m.ActivityFeed })));
+const ContributionsView = lazy(() => import("@/presentation/components/contributions/ContributionsView").then(m => ({ default: m.ContributionsView })));
+const PayoutsView = lazy(() => import("@/presentation/components/payouts/PayoutsView").then(m => ({ default: m.PayoutsView })));
+const MeetingsView = lazy(() => import("@/presentation/components/meetings/MeetingsView").then(m => ({ default: m.MeetingsView })));
+const GroupInfoView = lazy(() => import("@/presentation/components/groups/GroupInfoView").then(m => ({ default: m.GroupInfoView })));
+import { GroupActionsButtons } from "@/presentation/components/groups/GroupActionsButtons";
+import { PendingInvitesView } from "@/presentation/components/members/PendingInvitesView";
+import { PublicJoinView } from "@/presentation/components/groups/PublicJoinView";
+import { ProfileMenu } from "@/presentation/components/profile/ProfileMenu";
+import { MobileNav } from "@/presentation/layout/MobileNav";
+import { QuickActions } from "@/presentation/layout/QuickActions";
 import {
   KeyboardShortcuts,
   useKeyboardShortcuts,
-} from "./components/KeyboardShortcuts";
-import { LoadingProgress } from "./components/LoadingProgress";
-import { NotificationBell } from "./components/NotificationBell";
-import { ErrorBoundary } from "./components/ErrorBoundary";
-import { OfflineDetector } from "./components/OfflineDetector";
-import { ConfirmationDialog } from "./components/ConfirmationDialog";
-import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
-import { ThemeProvider } from "./components/ThemeProvider";
-import { ThemeToggle } from "./components/ThemeToggle";
-import { Logo } from "./components/Logo";
-import { OnboardingTour } from "./components/OnboardingTour";
-import { ContextualTips } from "./components/ContextualTips";
-import { Button } from "./components/ui/button";
+} from "@/presentation/shared/KeyboardShortcuts";
+import { LoadingProgress } from "@/presentation/shared/LoadingProgress";
+import { NotificationBell } from "@/presentation/layout/NotificationBell";
+import { ErrorBoundary } from "@/presentation/shared/ErrorBoundary";
+import { OfflineDetector } from "@/presentation/shared/OfflineDetector";
+import { ConfirmationDialog } from "@/presentation/shared/ConfirmationDialog";
+import { PWAInstallPrompt } from "@/presentation/shared/PWAInstallPrompt";
+import { ThemeProvider } from "@/presentation/shared/ThemeProvider";
+import { ThemeToggle } from "@/presentation/shared/ThemeToggle";
+import { Logo } from "@/presentation/layout/Logo";
+import { OnboardingTour } from "@/presentation/shared/OnboardingTour";
+import { ContextualTips } from "@/presentation/shared/ContextualTips";
+import { Button } from "@/presentation/ui/button";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "./components/ui/tooltip";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
+} from "@/presentation/ui/tooltip";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/presentation/ui/tabs";
 import {
   PieChart,
   DollarSign,
@@ -48,10 +48,10 @@ import {
   Keyboard,
   Calendar,
 } from "lucide-react";
-import { Toaster } from "./components/ui/sonner";
-import { useSession } from "./utils/hooks/useSession";
-import { useGroups } from "./utils/hooks/useGroups";
-import { useInviteToken } from "./utils/hooks/useInviteToken";
+import { Toaster } from "@/presentation/ui/sonner";
+import { useSession } from "@/application/hooks/useSession";
+import { useGroups } from "@/application/hooks/useGroups";
+import { useInviteToken } from "@/application/hooks/useInviteToken";
 
 export default function App() {
   const { session, loading: sessionLoading, checkSession, signOut } = useSession();
