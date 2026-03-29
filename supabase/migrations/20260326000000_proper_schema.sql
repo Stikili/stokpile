@@ -1,5 +1,5 @@
 -- ============================================================
--- Stok-pile: Proper Relational Schema
+-- Stokpile: Proper Relational Schema
 -- Replaces the single KV store table with normalized
 -- PostgreSQL tables, proper indexes, and RLS policies.
 --

@@ -1,4 +1,4 @@
--- KV Store table for Stok-pile application data
+-- KV Store table for Stokpile application data
 CREATE TABLE IF NOT EXISTS kv_store_34d0b231 (
   key TEXT NOT NULL PRIMARY KEY,
   value JSONB NOT NULL

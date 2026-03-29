@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# 🚀 Stok-pile Production Deployment Script
+# 🚀 Stokpile Production Deployment Script
 # This script helps automate the deployment process
 
 set -e  # Exit on error
 
-echo "🚀 Starting Stok-pile Deployment..."
+echo "🚀 Starting Stokpile Deployment..."
 echo ""
 
 # Colors for output
@@ -171,7 +171,7 @@ deploy_netlify() {
 # Main deployment flow
 main() {
     echo "=========================================="
-    echo "  Stok-pile Production Deployment"
+    echo "  Stokpile Production Deployment"
     echo "=========================================="
     echo ""
     
