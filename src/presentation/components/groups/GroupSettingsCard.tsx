@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/presentation/ui/card';
 import { Label } from '@/presentation/ui/label';
 import { Switch } from '@/presentation/ui/switch';
+import { ConfirmationDialog } from '@/presentation/shared/ConfirmationDialog';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
 import type { Group } from '@/domain/types';
@@ -15,6 +16,7 @@ export function GroupSettingsCard({ group, onUpdate }: GroupSettingsCardProps) {
   const [isPublic, setIsPublic] = useState(group.isPublic);
   const [payoutsAllowed, setPayoutsAllowed] = useState(group.payoutsAllowed);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [confirmDisablePayouts, setConfirmDisablePayouts] = useState(false);
 
   const handleToggleVisibility = async (checked: boolean) => {
     setUpdating('visibility');
@@ -33,9 +35,18 @@ export function GroupSettingsCard({ group, onUpdate }: GroupSettingsCardProps) {
   };
 
   const handleTogglePayouts = async (checked: boolean) => {
+    if (!checked) {
+      // Ask for confirmation before disabling
+      setConfirmDisablePayouts(true);
+      return;
+    }
+    await applyPayoutsToggle(true);
+  };
+
+  const applyPayoutsToggle = async (checked: boolean) => {
     setUpdating('payouts');
     setPayoutsAllowed(checked);
-    
+
     try {
       await api.updateGroup(group.id, { payoutsAllowed: checked });
       toast.success(`Payouts ${checked ? 'enabled' : 'disabled'}`);
@@ -104,6 +115,16 @@ export function GroupSettingsCard({ group, onUpdate }: GroupSettingsCardProps) {
           </p>
         </div>
       </CardContent>
+
+      <ConfirmationDialog
+        open={confirmDisablePayouts}
+        onOpenChange={setConfirmDisablePayouts}
+        title="Disable Payouts?"
+        description="This will hide the Payouts tab for all members and prevent new payouts from being scheduled. Existing payout records will not be deleted."
+        confirmText="Disable Payouts"
+        variant="destructive"
+        onConfirm={() => applyPayoutsToggle(false)}
+      />
     </Card>
   );
 }

@@ -176,9 +176,12 @@ export function AttendanceRegister({
   };
 
   // Filter members based on search and status
+  // Non-admins only see their own row (to protect member privacy)
   const filteredMembers = members.filter(member => {
+    if (!isAdmin) return member.email === userEmail;
+
     // Search filter
-    const matchesSearch = 
+    const matchesSearch =
       member.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       member.surname.toLowerCase().includes(searchQuery.toLowerCase()) ||
       member.email.toLowerCase().includes(searchQuery.toLowerCase());
@@ -278,8 +281,8 @@ export function AttendanceRegister({
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Statistics Cards — admin only */}
+        {isAdmin && <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900">
             <CardContent className="pt-6">
               <div className="flex items-center gap-2 text-green-700 dark:text-green-400 mb-1">
@@ -319,7 +322,7 @@ export function AttendanceRegister({
               <p className="text-2xl">{stats.attendanceRate}%</p>
             </CardContent>
           </Card>
-        </div>
+        </div>}
 
         {/* Quick Self-Attendance Card for non-admins */}
         {!isAdmin && members.find(m => m.email === userEmail) && (
@@ -374,8 +377,8 @@ export function AttendanceRegister({
 
         <Separator />
 
-        {/* Search and Filters */}
-        {members.length > 0 && (
+        {/* Search and Filters — admin only */}
+        {isAdmin && members.length > 0 && (
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

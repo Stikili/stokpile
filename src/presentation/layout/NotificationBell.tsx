@@ -1,9 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Button } from '@/presentation/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/presentation/ui/popover';
 import { ScrollArea } from '@/presentation/ui/scroll-area';
 import { Badge } from '@/presentation/ui/badge';
-import { Bell, Check, AlertTriangle, Calendar, TrendingUp, DollarSign, Info } from 'lucide-react';
+import { Bell, Check, AlertTriangle, Calendar, TrendingUp, DollarSign, Info, RefreshCw } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import { formatCurrency } from '@/lib/export';
 import type { Contribution, Payout, Meeting } from '@/domain/types';
@@ -159,9 +159,28 @@ export function NotificationBell({ groupId, userEmail }: NotificationBellProps) 
     }
   }, [groupId, userEmail]);
 
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      loadNotifications();
+      intervalRef.current = setInterval(loadNotifications, 30000);
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [open, loadNotifications]);
+
   const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen);
-    if (isOpen) loadNotifications();
   };
 
   const dismiss = (id: string) => {
@@ -207,12 +226,17 @@ export function NotificationBell({ groupId, userEmail }: NotificationBellProps) 
       <PopoverContent className="w-80 p-0" align="end">
         <div className="flex items-center justify-between p-4 border-b">
           <h3 className="font-medium">Notifications</h3>
-          {visibleNotifications.length > 0 && (
-            <Button variant="ghost" size="sm" onClick={dismissAll}>
-              <Check className="h-4 w-4 mr-2" />
-              Dismiss all
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => loadNotifications()} disabled={loading}>
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             </Button>
-          )}
+            {visibleNotifications.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={dismissAll}>
+                <Check className="h-4 w-4 mr-2" />
+                Dismiss all
+              </Button>
+            )}
+          </div>
         </div>
 
         <ScrollArea className="h-[400px]">

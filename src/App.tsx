@@ -73,6 +73,7 @@ export default function App() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [signOutLoading, setSignOutLoading] = useState(false);
+  const [exportingCSV, setExportingCSV] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(
     () => !localStorage.getItem("onboardingCompleted")
   );
@@ -109,9 +110,12 @@ export default function App() {
       return;
     }
     if (action === "export-contributions" && selectedGroup) {
-      api.getContributions(selectedGroup.id).then(({ contributions }) => {
-        exportToCSV(contributions as Record<string, unknown>[], `contributions-${selectedGroup.id}.csv`);
-      });
+      setExportingCSV(true);
+      api.getContributions(selectedGroup.id)
+        .then(({ contributions }) => {
+          exportToCSV(contributions as Record<string, unknown>[], `contributions-${selectedGroup.id}.csv`);
+        })
+        .finally(() => setExportingCSV(false));
     }
   }, [selectedGroup]);
 
@@ -191,6 +195,7 @@ export default function App() {
               onComplete={handleOnboardingComplete}
               onSkip={handleOnboardingComplete}
               hasGroups={groups.length > 0}
+              isAdmin={isAdmin}
             />
             
             {/* Sign Out Confirmation Dialog */}
@@ -228,8 +233,8 @@ export default function App() {
                 <div className="flex items-center gap-1.5">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" onClick={() => setShowShortcuts(true)} className="hidden lg:flex">
-                        <Keyboard className="h-5 w-5" />
+                      <Button variant="ghost" size="icon" onClick={() => setShowShortcuts(true)} className="hidden lg:flex" aria-label="Keyboard shortcuts">
+                        <Keyboard className="h-5 w-5" aria-hidden="true" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Keyboard shortcuts (Press ?)</TooltipContent>

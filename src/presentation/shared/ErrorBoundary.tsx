@@ -1,4 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
+import * as Sentry from '@sentry/react';
 import { projectId, publicAnonKey } from '@/infrastructure/supabase/config';
 import { Button } from '@/presentation/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/presentation/ui/card';
@@ -31,6 +32,8 @@ export class ErrorBoundary extends Component<Props, State> {
       console.error('ErrorBoundary caught an error:', error, errorInfo);
     }
     this.setState({ error, errorInfo });
+    // Report to Sentry if configured
+    Sentry.captureException(error, { extra: { componentStack: errorInfo.componentStack } });
     this.reportError(error, errorInfo);
   }
 
@@ -53,8 +56,10 @@ export class ErrorBoundary extends Component<Props, State> {
           }),
         }
       );
-    } catch {
-      // Silently fail — error reporting must not cause further errors
+    } catch (reportingError) {
+      if (import.meta.env.DEV) {
+        console.warn('ErrorBoundary: failed to report error to backend', reportingError);
+      }
     }
   };
 

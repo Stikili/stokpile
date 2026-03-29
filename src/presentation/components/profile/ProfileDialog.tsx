@@ -177,20 +177,6 @@ export function ProfileDialog({ session: _session, onProfileUpdate, open: contro
             {/* Profile Fields */}
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  disabled
-                  className="bg-muted"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Email cannot be changed
-                </p>
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="fullName">First Name</Label>
                 <Input
                   id="fullName"
@@ -214,6 +200,14 @@ export function ProfileDialog({ session: _session, onProfileUpdate, open: contro
                   disabled={loading}
                   placeholder="Enter your last name"
                 />
+              </div>
+
+              <div className="space-y-1 pt-2 border-t">
+                <Label className="text-muted-foreground text-sm">Email address</Label>
+                <p className="text-sm font-medium break-all">{email}</p>
+                <p className="text-xs text-muted-foreground">
+                  Sign-in email cannot be changed here
+                </p>
               </div>
             </div>
 

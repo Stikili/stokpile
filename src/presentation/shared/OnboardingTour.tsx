@@ -19,9 +19,10 @@ interface OnboardingTourProps {
   onComplete: () => void;
   onSkip: () => void;
   hasGroups: boolean;
+  isAdmin?: boolean;
 }
 
-export function OnboardingTour({ show, onComplete, onSkip, hasGroups }: OnboardingTourProps) {
+export function OnboardingTour({ show, onComplete, onSkip, hasGroups, isAdmin = false }: OnboardingTourProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isOpen, setIsOpen] = useState(show);
 
@@ -32,7 +33,9 @@ export function OnboardingTour({ show, onComplete, onSkip, hasGroups }: Onboardi
   const steps: TourStep[] = hasGroups ? [
     {
       title: "Welcome to Stokpile! 🎉",
-      description: "Let's take a quick tour to help you get started with managing your group savings.",
+      description: isAdmin
+        ? "You're an admin — you have full control over your group. Let's walk through your key responsibilities."
+        : "Let's take a quick tour to help you get started with managing your group savings.",
       tip: "This tour takes about 2 minutes. You can skip it anytime."
     },
     {
@@ -61,9 +64,28 @@ export function OnboardingTour({ show, onComplete, onSkip, hasGroups }: Onboardi
       tip: "Keyboard shortcut: Press '?' to see all shortcuts",
       action: "Access common actions with one click"
     },
+    ...(isAdmin ? [
+      {
+        title: "Admin: Record Contributions",
+        description: "Use the Contributions tab to log each member's payment. Mark contributions as paid or unpaid, and export reports any time.",
+        action: "Keep accurate financial records for all members"
+      },
+      {
+        title: "Admin: Schedule Payouts",
+        description: "When it's a member's turn to receive funds, go to Payouts and schedule a payout. You can enable or disable the payout feature in Group Settings.",
+        action: "Distribute funds fairly and on schedule"
+      },
+      {
+        title: "Admin: Manage Members",
+        description: "In Group Settings you can invite new members, promote members to admin (max 3 admins), deactivate inactive members, and upload your group constitution.",
+        action: "Keep your group roster up to date"
+      },
+    ] : []),
     {
       title: "You're All Set! ✨",
-      description: "You now know the basics! Explore the app at your own pace. You can always access help by clicking the question mark icon in the header.",
+      description: isAdmin
+        ? "You're ready to manage your group. Use the + button (bottom right) for quick actions, or press '?' for keyboard shortcuts."
+        : "You now know the basics! Explore the app at your own pace. You can always access help by clicking the question mark icon in the header.",
       action: "Start managing your group savings"
     }
   ] : [

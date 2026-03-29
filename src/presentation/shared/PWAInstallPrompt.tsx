@@ -22,10 +22,15 @@ const isIOS = () => {
   return /iphone|ipad|ipod/.test(userAgent);
 };
 
+// Extend Navigator to include iOS-specific standalone property
+interface NavigatorWithStandalone extends Navigator {
+  standalone?: boolean;
+}
+
 // Detect if running in standalone mode (already installed)
 const isStandaloneMode = () => {
   const isDisplayStandalone = window.matchMedia('(display-mode: standalone)').matches;
-  const isIOSStandalone = (window.navigator as any).standalone === true;
+  const isIOSStandalone = (window.navigator as NavigatorWithStandalone).standalone === true;
   return isDisplayStandalone || isIOSStandalone;
 };
 

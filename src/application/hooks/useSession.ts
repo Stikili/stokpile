@@ -82,8 +82,8 @@ export function useSession() {
     } catch (error) {
       console.error("Sign out error:", error);
     }
-    localStorage.removeItem("rememberedEmail");
-    localStorage.removeItem("rememberMe");
+    sessionStorage.removeItem("rememberedEmail");
+    sessionStorage.removeItem("rememberMe");
     setAccessToken(null);
     setSession(null);
   };

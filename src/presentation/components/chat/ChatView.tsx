@@ -19,11 +19,11 @@ export function ChatView({ groupId, meetingId, userEmail }: ChatViewProps) {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadMessages();
-    
+
     // Poll for new messages every 5 seconds
     const interval = setInterval(loadMessages, 5000);
     return () => clearInterval(interval);
@@ -31,9 +31,7 @@ export function ChatView({ groupId, meetingId, userEmail }: ChatViewProps) {
 
   useEffect(() => {
     // Scroll to bottom when messages change
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const loadMessages = async () => {
@@ -52,15 +50,32 @@ export function ChatView({ groupId, meetingId, userEmail }: ChatViewProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim()) return;
+    const text = message.trim();
+    if (!text) return;
 
     setSending(true);
+    setMessage('');
+
+    // Optimistic update
+    const optimisticId = `optimistic-${Date.now()}`;
+    const optimisticMsg: ChatMessage = {
+      id: optimisticId,
+      groupId,
+      meetingId,
+      userEmail,
+      message: text,
+      createdAt: new Date().toISOString(),
+      user: undefined,
+    };
+    setMessages(prev => [...prev, optimisticMsg]);
 
     try {
-      await api.sendMessage({ groupId, message: message.trim(), meetingId });
-      setMessage('');
+      await api.sendMessage({ groupId, message: text, meetingId });
       loadMessages();
     } catch (error) {
+      // Remove the optimistic message on failure
+      setMessages(prev => prev.filter(m => m.id !== optimisticId));
+      setMessage(text);
       toast.error(error instanceof Error ? error.message : 'Failed to send message');
     } finally {
       setSending(false);
@@ -91,7 +106,7 @@ export function ChatView({ groupId, meetingId, userEmail }: ChatViewProps) {
         <CardTitle>Group Chat</CardTitle>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col gap-4 min-h-0">
-        <ScrollArea className="flex-1 pr-4" ref={scrollRef as any}>
+        <ScrollArea className="flex-1 pr-4">
           {loading ? (
             <div className="text-center py-8 text-muted-foreground">Loading messages...</div>
           ) : messages.length === 0 ? (
@@ -130,6 +145,7 @@ export function ChatView({ groupId, meetingId, userEmail }: ChatViewProps) {
                   </div>
                 );
               })}
+              <div ref={bottomRef} />
             </div>
           )}
         </ScrollArea>

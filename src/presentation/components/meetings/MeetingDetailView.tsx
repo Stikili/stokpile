@@ -45,6 +45,8 @@ export function MeetingDetailView({ meeting, groupId, isAdmin, userEmail, onBack
   const [members, setMembers] = useState<Member[]>([]);
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
   const [localMeeting, setLocalMeeting] = useState(meeting);
+  const [activeTab, setActiveTab] = useState('details');
+  const [detailsRefreshKey, setDetailsRefreshKey] = useState(0);
 
   useEffect(() => {
     loadMembers();
@@ -164,7 +166,12 @@ export function MeetingDetailView({ meeting, groupId, isAdmin, userEmail, onBack
       </Card>
 
       {/* Meeting Content Tabs */}
-      <Tabs defaultValue="details" className="w-full">
+      <Tabs value={activeTab} onValueChange={(tab) => {
+        if (tab === 'details' && activeTab !== 'details') {
+          setDetailsRefreshKey(k => k + 1);
+        }
+        setActiveTab(tab);
+      }} className="w-full">
         <TabsList className="bg-white dark:bg-card w-full justify-start overflow-x-auto">
           <TabsTrigger value="details" className="gap-2">
             <ClipboardList className="h-4 w-4" />
@@ -190,6 +197,7 @@ export function MeetingDetailView({ meeting, groupId, isAdmin, userEmail, onBack
 
         <TabsContent value="details" className="mt-6">
           <MeetingDetailsTab
+            key={detailsRefreshKey}
             meeting={localMeeting}
             groupId={groupId}
             members={members}

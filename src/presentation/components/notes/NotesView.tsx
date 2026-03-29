@@ -25,7 +25,7 @@ export function NotesView({ groupId, meetingId }: NotesViewProps) {
 
   useEffect(() => {
     loadNotes();
-  }, [groupId]);
+  }, [groupId, meetingId]);
 
   const loadNotes = async () => {
     try {

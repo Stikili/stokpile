@@ -59,9 +59,17 @@ export function VotingView({ groupId, meetingId, isAdmin, userEmail }: VotingVie
   };
 
   const handleCastVote = async (voteId: string, answer: 'yes' | 'no') => {
+    const vote = votes.find(v => v.id === voteId);
+    const previousVote = vote ? getUserVote(vote) : null;
+    const isChange = previousVote !== null && previousVote !== answer;
+
     try {
       await api.castVote(voteId, answer);
-      toast.success('Vote cast successfully');
+      if (isChange) {
+        toast.success(`Vote changed to ${answer.toUpperCase()}`);
+      } else {
+        toast.success(`Voted ${answer.toUpperCase()}`);
+      }
       loadVotes();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to cast vote');

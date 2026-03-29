@@ -52,10 +52,10 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [rememberMe, setRememberMe] = useState(false);
 
-  // Load remembered email on mount
+  // Load remembered email on mount (sessionStorage — scoped to browser tab)
   useEffect(() => {
-    const rememberedEmail = localStorage.getItem("rememberedEmail");
-    const shouldRemember = localStorage.getItem("rememberMe") === "true";
+    const rememberedEmail = sessionStorage.getItem("rememberedEmail");
+    const shouldRemember = sessionStorage.getItem("rememberMe") === "true";
 
     if (rememberedEmail && shouldRemember) {
       setEmail(rememberedEmail);
@@ -72,7 +72,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
     }
     if (name === "password") {
       if (!value) errors.password = "Password is required";
-      else if (value.length < 6) errors.password = "Password must be at least 6 characters";
+      else if (value.length < 12) errors.password = "Password must be at least 12 characters";
       else delete errors.password;
     }
     if (name === "fullName") {
@@ -102,7 +102,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
         if (!surname.trim()) errors.surname = "Surname is required";
         if (!country) errors.country = "Please select your country";
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = "Enter a valid email address";
-        if (password.length < 6) errors.password = "Password must be at least 6 characters";
+        if (password.length < 12) errors.password = "Password must be at least 12 characters";
         if (Object.keys(errors).length > 0) {
           setFieldErrors(errors);
           setLoading(false);
@@ -121,13 +121,13 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
         await api.signin({ email, password });
       }
 
-      // Handle remember me
+      // Handle remember me (sessionStorage — scoped to tab, not persisted)
       if (rememberMe) {
-        localStorage.setItem("rememberedEmail", email);
-        localStorage.setItem("rememberMe", "true");
+        sessionStorage.setItem("rememberedEmail", email);
+        sessionStorage.setItem("rememberMe", "true");
       } else {
-        localStorage.removeItem("rememberedEmail");
-        localStorage.removeItem("rememberMe");
+        sessionStorage.removeItem("rememberedEmail");
+        sessionStorage.removeItem("rememberMe");
       }
 
       onSuccess();
@@ -168,13 +168,14 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
             {isSignup && (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">First Name</Label>
+                  <Label htmlFor="fullName">First Name <span className="text-destructive">*</span></Label>
                   <Input
                     id="fullName"
                     value={fullName}
                     onChange={(e) => { setFullName(e.target.value); validateField("fullName", e.target.value); }}
                     onBlur={(e) => validateField("fullName", e.target.value)}
                     required
+                    aria-required="true"
                     disabled={loading}
                     className={fieldErrors.fullName ? "border-destructive" : ""}
                   />
@@ -182,7 +183,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="surname">Surname</Label>
+                  <Label htmlFor="surname">Surname <span className="text-destructive">*</span></Label>
                   <Input
                     id="surname"
                     value={surname}
@@ -196,7 +197,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="country">Country</Label>
+                  <Label htmlFor="country">Country <span className="text-destructive">*</span></Label>
                   <Select
                     value={country}
                     onValueChange={(v) => { setCountry(v); validateField("country", v); }}
@@ -220,7 +221,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email <span className="text-destructive">*</span></Label>
               <Input
                 id="email"
                 type="email"
@@ -228,6 +229,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
                 onChange={(e) => { setEmail(e.target.value); validateField("email", e.target.value); }}
                 onBlur={(e) => validateField("email", e.target.value)}
                 required
+                aria-required="true"
                 disabled={loading}
                 className={fieldErrors.email ? "border-destructive" : ""}
               />
@@ -236,7 +238,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Password <span className="text-destructive">*</span></Label>
                 {!isSignup && <ForgotPasswordDialog />}
               </div>
               <Input
@@ -246,10 +248,37 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
                 onChange={(e) => { setPassword(e.target.value); validateField("password", e.target.value); }}
                 onBlur={(e) => validateField("password", e.target.value)}
                 required
+                aria-required="true"
                 disabled={loading}
-                minLength={6}
+                minLength={12}
                 className={fieldErrors.password ? "border-destructive" : ""}
               />
+              {isSignup && password.length > 0 && (
+                <div className="space-y-1">
+                  <div className="flex gap-1">
+                    {[1,2,3,4].map(i => {
+                      const strength = Math.min(4, Math.floor(
+                        (password.length >= 12 ? 1 : 0) +
+                        (/[A-Z]/.test(password) ? 1 : 0) +
+                        (/[0-9]/.test(password) ? 1 : 0) +
+                        (/[^A-Za-z0-9]/.test(password) ? 1 : 0)
+                      ));
+                      const colors = ['bg-destructive','bg-orange-400','bg-yellow-400','bg-green-500'];
+                      return <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${i <= strength ? colors[strength-1] : 'bg-muted'}`} />;
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {(() => {
+                      const tips = [];
+                      if (password.length < 12) tips.push('12+ chars');
+                      if (!/[A-Z]/.test(password)) tips.push('uppercase');
+                      if (!/[0-9]/.test(password)) tips.push('number');
+                      if (!/[^A-Za-z0-9]/.test(password)) tips.push('symbol');
+                      return tips.length === 0 ? '✓ Strong password' : `Add: ${tips.join(', ')}`;
+                    })()}
+                  </p>
+                </div>
+              )}
               {fieldErrors.password && <p className="text-xs text-destructive">{fieldErrors.password}</p>}
             </div>
 

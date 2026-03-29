@@ -92,7 +92,7 @@ export function MobileNav({
                 <User className="h-5 w-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm truncate">{(session.user as any).user_metadata?.fullName}</p>
+                <p className="text-sm truncate">{session.user.fullName || session.user.email?.split('@')[0]}</p>
                 <p className="text-xs text-muted-foreground truncate">{session.user.email}</p>
               </div>
             </div>

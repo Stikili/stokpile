@@ -19,7 +19,7 @@ export function useGroups(session: Session | null) {
       setGroups(data.groups || []);
     } catch (error) {
       console.error("Failed to load groups:", error);
-      // Don't show toast on initial load failure
+      toast.error("Failed to load groups. Check your connection and try again.");
     } finally {
       setGroupsLoading(false);
     }
@@ -80,6 +80,18 @@ export function useGroups(session: Session | null) {
       loadSelectedGroup();
     }
   }, [session?.user?.id]); // Only depend on user ID
+
+  // Background refresh every 5 minutes to keep data fresh
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    const interval = setInterval(() => {
+      if (getAccessToken()) {
+        loadGroups();
+        loadSelectedGroup();
+      }
+    }, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [session?.user?.id]);
 
   return {
     groups,
