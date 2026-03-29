@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import type { Contribution, Payout, DashboardStats, Meeting, Member } from '@/domain/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/ui/card';
-import { Calendar, ArrowUpRight, ArrowDownLeft, Wallet, Users, AlertTriangle, TrendingUp, User } from 'lucide-react';
+import { Button } from '@/presentation/ui/button';
+import { Calendar, ArrowUpRight, ArrowDownLeft, Wallet, Users, AlertTriangle, TrendingUp, User, RefreshCw } from 'lucide-react';
 import { Badge } from '@/presentation/ui/badge';
 import { ContributionChart } from '@/presentation/components/contributions/ContributionChart';
 import { EditTotalContributionsDialog } from '@/presentation/components/groups/EditTotalContributionsDialog';
@@ -30,6 +31,7 @@ export function Dashboard({ groupId, isAdmin = false, userEmail }: DashboardProp
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (groupId) loadStats();
@@ -40,6 +42,7 @@ export function Dashboard({ groupId, isAdmin = false, userEmail }: DashboardProp
 
     try {
       setLoading(true);
+      setError(null);
       const [contributionsData, payoutsData, adjustmentData, meetingsData, membersData] = await Promise.all([
         api.getContributions(groupId),
         api.getPayouts(groupId),
@@ -89,7 +92,7 @@ export function Dashboard({ groupId, isAdmin = false, userEmail }: DashboardProp
         scheduledPayoutsCount
       });
     } catch (error) {
-      console.error('Failed to load stats:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
@@ -158,7 +161,24 @@ export function Dashboard({ groupId, isAdmin = false, userEmail }: DashboardProp
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
+        <AlertTriangle className="h-10 w-10 text-destructive" />
+        <div>
+          <p className="font-medium">Failed to load dashboard</p>
+          <p className="text-sm text-muted-foreground mt-1">{error}</p>
+        </div>
+        <Button variant="outline" onClick={loadStats}>
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Try again
+        </Button>
+      </div>
+    );
+  }
+
   const chartData = generateChartData(contributions, payouts);
+  const hasAnyData = contributions.length > 0 || payouts.length > 0;
 
   return (
     <div className="space-y-4">
@@ -298,7 +318,7 @@ export function Dashboard({ groupId, isAdmin = false, userEmail }: DashboardProp
       </div>
 
       {/* Personal Summary Card */}
-      {userEmail && contributions.some(c => c.userEmail === userEmail) && (
+      {userEmail && (
         <Card className="dark:bg-card/50 border-primary/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4">
             <CardTitle className="text-xs flex items-center gap-2">
@@ -336,13 +356,15 @@ export function Dashboard({ groupId, isAdmin = false, userEmail }: DashboardProp
         </Card>
       )}
 
-      {/* Financial Flow Chart */}
-      <ContributionChart
-        data={chartData}
-        totalPaidContributions={stats.totalContributions}
-        totalPayouts={stats.totalPayouts}
-        netBalance={stats.netBalance}
-      />
+      {/* Financial Flow Chart — only shown when there's actual data */}
+      {hasAnyData && (
+        <ContributionChart
+          data={chartData}
+          totalPaidContributions={stats.totalContributions}
+          totalPayouts={stats.totalPayouts}
+          netBalance={stats.netBalance}
+        />
+      )}
     </div>
   );
 }

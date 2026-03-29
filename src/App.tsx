@@ -44,14 +44,17 @@ import {
   DollarSign,
   TrendingUp,
   Users,
-  Info,
+  Settings,
   Keyboard,
   Calendar,
+  Lock,
 } from "lucide-react";
 import { Toaster } from "@/presentation/ui/sonner";
 import { useSession } from "@/application/hooks/useSession";
 import { useGroups } from "@/application/hooks/useGroups";
 import { useInviteToken } from "@/application/hooks/useInviteToken";
+import { api } from "@/infrastructure/api";
+import { exportToCSV } from "@/lib/export";
 
 export default function App() {
   const { session, loading: sessionLoading, checkSession, signOut } = useSession();
@@ -99,9 +102,18 @@ export default function App() {
       meeting: "meetings",
       members: "info",
       info: "info",
+      contributions: "contributions",
     };
-    if (tabMap[action]) setActiveTab(tabMap[action]);
-  }, []);
+    if (tabMap[action]) {
+      setActiveTab(tabMap[action]);
+      return;
+    }
+    if (action === "export-contributions" && selectedGroup) {
+      api.getContributions(selectedGroup.id).then(({ contributions }) => {
+        exportToCSV(contributions as Record<string, unknown>[], `contributions-${selectedGroup.id}.csv`);
+      });
+    }
+  }, [selectedGroup]);
 
   const handleAuthSuccess = useCallback(() => {
     checkSession();
@@ -289,25 +301,37 @@ export default function App() {
                         <DollarSign className="h-3.5 w-3.5 mr-1.5" />
                         Contributions
                       </TabsTrigger>
-                      {selectedGroup.payoutsAllowed && (
+                      {selectedGroup.payoutsAllowed ? (
                         <TabsTrigger value="payouts" className="text-sm">
                           <TrendingUp className="h-3.5 w-3.5 mr-1.5" />
                           Payouts
                         </TabsTrigger>
+                      ) : isAdmin && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground cursor-default select-none opacity-60">
+                              <Lock className="h-3.5 w-3.5" />
+                              Payouts
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Payouts are disabled for this group. Enable them in Group Settings.
+                          </TooltipContent>
+                        </Tooltip>
                       )}
                       <TabsTrigger value="meetings" className="text-sm">
                         <Calendar className="h-3.5 w-3.5 mr-1.5" />
                         Meetings
                       </TabsTrigger>
                       <TabsTrigger value="info" className="text-sm">
-                        <Info className="h-3.5 w-3.5 mr-1.5" />
+                        <Settings className="h-3.5 w-3.5 mr-1.5" />
                         Group Settings
                       </TabsTrigger>
                     </TabsList>
 
                     <Suspense fallback={<LoadingProgress message="Loading..." />}>
                       <TabsContent value="dashboard" className="space-y-4">
-                        <ContextualTips context="dashboard" isAdmin={isAdmin} hasData />
+                        <ContextualTips context="dashboard" isAdmin={isAdmin} hasData onAction={handleQuickAction} />
                         <Dashboard
                           groupId={selectedGroup.id}
                           isAdmin={isAdmin}
@@ -318,7 +342,7 @@ export default function App() {
                       </TabsContent>
 
                       <TabsContent value="contributions" className="space-y-3">
-                        <ContextualTips context="contributions" isAdmin={isAdmin} hasData />
+                        <ContextualTips context="contributions" isAdmin={isAdmin} hasData onAction={handleQuickAction} />
                         <ContributionsView
                           groupId={selectedGroup.id}
                           userEmail={session.user.email}
@@ -328,13 +352,13 @@ export default function App() {
 
                       {selectedGroup.payoutsAllowed && (
                         <TabsContent value="payouts" className="space-y-3">
-                          <ContextualTips context="payouts" isAdmin={isAdmin} hasData />
+                          <ContextualTips context="payouts" isAdmin={isAdmin} hasData onAction={handleQuickAction} />
                           <PayoutsView groupId={selectedGroup.id} isAdmin={isAdmin} />
                         </TabsContent>
                       )}
 
                       <TabsContent value="meetings" className="space-y-3">
-                        <ContextualTips context="meetings" isAdmin={isAdmin} hasData />
+                        <ContextualTips context="meetings" isAdmin={isAdmin} hasData onAction={handleQuickAction} />
                         <MeetingsView
                           groupId={selectedGroup.id}
                           isAdmin={isAdmin}
@@ -343,7 +367,7 @@ export default function App() {
                       </TabsContent>
 
                       <TabsContent value="info" className="space-y-3">
-                        <ContextualTips context="info" isAdmin={isAdmin} hasData />
+                        <ContextualTips context="info" isAdmin={isAdmin} hasData onAction={handleQuickAction} />
                         <GroupInfoView group={selectedGroup} onGroupUpdate={refreshGroups} />
                       </TabsContent>
                     </Suspense>

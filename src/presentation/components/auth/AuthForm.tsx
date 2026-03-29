@@ -49,6 +49,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
   const [country, setCountry] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [rememberMe, setRememberMe] = useState(false);
 
   // Load remembered email on mount
@@ -62,6 +63,33 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
     }
   }, []);
 
+  const validateField = (name: string, value: string) => {
+    const errors: Record<string, string> = { ...fieldErrors };
+    if (name === "email") {
+      if (!value) errors.email = "Email is required";
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) errors.email = "Enter a valid email address";
+      else delete errors.email;
+    }
+    if (name === "password") {
+      if (!value) errors.password = "Password is required";
+      else if (value.length < 6) errors.password = "Password must be at least 6 characters";
+      else delete errors.password;
+    }
+    if (name === "fullName") {
+      if (!value.trim()) errors.fullName = "First name is required";
+      else delete errors.fullName;
+    }
+    if (name === "surname") {
+      if (!value.trim()) errors.surname = "Surname is required";
+      else delete errors.surname;
+    }
+    if (name === "country") {
+      if (!value) errors.country = "Please select your country";
+      else delete errors.country;
+    }
+    setFieldErrors(errors);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -69,8 +97,14 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
 
     try {
       if (isSignup) {
-        if (!fullName || !surname || !country) {
-          setError("Please fill in all fields");
+        const errors: Record<string, string> = {};
+        if (!fullName.trim()) errors.fullName = "First name is required";
+        if (!surname.trim()) errors.surname = "Surname is required";
+        if (!country) errors.country = "Please select your country";
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = "Enter a valid email address";
+        if (password.length < 6) errors.password = "Password must be at least 6 characters";
+        if (Object.keys(errors).length > 0) {
+          setFieldErrors(errors);
           setLoading(false);
           return;
         }
@@ -134,14 +168,17 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
             {isSignup && (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
+                  <Label htmlFor="fullName">First Name</Label>
                   <Input
                     id="fullName"
                     value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
+                    onChange={(e) => { setFullName(e.target.value); validateField("fullName", e.target.value); }}
+                    onBlur={(e) => validateField("fullName", e.target.value)}
                     required
                     disabled={loading}
+                    className={fieldErrors.fullName ? "border-destructive" : ""}
                   />
+                  {fieldErrors.fullName && <p className="text-xs text-destructive">{fieldErrors.fullName}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -149,21 +186,24 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
                   <Input
                     id="surname"
                     value={surname}
-                    onChange={(e) => setSurname(e.target.value)}
+                    onChange={(e) => { setSurname(e.target.value); validateField("surname", e.target.value); }}
+                    onBlur={(e) => validateField("surname", e.target.value)}
                     required
                     disabled={loading}
+                    className={fieldErrors.surname ? "border-destructive" : ""}
                   />
+                  {fieldErrors.surname && <p className="text-xs text-destructive">{fieldErrors.surname}</p>}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="country">Country</Label>
                   <Select
                     value={country}
-                    onValueChange={setCountry}
+                    onValueChange={(v) => { setCountry(v); validateField("country", v); }}
                     required
                     disabled={loading}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className={fieldErrors.country ? "border-destructive" : ""}>
                       <SelectValue placeholder="Select your country" />
                     </SelectTrigger>
                     <SelectContent>
@@ -174,6 +214,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
                       ))}
                     </SelectContent>
                   </Select>
+                  {fieldErrors.country && <p className="text-xs text-destructive">{fieldErrors.country}</p>}
                 </div>
               </>
             )}
@@ -184,10 +225,13 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); validateField("email", e.target.value); }}
+                onBlur={(e) => validateField("email", e.target.value)}
                 required
                 disabled={loading}
+                className={fieldErrors.email ? "border-destructive" : ""}
               />
+              {fieldErrors.email && <p className="text-xs text-destructive">{fieldErrors.email}</p>}
             </div>
 
             <div className="space-y-2">
@@ -199,11 +243,14 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
                 id="password"
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => { setPassword(e.target.value); validateField("password", e.target.value); }}
+                onBlur={(e) => validateField("password", e.target.value)}
                 required
                 disabled={loading}
                 minLength={6}
+                className={fieldErrors.password ? "border-destructive" : ""}
               />
+              {fieldErrors.password && <p className="text-xs text-destructive">{fieldErrors.password}</p>}
             </div>
 
             {!isSignup && (
@@ -233,6 +280,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
               onClick={() => {
                 setIsSignup(!isSignup);
                 setError("");
+                setFieldErrors({});
               }}
               className="w-full text-sm text-center text-muted-foreground hover:text-foreground transition-colors"
               disabled={loading}

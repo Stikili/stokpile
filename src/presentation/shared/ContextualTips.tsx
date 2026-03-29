@@ -19,9 +19,10 @@ interface ContextualTipsProps {
   context: 'dashboard' | 'contributions' | 'payouts' | 'meetings' | 'info';
   isAdmin: boolean;
   hasData: boolean;
+  onAction?: (action: string) => void;
 }
 
-export function ContextualTips({ context, isAdmin, hasData }: ContextualTipsProps) {
+export function ContextualTips({ context, isAdmin, hasData, onAction }: ContextualTipsProps) {
   const [dismissedTips, setDismissedTips] = useState<string[]>(() => {
     const saved = localStorage.getItem('dismissedTips');
     return saved ? JSON.parse(saved) : [];
@@ -33,10 +34,10 @@ export function ContextualTips({ context, isAdmin, hasData }: ContextualTipsProp
         id: 'dashboard-overview',
         icon: TrendingUp,
         title: 'Track Your Progress',
-        description: 'Your dashboard shows real-time financial metrics. The contribution chart helps visualize payment trends over time.',
+        description: 'Your dashboard shows real-time financial metrics. The contribution chart appears once your group has data.',
         action: isAdmin ? {
-          label: 'View Reports',
-          onClick: () => {}
+          label: 'Go to Contributions',
+          onClick: () => onAction?.('contributions')
         } : undefined
       },
       {
@@ -51,12 +52,12 @@ export function ContextualTips({ context, isAdmin, hasData }: ContextualTipsProp
         id: 'contributions-record',
         icon: DollarSign,
         title: hasData ? 'Export Your Data' : 'Start Recording Contributions',
-        description: hasData 
+        description: hasData
           ? 'You can export contribution records to CSV for external reporting or record-keeping.'
           : 'Record member contributions to start tracking your group\'s savings. You can add multiple contributions at once.',
         action: hasData ? {
           label: 'Export to CSV',
-          onClick: () => {}
+          onClick: () => onAction?.('export-contributions')
         } : undefined
       },
       {
@@ -64,6 +65,10 @@ export function ContextualTips({ context, isAdmin, hasData }: ContextualTipsProp
         icon: Calendar,
         title: 'Set Contribution Frequency',
         description: 'Configure how often members should contribute (weekly, monthly, etc.) in the Group Settings tab. This helps track who\'s up to date.',
+        action: {
+          label: 'Group Settings',
+          onClick: () => onAction?.('info')
+        }
       }
     ],
     meetings: [
@@ -94,7 +99,26 @@ export function ContextualTips({ context, isAdmin, hasData }: ContextualTipsProp
         description: 'Invite new members via email or shareable link. You can also make your group discoverable in public searches.',
       }
     ],
-    payouts: []
+    payouts: [
+      {
+        id: 'payouts-how-it-works',
+        icon: TrendingUp,
+        title: 'How Payouts Work',
+        description: 'Schedule payouts to members from the group fund. Once a payout is marked completed, it\'s deducted from the net balance on the dashboard.',
+      },
+      {
+        id: 'payouts-enable',
+        icon: Lightbulb,
+        title: isAdmin ? 'Manage Payout Settings' : 'Ask Your Admin',
+        description: isAdmin
+          ? 'You can enable or disable payouts for this group, and set who is eligible to receive them.'
+          : 'Only group admins can schedule payouts. Contact your group admin if you need a payout.',
+        action: isAdmin ? {
+          label: 'Group Settings',
+          onClick: () => onAction?.('info')
+        } : undefined
+      }
+    ]
   };
 
   const tips = allTips[context] || [];

@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/presentation/ui/badge';
 import { Skeleton } from '@/presentation/ui/skeleton';
 import { EmptyState } from '@/presentation/shared/EmptyState';
-import { Calendar, Plus, MapPin, FileText, Edit2, Trash2, Clock, Eye } from 'lucide-react';
+import { Calendar, Plus, MapPin, FileText, Edit2, Trash2, Clock, Eye, RefreshCw, AlertTriangle } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
 import { ConfirmationDialog } from '@/presentation/shared/ConfirmationDialog';
@@ -24,6 +24,7 @@ interface MeetingsViewProps {
 export function MeetingsView({ groupId, isAdmin, userEmail: _userEmail }: MeetingsViewProps) {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [open, setOpen] = useState(false);
   const [editingMeeting, setEditingMeeting] = useState<Meeting | null>(null);
@@ -47,11 +48,12 @@ export function MeetingsView({ groupId, isAdmin, userEmail: _userEmail }: Meetin
 
   const loadMeetings = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const data = await api.getMeetings(groupId);
       setMeetings(data.meetings || []);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to load meetings');
+      setLoadError(error instanceof Error ? error.message : 'Failed to load meetings');
     } finally {
       setLoading(false);
     }
@@ -266,11 +268,21 @@ export function MeetingsView({ groupId, isAdmin, userEmail: _userEmail }: Meetin
               <Skeleton className="h-12 w-full" />
               <Skeleton className="h-12 w-full" />
             </div>
+          ) : loadError ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center gap-3">
+              <AlertTriangle className="h-8 w-8 text-destructive" />
+              <p className="text-sm text-muted-foreground">{loadError}</p>
+              <Button variant="outline" size="sm" onClick={loadMeetings}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Try again
+              </Button>
+            </div>
           ) : meetings.length === 0 ? (
             <EmptyState
               icon={Calendar}
               title="No meetings scheduled"
               description="Schedule your first group meeting to get started"
+              action={isAdmin ? { label: 'Schedule Meeting', onClick: () => setOpen(true) } : undefined}
             />
           ) : (
             <div className="space-y-6">
