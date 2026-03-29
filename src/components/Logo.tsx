@@ -124,7 +124,7 @@ export function Logo({ className = "", showText = true }: LogoProps) {
       {/* App Name */}
       {showText && (
         <div className="flex flex-col">
-          <h1 className="text-2xl leading-none">Stok-pile</h1>
+          <h1 className="text-2xl leading-none">Stokpile</h1>
           <p className="text-xs text-muted-foreground leading-none mt-0.5">
             Transparent group savings
           </p>

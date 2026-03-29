@@ -122,7 +122,7 @@ export function PWAInstallPrompt() {
                   <Smartphone className="h-7 w-7 text-primary-foreground" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Add Stok-pile to Home Screen</CardTitle>
+                  <CardTitle className="text-lg">Add Stokpile to Home Screen</CardTitle>
                   <CardDescription className="mt-1 text-xs">
                     Install for the best experience
                   </CardDescription>
@@ -218,7 +218,7 @@ export function PWAInstallPrompt() {
                 <Smartphone className="h-7 w-7 text-primary-foreground" />
               </div>
               <div>
-                <CardTitle className="text-lg">Install Stok-pile</CardTitle>
+                <CardTitle className="text-lg">Install Stokpile</CardTitle>
                 <CardDescription className="mt-1 text-xs">
                   Add to your home screen
                 </CardDescription>

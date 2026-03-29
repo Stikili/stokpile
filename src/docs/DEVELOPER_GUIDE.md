@@ -1,6 +1,6 @@
-# Stok-pile Developer Guide
+# Stokpile Developer Guide
 
-> Technical documentation for developers working on Stok-pile
+> Technical documentation for developers working on Stokpile
 
 ---
 
@@ -58,7 +58,7 @@
 1. **Clone the repository**
 ```bash
 git clone <your-repo-url>
-cd stok-pile
+cd stokpile
 ```
 
 2. **Install dependencies**

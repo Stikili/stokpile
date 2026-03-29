@@ -1,4 +1,4 @@
-# Stok-pile — Deployment Guide
+# Stokpile — Deployment Guide
 
 ## Prerequisites
 - Supabase account + project (free tier is fine for dev)

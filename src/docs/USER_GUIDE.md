@@ -1,6 +1,6 @@
-# Stok-pile User Guide
+# Stokpile User Guide
 
-> Complete guide for using Stok-pile to manage your financial groups
+> Complete guide for using Stokpile to manage your financial groups
 
 ---
 
@@ -21,7 +21,7 @@
 
 ### Creating an Account
 
-1. Visit the Stok-pile app
+1. Visit the Stokpile app
 2. Click "Sign Up"
 3. Enter your email and password
 4. Verify your email (if required)

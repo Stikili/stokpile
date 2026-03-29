@@ -115,7 +115,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
             <Logo showText={false} />
           </div>
           <CardTitle>
-            {isSignup ? "Create Account" : "Welcome to Stok-pile"}
+            {isSignup ? "Create Account" : "Welcome to Stokpile"}
           </CardTitle>
           <CardDescription>
             {isSignup

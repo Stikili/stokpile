@@ -1,4 +1,4 @@
-# 🚀 Stok-pile Quick Reference
+# 🚀 Stokpile Quick Reference
 
 > Essential commands and information for developers
 
@@ -57,7 +57,7 @@ STRIPE_WEBHOOK_SECRET=whsec_xxx...
 ## 🗂️ Project Structure
 
 ```
-stok-pile/
+stokpile/
 ├── components/          # React components
 │   ├── ui/             # Shadcn components (don't modify)
 │   ├── AuthForm.tsx    # Authentication

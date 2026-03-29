@@ -1,11 +1,11 @@
-# Stok-pile Documentation
+# Stokpile Documentation
 
-Welcome to the Stok-pile documentation. This folder contains all the essential documentation for users and developers.
+Welcome to the Stokpile documentation. This folder contains all the essential documentation for users and developers.
 
 ## 📚 Available Documentation
 
 ### For Users
-- **[User Guide](./USER_GUIDE.md)** - Complete guide for using Stok-pile
+- **[User Guide](./USER_GUIDE.md)** - Complete guide for using Stokpile
   - Getting started
   - Managing groups
   - Contributions and payouts

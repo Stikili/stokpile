@@ -1,4 +1,4 @@
-# Stok-pile - Group Financial Management Platform
+# Stokpile - Group Financial Management Platform
 
 > A mobile-first, accessible platform for managing Stokvel groups and savings clubs with Supabase backend.
 
@@ -8,9 +8,9 @@
 
 ---
 
-## 🎯 What is Stok-pile?
+## 🎯 What is Stokpile?
 
-Stok-pile is a comprehensive financial group management application designed for Stokvels, ROSCAs, savings clubs, and community savings groups. It provides robust tools for tracking contributions, managing payouts, scheduling meetings, and coordinating group activities.
+Stokpile is a comprehensive financial group management application designed for Stokvels, ROSCAs, savings clubs, and community savings groups. It provides robust tools for tracking contributions, managing payouts, scheduling meetings, and coordinating group activities.
 
 ### Key Features
 
@@ -116,7 +116,7 @@ Detailed documentation is available in the `/docs` folder:
 
 ## 📱 PWA Support
 
-Stok-pile is installable as a Progressive Web App:
+Stokpile is installable as a Progressive Web App:
 - Works offline (basic functionality)
 - Install on mobile home screen
 - Native app-like experience

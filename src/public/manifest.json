@@ -1,6 +1,6 @@
 {
-  "name": "Stok-pile - Group Financial Management",
-  "short_name": "Stok-pile",
+  "name": "Stokpile - Group Financial Management",
+  "short_name": "Stokpile",
   "description": "Modern stokvel and group savings management platform with contributions tracking, payouts, meetings, voting, and real-time collaboration. Secure, transparent, and built for mobile-first communities.",
   "start_url": "/",
   "display": "standalone",

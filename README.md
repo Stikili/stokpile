@@ -1,7 +1,7 @@
 
-  # Stok-pile
+  # Stokpile
 
-  This is a code bundle for Stok-pile. The original project is available at https://www.figma.com/design/zJInaAE5KrawcOHdNf1lql/Stok-pile.
+  This is a code bundle for Stokpile. The original project is available at https://www.figma.com/design/zJInaAE5KrawcOHdNf1lql/Stokpile.
 
   ## Running the code
 

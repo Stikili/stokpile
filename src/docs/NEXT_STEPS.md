@@ -1,6 +1,6 @@
 # 🎯 Next Steps After Cleanup
 
-Your Stok-pile app has been successfully simplified! Here's what to do next.
+Your Stokpile app has been successfully simplified! Here's what to do next.
 
 ---
 

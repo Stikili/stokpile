@@ -1,4 +1,4 @@
-# 📊 Stok-pile Project Status
+# 📊 Stokpile Project Status
 
 **Last Updated:** October 12, 2025  
 **Version:** 2.1 (Simplified)  
@@ -8,7 +8,7 @@
 
 ## 🎯 Project Overview
 
-**Stok-pile** is a comprehensive financial group management platform for Stokvels, ROSCAs, and savings clubs. Built with React, TypeScript, Tailwind CSS, and Supabase.
+**Stokpile** is a comprehensive financial group management platform for Stokvels, ROSCAs, and savings clubs. Built with React, TypeScript, Tailwind CSS, and Supabase.
 
 ---
 
@@ -77,7 +77,7 @@
 ## 📁 Project Structure
 
 ```
-stok-pile/
+stokpile/
 ├── README.md                    # Main project overview
 ├── PROJECT_STATUS.md            # This file
 ├── App.tsx                      # Main application

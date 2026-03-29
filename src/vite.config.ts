@@ -13,8 +13,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'robots.txt', 'icon-*.png'],
       manifest: {
-        name: 'Stok-pile',
-        short_name: 'Stok-pile',
+        name: 'Stokpile',
+        short_name: 'Stokpile',
         description: 'Multi-group financial management platform',
         theme_color: '#030213',
         background_color: '#ffffff',

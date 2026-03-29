@@ -174,9 +174,9 @@ app.post('/make-server-34d0b231/auth/request-reset', async (c) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: Deno.env.get('EMAIL_FROM') || 'Stok-pile <onboarding@resend.dev>',
+          from: Deno.env.get('EMAIL_FROM') || 'Stokpile <onboarding@resend.dev>',
           to: [email],
-          subject: 'Your Stok-pile password reset code',
+          subject: 'Your Stokpile password reset code',
           html: `
             <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;">
               <h2 style="color:#1e293b;margin-bottom:8px;">Reset your password</h2>

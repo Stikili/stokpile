@@ -31,7 +31,7 @@ export function OnboardingTour({ show, onComplete, onSkip, hasGroups }: Onboardi
 
   const steps: TourStep[] = hasGroups ? [
     {
-      title: "Welcome to Stok-pile! 🎉",
+      title: "Welcome to Stokpile! 🎉",
       description: "Let's take a quick tour to help you get started with managing your group savings.",
       tip: "This tour takes about 2 minutes. You can skip it anytime."
     },
@@ -68,8 +68,8 @@ export function OnboardingTour({ show, onComplete, onSkip, hasGroups }: Onboardi
     }
   ] : [
     {
-      title: "Welcome to Stok-pile! 🎉",
-      description: "Stok-pile helps you manage group savings, track contributions, and organize meetings. Let's get you started!",
+      title: "Welcome to Stokpile! 🎉",
+      description: "Stokpile helps you manage group savings, track contributions, and organize meetings. Let's get you started!",
       tip: "First, you'll need to create or join a group"
     },
     {

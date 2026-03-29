@@ -123,7 +123,7 @@ export default function App() {
     return (
       <ThemeProvider>
         <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-50 to-blue-50/40 dark:bg-transparent dark:bg-none dark:from-transparent dark:to-transparent">
-          <LoadingProgress message="Loading Stok-pile..." />
+          <LoadingProgress message="Loading Stokpile..." />
         </div>
       </ThemeProvider>
     );

@@ -51,22 +51,22 @@ export function ShareInviteDialog({ groupId, groupName }: ShareInviteDialogProps
 
   const shareViaWhatsApp = () => {
     const message = encodeURIComponent(
-      `Join our group "${groupName}" on Stok-pile!\n\nClick this link to join:\n${inviteLink}`
+      `Join our group "${groupName}" on Stokpile!\n\nClick this link to join:\n${inviteLink}`
     );
     window.open(`https://wa.me/?text=${message}`, '_blank');
   };
 
   const shareViaSMS = () => {
     const message = encodeURIComponent(
-      `Join our group "${groupName}" on Stok-pile! Click: ${inviteLink}`
+      `Join our group "${groupName}" on Stokpile! Click: ${inviteLink}`
     );
     window.location.href = `sms:?body=${message}`;
   };
 
   const shareViaEmail = () => {
-    const subject = encodeURIComponent(`Join ${groupName} on Stok-pile`);
+    const subject = encodeURIComponent(`Join ${groupName} on Stokpile`);
     const body = encodeURIComponent(
-      `You've been invited to join "${groupName}" on Stok-pile!\n\nClick this link to join:\n${inviteLink}\n\nSee you there!`
+      `You've been invited to join "${groupName}" on Stokpile!\n\nClick this link to join:\n${inviteLink}\n\nSee you there!`
     );
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
   };
@@ -76,7 +76,7 @@ export function ShareInviteDialog({ groupId, groupName }: ShareInviteDialogProps
       try {
         await navigator.share({
           title: `Join ${groupName}`,
-          text: `Join our group "${groupName}" on Stok-pile!`,
+          text: `Join our group "${groupName}" on Stokpile!`,
           url: inviteLink
         });
       } catch (error) {
