@@ -58,6 +58,15 @@ app.post('/make-server-34d0b231/signup', async (c) => {
       createdAt: new Date().toISOString()
     });
 
+    // Persist to profiles table
+    await supabaseAdmin.from('profiles').upsert({
+      email,
+      full_name: fullName,
+      surname,
+      country,
+      phone: phone || null,
+    }, { onConflict: 'email' });
+
     return c.json({ success: true, user: data.user });
   } catch (error) {
     console.log(`Signup exception: ${error.message}`);
@@ -275,15 +284,19 @@ app.get('/make-server-34d0b231/profile', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    // Also read phone from KV store as fallback (in case metadata is stale)
-    const kvProfile = await kv.get(`user:${user.email}`);
+    // Read from profiles table (source of truth for phone)
+    const { data: profileRow } = await supabaseAdmin
+      .from('profiles')
+      .select('phone, full_name, surname, country, profile_picture_url')
+      .eq('email', user.email)
+      .maybeSingle();
 
     return c.json({
       email: user.email,
-      fullName: user.user_metadata?.fullName || '',
-      surname: user.user_metadata?.surname || '',
-      profilePictureUrl: user.user_metadata?.profilePictureUrl || null,
-      phone: user.user_metadata?.phone || kvProfile?.phone || null,
+      fullName: profileRow?.full_name || user.user_metadata?.fullName || '',
+      surname: profileRow?.surname || user.user_metadata?.surname || '',
+      profilePictureUrl: profileRow?.profile_picture_url || user.user_metadata?.profilePictureUrl || null,
+      phone: profileRow?.phone || user.user_metadata?.phone || null,
     });
   } catch (error) {
     console.log(`Get profile error: ${error.message}`);
@@ -322,14 +335,24 @@ app.put('/make-server-34d0b231/profile', async (c) => {
 
     // Sync full profile to KV store so group lookups (WhatsApp, member lists) stay current
     const existingKv = await kv.get(`user:${user.email}`) || {};
+    const resolvedPhone = phone !== undefined ? (phone || null) : existingKv.phone || null;
     await kv.set(`user:${user.email}`, {
       ...existingKv,
       email: user.email,
       fullName,
       surname,
       profilePictureUrl: profilePictureUrl || null,
-      phone: phone !== undefined ? (phone || null) : existingKv.phone || null,
+      phone: resolvedPhone,
     });
+
+    // Persist to profiles table (source of truth)
+    await supabaseAdmin.from('profiles').upsert({
+      email: user.email,
+      full_name: fullName,
+      surname,
+      profile_picture_url: profilePictureUrl || null,
+      phone: resolvedPhone,
+    }, { onConflict: 'email' });
 
     return c.json({ success: true, user: updatedUser });
   } catch (error) {
@@ -3145,9 +3168,24 @@ async function sendWhatsApp(to: string, message: string) {
 async function getGroupMemberPhones(groupId: string): Promise<string[]> {
   const memberships = await kv.getByPrefix(`membership:${groupId}:`);
   const approved = memberships.filter((m) => m.status === 'approved');
+  const emails = approved.map((m) => m.userEmail);
+  if (emails.length === 0) return [];
+
+  // Prefer profiles table over KV store
+  const { data: profileRows } = await supabaseAdmin
+    .from('profiles')
+    .select('phone')
+    .in('email', emails)
+    .not('phone', 'is', null);
+
+  if (profileRows && profileRows.length > 0) {
+    return profileRows.map((r) => r.phone).filter(Boolean);
+  }
+
+  // Fallback to KV store
   const phones: string[] = [];
-  for (const m of approved) {
-    const profile = await kv.get(`user:${m.userEmail}`);
+  for (const email of emails) {
+    const profile = await kv.get(`user:${email}`);
     if (profile?.phone) phones.push(profile.phone);
   }
   return phones;
