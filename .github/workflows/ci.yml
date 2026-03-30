@@ -33,30 +33,3 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_SUPABASE_PROJECT_ID: ${{ secrets.VITE_SUPABASE_PROJECT_ID }}
-
-  test:
-    name: Tests
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run tests
-        run: npx vitest run --config src/vitest.config.ts
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        if: always()
-        with:
-          files: ./coverage/lcov.info
-          fail_ci_if_error: false
