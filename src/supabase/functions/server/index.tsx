@@ -275,11 +275,15 @@ app.get('/make-server-34d0b231/profile', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
+    // Also read phone from KV store as fallback (in case metadata is stale)
+    const kvProfile = await kv.get(`user:${user.email}`);
+
     return c.json({
       email: user.email,
       fullName: user.user_metadata?.fullName || '',
       surname: user.user_metadata?.surname || '',
-      profilePictureUrl: user.user_metadata?.profilePictureUrl || null
+      profilePictureUrl: user.user_metadata?.profilePictureUrl || null,
+      phone: user.user_metadata?.phone || kvProfile?.phone || null,
     });
   } catch (error) {
     console.log(`Get profile error: ${error.message}`);
@@ -312,16 +316,20 @@ app.put('/make-server-34d0b231/profile', async (c) => {
       }
     );
 
-    // Also persist phone in KV store for group notification lookups
-    if (phone !== undefined) {
-      const kvProfile = await kv.get(`user:${user.email}`) || {};
-      kvProfile.phone = phone || null;
-      await kv.set(`user:${user.email}`, kvProfile);
-    }
-
     if (updateError) {
       throw new Error(updateError.message);
     }
+
+    // Sync full profile to KV store so group lookups (WhatsApp, member lists) stay current
+    const existingKv = await kv.get(`user:${user.email}`) || {};
+    await kv.set(`user:${user.email}`, {
+      ...existingKv,
+      email: user.email,
+      fullName,
+      surname,
+      profilePictureUrl: profilePictureUrl || null,
+      phone: phone !== undefined ? (phone || null) : existingKv.phone || null,
+    });
 
     return c.json({ success: true, user: updatedUser });
   } catch (error) {
