@@ -31,6 +31,7 @@ import { ThemeToggle } from "@/presentation/shared/ThemeToggle";
 import { LanguageToggle } from "@/presentation/shared/LanguageToggle";
 import { LanguageProvider } from "@/application/context/LanguageContext";
 import { PushNotificationSetup } from "@/presentation/shared/PushNotificationSetup";
+import { PhonePrompt } from "@/presentation/shared/PhonePrompt";
 import { Logo } from "@/presentation/layout/Logo";
 import { OnboardingTour } from "@/presentation/shared/OnboardingTour";
 import { ContextualTips } from "@/presentation/shared/ContextualTips";
@@ -200,6 +201,7 @@ export default function App() {
             <OfflineDetector />
             <PWAInstallPrompt />
             <PushNotificationSetup />
+            <PhonePrompt userId={session.user.id} />
             <KeyboardShortcuts open={showShortcuts} onOpenChange={setShowShortcuts} />
             <OnboardingTour
               show={showOnboarding && !!session}
