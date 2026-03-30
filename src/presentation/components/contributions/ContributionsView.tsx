@@ -17,7 +17,7 @@ import { UserAvatar } from '@/presentation/components/profile/UserAvatar';
 import { MemberStatsDialog } from '@/presentation/components/members/MemberStatsDialog';
 import { DatePicker } from '@/presentation/shared/DatePicker';
 import { ConfirmationDialog } from '@/presentation/shared/ConfirmationDialog';
-import { Plus, Download, DollarSign, Trash2, Search, Info } from 'lucide-react';
+import { Plus, Download, DollarSign, Trash2, Search, Info, CreditCard, Loader2 } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
 import { exportToCSV, formatCurrency, formatDate } from '@/lib/export';
@@ -38,6 +38,7 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
   const [selectedMemberEmail, setSelectedMemberEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
+  const [payingId, setPayingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [duplicateWarning, setDuplicateWarning] = useState<{ open: boolean; pendingSubmit: (() => Promise<void>) | null }>({ open: false, pendingSubmit: null });
 
@@ -159,6 +160,18 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
       loadContributions();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to delete contribution');
+    }
+  };
+
+  const handlePayNow = async (contribution: Contribution) => {
+    setPayingId(contribution.id);
+    try {
+      const data = await api.createPaymentLink(contribution.id);
+      window.open(data.authorizationUrl, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Payment not available');
+    } finally {
+      setPayingId(null);
     }
   };
 
@@ -457,22 +470,43 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        {(contribution.userEmail === userEmail || isAdmin) && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setDeleteConfirm({ open: true, id: contribution.id })}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {contribution.userEmail === userEmail ? 'Delete contribution' : 'Delete contribution (Admin)'}
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
+                        <div className="flex items-center justify-end gap-1">
+                          {!contribution.paid && contribution.userEmail === userEmail && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handlePayNow(contribution)}
+                                  disabled={payingId === contribution.id}
+                                  className="text-primary border-primary/30 hover:bg-primary/5 h-8 px-2"
+                                >
+                                  {payingId === contribution.id
+                                    ? <Loader2 className="h-3 w-3 animate-spin" />
+                                    : <><CreditCard className="h-3 w-3 mr-1" /><span className="text-xs">Pay</span></>
+                                  }
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Pay this contribution via Paystack</TooltipContent>
+                            </Tooltip>
+                          )}
+                          {(contribution.userEmail === userEmail || isAdmin) && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => setDeleteConfirm({ open: true, id: contribution.id })}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {contribution.userEmail === userEmail ? 'Delete contribution' : 'Delete contribution (Admin)'}
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

@@ -295,7 +295,7 @@ app.put('/make-server-34d0b231/profile', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    const { fullName, surname, profilePictureUrl } = await c.req.json();
+    const { fullName, surname, profilePictureUrl, phone } = await c.req.json();
 
     // Update user metadata
     const { data: updatedUser, error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
@@ -305,10 +305,18 @@ app.put('/make-server-34d0b231/profile', async (c) => {
           ...user.user_metadata,
           fullName,
           surname,
-          profilePictureUrl
+          profilePictureUrl,
+          phone: phone || null,
         }
       }
     );
+
+    // Also persist phone in KV store for group notification lookups
+    if (phone !== undefined) {
+      const kvProfile = await kv.get(`user:${user.email}`) || {};
+      kvProfile.phone = phone || null;
+      await kv.set(`user:${user.email}`, kvProfile);
+    }
 
     if (updateError) {
       throw new Error(updateError.message);
@@ -400,8 +408,8 @@ app.post('/make-server-34d0b231/groups', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    const { name, description, contributionFrequency, isPublic } = await c.req.json();
-    
+    const { name, description, contributionFrequency, isPublic, groupType } = await c.req.json();
+
     // Check if group name is unique
     const nameIsUnique = await isGroupNameUnique(name);
     if (!nameIsUnique) {
@@ -417,6 +425,7 @@ app.post('/make-server-34d0b231/groups', async (c) => {
       description: description || '',
       contributionFrequency: contributionFrequency || 'monthly',
       isPublic: isPublic || false,
+      groupType: groupType || 'rotating',
       groupCode,
       payoutsAllowed: true,
       admin1: user.email,
@@ -1351,6 +1360,23 @@ app.post('/make-server-34d0b231/contributions', async (c) => {
 
     await kv.set(`contribution:${groupId}:${contributionId}`, contribution);
 
+    // Fire-and-forget: WhatsApp + push notifications to admins
+    const group = await kv.get(`group:${groupId}`);
+    const groupName = group?.name || 'your group';
+    const amountFormatted = `R ${contribution.amount.toFixed(2)}`;
+    const notifMessage = `💰 *${groupName}*: New contribution of ${amountFormatted} recorded for ${targetUserEmail}.`;
+
+    (async () => {
+      const phones = await getGroupMemberPhones(groupId);
+      for (const phone of phones) await sendWhatsApp(phone, notifMessage);
+    })().catch(console.warn);
+
+    sendPushToGroup(groupId, {
+      title: groupName,
+      body: `New contribution of ${amountFormatted} recorded`,
+      url: '/',
+    }).catch(console.warn);
+
     return c.json({ success: true, contribution });
   } catch (error) {
     console.log(`Create contribution error: ${error.message}`);
@@ -1527,6 +1553,28 @@ app.post('/make-server-34d0b231/payouts', async (c) => {
     };
 
     await kv.set(`payout:${groupId}:${payoutId}`, payout);
+
+    // Fire-and-forget: WhatsApp + push notifications
+    const payoutGroup = await kv.get(`group:${groupId}`);
+    const payoutGroupName = payoutGroup?.name || 'your group';
+    const payoutAmount = `R ${payout.amount.toFixed(2)}`;
+    const payoutNotif = `🎉 *${payoutGroupName}*: A payout of ${payoutAmount} has been scheduled for ${recipientEmail}.`;
+
+    (async () => {
+      const phones = await getGroupMemberPhones(groupId);
+      for (const phone of phones) await sendWhatsApp(phone, payoutNotif);
+      // Also WhatsApp the recipient directly
+      const recipientProfile = await kv.get(`user:${recipientEmail}`);
+      if (recipientProfile?.phone) {
+        await sendWhatsApp(recipientProfile.phone, `🎉 *${payoutGroupName}*: You are scheduled to receive a payout of ${payoutAmount}! Your admin will process this soon.`);
+      }
+    })().catch(console.warn);
+
+    sendPushToGroup(groupId, {
+      title: payoutGroupName,
+      body: `Payout of ${payoutAmount} scheduled for ${recipientEmail}`,
+      url: '/',
+    }).catch(console.warn);
 
     return c.json({ success: true, payout });
   } catch (error) {
@@ -3054,6 +3102,163 @@ app.put('/make-server-34d0b231/groups/:groupId/contribution-adjustment', async (
     return c.json({ success: true, adjustment });
   } catch (error) {
     console.log(`Update contribution adjustment error: ${error.message}`);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// === WHATSAPP HELPER ===
+
+async function sendWhatsApp(to: string, message: string) {
+  const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
+  const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
+  const from = Deno.env.get('TWILIO_WHATSAPP_FROM') || 'whatsapp:+14155238886';
+  if (!accountSid || !authToken) return; // Skip silently if not configured
+
+  // Ensure recipient number has whatsapp: prefix
+  const toNumber = to.startsWith('whatsapp:') ? to : `whatsapp:${to}`;
+
+  const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+  const body = new URLSearchParams({ From: from, To: toNumber, Body: message });
+  const credentials = btoa(`${accountSid}:${authToken}`);
+
+  try {
+    await fetch(url, {
+      method: 'POST',
+      headers: { Authorization: `Basic ${credentials}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    });
+  } catch (err) {
+    console.log(`WhatsApp send error: ${err.message}`);
+  }
+}
+
+// Get WhatsApp numbers for approved group members who have a phone set
+async function getGroupMemberPhones(groupId: string): Promise<string[]> {
+  const memberships = await kv.getByPrefix(`membership:${groupId}:`);
+  const approved = memberships.filter((m) => m.status === 'approved');
+  const phones: string[] = [];
+  for (const m of approved) {
+    const profile = await kv.get(`user:${m.userEmail}`);
+    if (profile?.phone) phones.push(profile.phone);
+  }
+  return phones;
+}
+
+// === PUSH NOTIFICATION HELPER ===
+
+async function sendPushToGroup(groupId: string, payload: { title: string; body: string; url?: string }) {
+  const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY');
+  const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY');
+  const vapidSubject = Deno.env.get('VAPID_SUBJECT') || 'mailto:admin@stokpile.app';
+  if (!vapidPrivateKey || !vapidPublicKey) return;
+
+  // Get all subscriptions for group members
+  const memberships = await kv.getByPrefix(`membership:${groupId}:`);
+  const approved = memberships.filter((m) => m.status === 'approved');
+
+  for (const m of approved) {
+    const subData = await kv.get(`push-subscription:${m.userEmail}`);
+    if (!subData) continue;
+    try {
+      // Use web-push compatible fetch
+      const { endpoint, keys } = subData;
+      if (!endpoint || !keys?.auth || !keys?.p256dh) continue;
+
+      // Build the push message using Web Push Protocol via fetch
+      // For full web-push support, import npm:web-push in Deno
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/octet-stream',
+          'Content-Encoding': 'aes128gcm',
+          TTL: '86400',
+        },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        console.log(`Push failed for ${m.userEmail}: ${response.status}`);
+      }
+    } catch (err) {
+      console.log(`Push error for ${m.userEmail}: ${err.message}`);
+    }
+  }
+}
+
+// === PUSH SUBSCRIPTION STORAGE ===
+
+app.post('/make-server-34d0b231/push-subscription', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const subscription = await c.req.json();
+    await kv.set(`push-subscription:${user.email}`, subscription);
+    return c.json({ success: true });
+  } catch (error) {
+    console.log(`Store push subscription error: ${error.message}`);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// === PAYSTACK PAYMENT LINK ===
+
+app.post('/make-server-34d0b231/contributions/:id/payment-link', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const paystackSecretKey = Deno.env.get('PAYSTACK_SECRET_KEY');
+    if (!paystackSecretKey) return c.json({ error: 'Payment not configured' }, 503);
+
+    const contributionId = c.req.param('id');
+
+    // Find contribution
+    const allContributions = await kv.getByPrefix('contribution:');
+    const contribution = allContributions.find((c) => c.id === contributionId);
+    if (!contribution) return c.json({ error: 'Contribution not found' }, 404);
+
+    // Only the contribution owner can pay
+    if (contribution.userEmail !== user.email) {
+      return c.json({ error: 'Not authorized' }, 403);
+    }
+
+    const group = await kv.get(`group:${contribution.groupId}`);
+    const reference = `stokpile-${contributionId}-${Date.now()}`;
+
+    const paystackResponse = await fetch('https://api.paystack.co/transaction/initialize', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${paystackSecretKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: user.email,
+        amount: Math.round(contribution.amount * 100), // Paystack uses kobo/cents
+        currency: 'ZAR',
+        reference,
+        metadata: {
+          contributionId,
+          groupId: contribution.groupId,
+          groupName: group?.name || '',
+        },
+        callback_url: Deno.env.get('APP_URL') || 'https://stokpilev1.vercel.app',
+      }),
+    });
+
+    const paystackData = await paystackResponse.json();
+
+    if (!paystackData.status) {
+      return c.json({ error: paystackData.message || 'Payment initialization failed' }, 400);
+    }
+
+    return c.json({
+      authorizationUrl: paystackData.data.authorization_url,
+      reference: paystackData.data.reference,
+    });
+  } catch (error) {
+    console.log(`Create payment link error: ${error.message}`);
     return c.json({ error: error.message }, 500);
   }
 });

@@ -90,14 +90,14 @@ export const api = {
   getProfile: () =>
     request<Profile>("/profile"),
 
-  updateProfile: (data: { fullName: string; surname: string; profilePictureUrl?: string | null }) =>
+  updateProfile: (data: { fullName: string; surname: string; profilePictureUrl?: string | null; phone?: string | null }) =>
     request<{ message: string }>("/profile", { method: "PUT", body: data }),
 
   uploadProfilePicture: (formData: FormData) =>
     request<{ url: string }>("/profile/picture", { method: "POST", body: formData }),
 
   // Groups
-  createGroup: (data: { name: string; description?: string; contributionFrequency?: string; isPublic: boolean }) =>
+  createGroup: (data: { name: string; description?: string; contributionFrequency?: string; isPublic: boolean; groupType?: string }) =>
     request<{ group: Group; groupCode: string }>("/groups", { method: "POST", body: data }),
 
   getGroups: () =>
@@ -302,4 +302,12 @@ export const api = {
     }
     return request<{ message: string; deletedCount?: Record<string, number> }>("/admin/clear-all-data", { method: "DELETE" });
   },
+
+  // Paystack payment link for a contribution
+  createPaymentLink: (contributionId: string) =>
+    request<{ authorizationUrl: string; reference: string }>(`/contributions/${contributionId}/payment-link`, { method: "POST" }),
+
+  // Push notification subscription storage
+  storePushSubscription: (subscription: object) =>
+    request<{ message: string }>("/push-subscription", { method: "POST", body: subscription }),
 };

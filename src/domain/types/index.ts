@@ -6,6 +6,7 @@ export interface User {
   surname: string;
   country: string;
   profilePictureUrl?: string | null;
+  phone?: string | null;
 }
 
 export interface Session {
@@ -19,9 +20,12 @@ export interface Profile {
   surname: string;
   country: string;
   profilePictureUrl?: string | null;
+  phone?: string | null;
 }
 
 // === Groups ===
+export type GroupType = 'rotating' | 'burial' | 'grocery' | 'investment';
+
 export interface Group {
   id: string;
   name: string;
@@ -30,6 +34,7 @@ export interface Group {
   isPublic: boolean;
   payoutsAllowed: boolean;
   contributionFrequency?: string;
+  groupType?: GroupType;
   createdBy: string;
   createdAt: string;
   admin1?: string;

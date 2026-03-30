@@ -28,6 +28,9 @@ import { ConfirmationDialog } from "@/presentation/shared/ConfirmationDialog";
 import { PWAInstallPrompt } from "@/presentation/shared/PWAInstallPrompt";
 import { ThemeProvider } from "@/presentation/shared/ThemeProvider";
 import { ThemeToggle } from "@/presentation/shared/ThemeToggle";
+import { LanguageToggle } from "@/presentation/shared/LanguageToggle";
+import { LanguageProvider } from "@/application/context/LanguageContext";
+import { PushNotificationSetup } from "@/presentation/shared/PushNotificationSetup";
 import { Logo } from "@/presentation/layout/Logo";
 import { OnboardingTour } from "@/presentation/shared/OnboardingTour";
 import { ContextualTips } from "@/presentation/shared/ContextualTips";
@@ -138,9 +141,11 @@ export default function App() {
   if (sessionLoading) {
     return (
       <ThemeProvider>
-        <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-50 to-blue-50/40 dark:bg-transparent dark:bg-none dark:from-transparent dark:to-transparent">
-          <LoadingProgress message="Loading Stokpile..." />
-        </div>
+        <LanguageProvider>
+          <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-50 to-blue-50/40 dark:bg-transparent dark:bg-none dark:from-transparent dark:to-transparent">
+            <LoadingProgress message="Loading Stokpile..." />
+          </div>
+        </LanguageProvider>
       </ThemeProvider>
     );
   }
@@ -149,16 +154,18 @@ export default function App() {
   if (inviteToken && !showAuthForInvite) {
     return (
       <ThemeProvider>
-        <PublicJoinView
-          inviteToken={inviteToken}
-          isAuthenticated={!!session}
-          onJoinSuccess={() => {
-            clearInviteToken();
-            checkSession();
-          }}
-          onNeedAuth={requireAuth}
-        />
-        <Toaster />
+        <LanguageProvider>
+          <PublicJoinView
+            inviteToken={inviteToken}
+            isAuthenticated={!!session}
+            onJoinSuccess={() => {
+              clearInviteToken();
+              checkSession();
+            }}
+            onNeedAuth={requireAuth}
+          />
+          <Toaster />
+        </LanguageProvider>
       </ThemeProvider>
     );
   }
@@ -167,8 +174,10 @@ export default function App() {
   if (!session) {
     return (
       <ThemeProvider>
-        <AuthForm onSuccess={handleAuthSuccess} />
-        <Toaster />
+        <LanguageProvider>
+          <AuthForm onSuccess={handleAuthSuccess} />
+          <Toaster />
+        </LanguageProvider>
       </ThemeProvider>
     );
   }
@@ -176,6 +185,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
+        <LanguageProvider>
         <TooltipProvider>
           <div className="min-h-screen bg-gradient-to-br from-slate-50/80 to-blue-50/30 dark:bg-transparent dark:bg-none dark:from-transparent dark:to-transparent">
             {/* Skip to main content for accessibility */}
@@ -189,6 +199,7 @@ export default function App() {
             <Toaster />
             <OfflineDetector />
             <PWAInstallPrompt />
+            <PushNotificationSetup />
             <KeyboardShortcuts open={showShortcuts} onOpenChange={setShowShortcuts} />
             <OnboardingTour
               show={showOnboarding && !!session}
@@ -244,6 +255,7 @@ export default function App() {
                     userEmail={session?.user?.email}
                   />
                   <ThemeToggle className="hidden lg:flex" />
+                  <LanguageToggle />
                   <ProfileMenu 
                     session={session}
                     onProfileUpdate={() => checkSession()}
@@ -404,6 +416,7 @@ export default function App() {
             </div>
           </div>
         </TooltipProvider>
+        </LanguageProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

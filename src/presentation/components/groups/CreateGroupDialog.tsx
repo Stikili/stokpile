@@ -24,6 +24,7 @@ export function CreateGroupDialog({ onSuccess, open: controlledOpen, onOpenChang
   const [description, setDescription] = useState('');
   const [contributionFrequency, setContributionFrequency] = useState('monthly');
   const [isPublic, setIsPublic] = useState(false);
+  const [groupType, setGroupType] = useState('rotating');
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -35,7 +36,8 @@ export function CreateGroupDialog({ onSuccess, open: controlledOpen, onOpenChang
         name,
         description,
         contributionFrequency,
-        isPublic
+        isPublic,
+        groupType,
       });
       toast.success(`Group created! Share code: ${result.group.groupCode}`);
       setOpen(false);
@@ -43,6 +45,7 @@ export function CreateGroupDialog({ onSuccess, open: controlledOpen, onOpenChang
       setDescription('');
       setContributionFrequency('monthly');
       setIsPublic(false);
+      setGroupType('rotating');
       onSuccess();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to create group');
@@ -114,6 +117,31 @@ export function CreateGroupDialog({ onSuccess, open: controlledOpen, onOpenChang
             </Select>
             <p className="text-xs text-muted-foreground">
               How often members are expected to contribute
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="groupType">Group Type</Label>
+            <Select
+              value={groupType}
+              onValueChange={setGroupType}
+              disabled={submitting}
+            >
+              <SelectTrigger id="groupType">
+                <SelectValue placeholder="Select group type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="rotating">Rotating (Merry-go-round)</SelectItem>
+                <SelectItem value="burial">Burial Society</SelectItem>
+                <SelectItem value="grocery">Grocery Stokvel</SelectItem>
+                <SelectItem value="investment">Investment Club</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {groupType === 'rotating' && 'Members take turns receiving the full pot. Payouts rotate through members.'}
+              {groupType === 'burial' && 'Members pool levies to cover funeral costs for families in the group.'}
+              {groupType === 'grocery' && 'Members save together to bulk-buy groceries at a discount.'}
+              {groupType === 'investment' && 'Members pool money to invest collectively and share returns.'}
             </p>
           </div>
 

@@ -27,6 +27,7 @@ export function ProfileDialog({ session: _session, onProfileUpdate, open: contro
   const [fullName, setFullName] = useState('');
   const [surname, setSurname] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -43,6 +44,7 @@ export function ProfileDialog({ session: _session, onProfileUpdate, open: contro
       setFullName(data.fullName || '');
       setSurname(data.surname || '');
       setEmail(data.email || '');
+      setPhone(data.phone || '');
       setProfilePictureUrl(data.profilePictureUrl || null);
     } catch (error) {
       console.error('Failed to load profile:', error);
@@ -91,7 +93,8 @@ export function ProfileDialog({ session: _session, onProfileUpdate, open: contro
       await api.updateProfile({
         fullName,
         surname,
-        profilePictureUrl
+        profilePictureUrl,
+        phone: phone.trim() || null,
       });
 
       toast.success('Profile updated successfully');
@@ -200,6 +203,21 @@ export function ProfileDialog({ session: _session, onProfileUpdate, open: contro
                   disabled={loading}
                   placeholder="Enter your last name"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone">WhatsApp Number</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  disabled={loading}
+                  placeholder="+27 82 123 4567"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Used to receive contribution and payout notifications via WhatsApp
+                </p>
               </div>
 
               <div className="space-y-1 pt-2 border-t">

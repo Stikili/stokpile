@@ -70,3 +70,36 @@ self.addEventListener('fetch', (event) => {
     fetch(request).catch(() => caches.match(request))
   );
 });
+
+// Push notifications
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+
+  let data = { title: 'Stokpile', body: 'You have a new notification', icon: '/icon-192x192.png' };
+  try {
+    data = { ...data, ...event.data.json() };
+  } catch {
+    data.body = event.data.text();
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: data.icon || '/icon-192x192.png',
+      badge: '/icon-192x192.png',
+      data: data.url ? { url: data.url } : undefined,
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || '/';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window' }).then((clients) => {
+      const existing = clients.find((c) => c.url === url && 'focus' in c);
+      if (existing) return existing.focus();
+      return self.clients.openWindow(url);
+    })
+  );
+});
