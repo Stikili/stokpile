@@ -24,15 +24,15 @@ import { Logo } from "@/presentation/layout/Logo";
 import { api } from "@/infrastructure/api";
 
 const countries = [
-  "South Africa",
-  "Zimbabwe",
   "Botswana",
-  "Namibia",
-  "Lesotho",
-  "Swaziland",
-  "Kenya",
-  "Nigeria",
   "Ghana",
+  "Kenya",
+  "Lesotho",
+  "Namibia",
+  "Nigeria",
+  "South Africa",
+  "Eswatini",
+  "Zimbabwe",
   "Other",
 ];
 
@@ -47,6 +47,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
   const [fullName, setFullName] = useState("");
   const [surname, setSurname] = useState("");
   const [country, setCountry] = useState("");
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -114,6 +115,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
           fullName,
           surname,
           country,
+          phone: phone.trim() || undefined,
         });
         // Auto sign in after signup
         await api.signin({ email, password });
@@ -216,6 +218,21 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
                     </SelectContent>
                   </Select>
                   {fieldErrors.country && <p className="text-xs text-destructive">{fieldErrors.country}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone">WhatsApp / Cell Number</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    disabled={loading}
+                    placeholder="+27 82 123 4567"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Optional — used for contribution and payout notifications
+                  </p>
                 </div>
               </>
             )}

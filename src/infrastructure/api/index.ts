@@ -60,7 +60,7 @@ function request<T>(
 
 export const api = {
   // Auth
-  signup: (data: { email: string; password: string; fullName: string; surname: string; country: string }) =>
+  signup: (data: { email: string; password: string; fullName: string; surname: string; country: string; phone?: string }) =>
     request<{ message: string }>("/signup", { method: "POST", body: data, auth: "anon" }),
 
   signin: async (data: { email: string; password: string }) => {

@@ -33,13 +33,13 @@ const isGroupNameUnique = async (name: string, excludeGroupId?: string) => {
 
 app.post('/make-server-34d0b231/signup', async (c) => {
   try {
-    const { email, password, fullName, surname, country } = await c.req.json();
-    
+    const { email, password, fullName, surname, country, phone } = await c.req.json();
+
     // Create user in Supabase Auth
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      user_metadata: { fullName, surname, country },
+      user_metadata: { fullName, surname, country, phone: phone || null },
       email_confirm: true // Auto-confirm since email server isn't configured
     });
 
@@ -54,6 +54,7 @@ app.post('/make-server-34d0b231/signup', async (c) => {
       fullName,
       surname,
       country,
+      phone: phone || null,
       createdAt: new Date().toISOString()
     });
 
