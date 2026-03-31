@@ -3767,14 +3767,22 @@ app.get('/make-server-34d0b231/groups/:groupId/overdue', async (c) => {
 
     const allContribs = await kv.getByPrefix(`contribution:${groupId}:`);
 
+    const profiles = await Promise.all(
+      approved.map(m => kv.get(`user:${m.userEmail}`).then(p => ({ email: m.userEmail, profile: p })))
+    );
+    const profileMap = Object.fromEntries(profiles.map(p => [p.email, p.profile]));
+
     const result = approved.map(m => {
       const memberContribs = allContribs.filter(c => c.userEmail === m.userEmail);
       const totalPaid = memberContribs.filter(c => c.paid).reduce((s, c) => s + c.amount, 0);
       const unpaidAmount = memberContribs.filter(c => !c.paid).reduce((s, c) => s + c.amount, 0);
       const isOverdue = target > 0 && totalPaid < target;
       const deficit = target > 0 ? Math.max(0, target - totalPaid) : 0;
+      const profile = profileMap[m.userEmail];
       return {
         email: m.userEmail,
+        fullName: profile?.fullName || 'Unknown',
+        surname: profile?.surname || '',
         totalPaid,
         unpaidAmount,
         contributionCount: memberContribs.length,

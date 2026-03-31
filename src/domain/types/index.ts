@@ -284,6 +284,8 @@ export interface RSVPSummary {
 // === Overdue Member ===
 export interface OverdueMember {
   email: string;
+  fullName: string;
+  surname: string;
   totalPaid: number;
   unpaidAmount: number;
   contributionCount: number;
