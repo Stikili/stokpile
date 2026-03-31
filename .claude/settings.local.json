@@ -77,7 +77,13 @@
       "Bash(curl -k -s -w \"\\\\nHTTP_STATUS:%{http_code}\" \"https://nehlggwkrizljansmwlu.supabase.co/functions/v1/make-server-34d0b231/signup\" -X POST -H \"Content-Type: application/json\" -H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5laGxnZ3drcml6bGphbnNtd2x1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1Mzk1OTAsImV4cCI6MjA5MDExNTU5MH0.oVK_JMSj5EIiGbct5yt9_3JQqqKaTJo19aGCgC3RJKg\" -d '{\"\"email\"\":\"\"test@test.com\"\",\"\"password\"\":\"\"Test1234!\"\",\"\"fullName\"\":\"\"Test\"\",\"\"surname\"\":\"\"User\"\",\"\"country\"\":\"\"South Africa\"\"}')",
       "Bash(SUPABASE_ACCESS_TOKEN=sbp_0268aa52a35a12fb56eb729e057d02bac85930ea npx supabase functions deploy make-server-34d0b231 --project-ref nehlggwkrizljansmwlu)",
       "Bash(find /c/Users/sbuti/Downloads/Stok-pile -name \"*.tsx\" -exec grep -l \"aria-label\\\\|aria-\" {})",
-      "Bash(find /c/Users/sbuti/Downloads/Stok-pile/src -type f -name \"*.tsx\" -exec grep -l \"onSuccess\\\\|onError\\\\|catch\\\\|then\" {})"
+      "Bash(find /c/Users/sbuti/Downloads/Stok-pile/src -type f -name \"*.tsx\" -exec grep -l \"onSuccess\\\\|onError\\\\|catch\\\\|then\" {})",
+      "Bash(find c:/Users/sbuti/Downloads/Stok-pile/src -maxdepth 2 -type f -name *.tsx -o -name *.ts)",
+      "Bash(grep -n \"TODO\\\\|FIXME\\\\|XXX\\\\|HACK\" c:/Users/sbuti/Downloads/Stok-pile/src/presentation/components/**/*.tsx)",
+      "Bash(find C:UserssbutiDownloadsStok-pilesrc -name *.ts -o -name *.tsx)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\sbuti\\.claude\\projects\\c--Users-sbuti-Downloads-Stok-pile\\memory"
     ]
   }
 }
