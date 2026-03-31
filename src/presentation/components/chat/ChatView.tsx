@@ -7,6 +7,7 @@ import { ScrollArea } from '@/presentation/ui/scroll-area';
 import { Send } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
 
 interface ChatViewProps {
   groupId: string;
@@ -157,9 +158,14 @@ export function ChatView({ groupId, meetingId, userEmail }: ChatViewProps) {
             placeholder="Type a message..."
             disabled={sending}
           />
-          <Button type="submit" size="icon" disabled={sending || !message.trim()}>
-            <Send className="h-4 w-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button type="submit" size="icon" disabled={sending || !message.trim()}>
+                <Send className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Send message</TooltipContent>
+          </Tooltip>
         </form>
       </CardContent>
     </Card>

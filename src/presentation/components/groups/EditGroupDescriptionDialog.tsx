@@ -6,6 +6,7 @@ import { Label } from '@/presentation/ui/label';
 import { Edit2, Loader2 } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
 
 interface EditGroupDescriptionDialogProps {
   groupId: string;
@@ -51,11 +52,16 @@ export function EditGroupDescriptionDialog({ groupId, currentDescription, onSucc
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <Edit2 className="h-4 w-4" />
-        </Button>
-      </DialogTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Edit2 className="h-4 w-4" />
+            </Button>
+          </DialogTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Edit description</TooltipContent>
+      </Tooltip>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit Group Description</DialogTitle>

@@ -6,6 +6,7 @@ import { Input } from '@/presentation/ui/input';
 import { Label } from '@/presentation/ui/label';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
 
 interface ShareInviteDialogProps {
   groupId: string;
@@ -114,13 +115,18 @@ export function ShareInviteDialog({ groupId, groupName }: ShareInviteDialogProps
                   readOnly
                   className="flex-1"
                 />
-                <Button onClick={copyToClipboard} variant="outline" size="icon">
-                  {copied ? (
-                    <Check className="h-4 w-4 text-green-600" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button onClick={copyToClipboard} variant="outline" size="icon">
+                      {copied ? (
+                        <Check className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{copied ? 'Copied!' : 'Copy link'}</TooltipContent>
+                </Tooltip>
               </div>
             )}
             <p className="text-xs text-muted-foreground">

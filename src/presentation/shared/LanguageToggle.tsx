@@ -2,6 +2,7 @@ import { Button } from '@/presentation/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/presentation/ui/dropdown-menu';
 import { Languages } from 'lucide-react';
 import { useLanguage } from '@/application/context/LanguageContext';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
 
 const LANGUAGES = [
   { code: 'en', label: 'English' },
@@ -15,11 +16,16 @@ export function LanguageToggle() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Change language">
-          <Languages className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label="Change language">
+              <Languages className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Change language</TooltipContent>
+      </Tooltip>
       <DropdownMenuContent align="end">
         {LANGUAGES.map((lang) => (
           <DropdownMenuItem

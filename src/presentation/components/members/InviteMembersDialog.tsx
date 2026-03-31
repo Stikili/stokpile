@@ -8,6 +8,7 @@ import { UserPlus, Search, Check } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
 import type { UserSearchResult } from '@/domain/types';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
 
 interface InviteMembersDialogProps {
   groupId: string;
@@ -88,9 +89,14 @@ export function InviteMembersDialog({ groupId }: InviteMembersDialogProps) {
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 placeholder="Search by name or email..."
               />
-              <Button onClick={handleSearch} disabled={searching} size="icon">
-                <Search className="h-4 w-4" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button onClick={handleSearch} disabled={searching} size="icon">
+                    <Search className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Search members</TooltipContent>
+              </Tooltip>
             </div>
           </div>
 

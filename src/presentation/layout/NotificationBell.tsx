@@ -4,6 +4,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/presentation/ui/popov
 import { ScrollArea } from '@/presentation/ui/scroll-area';
 import { Badge } from '@/presentation/ui/badge';
 import { Bell, Check, AlertTriangle, Calendar, TrendingUp, DollarSign, Info, RefreshCw, CheckCheck } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
 import { api } from '@/infrastructure/api';
 import type { AppNotification } from '@/domain/types';
 
@@ -78,26 +79,36 @@ export function NotificationBell({ groupId: _groupId, userEmail: _userEmail }: N
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          {unread > 0 && (
-            <Badge
-              variant="destructive"
-              className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
-            >
-              {unread > 9 ? '9+' : unread}
-            </Badge>
-          )}
-        </Button>
-      </PopoverTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="icon" className="relative">
+              <Bell className="h-5 w-5" />
+              {unread > 0 && (
+                <Badge
+                  variant="destructive"
+                  className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+                >
+                  {unread > 9 ? '9+' : unread}
+                </Badge>
+              )}
+            </Button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>{unread > 0 ? `${unread} unread notification${unread !== 1 ? 's' : ''}` : 'Notifications'}</TooltipContent>
+      </Tooltip>
       <PopoverContent className="w-80 p-0" align="end">
         <div className="flex items-center justify-between p-4 border-b">
           <h3 className="font-medium">Notifications</h3>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={load} disabled={loading}>
-              <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={load} disabled={loading}>
+                  <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Refresh notifications</TooltipContent>
+            </Tooltip>
             {unread > 0 && (
               <Button variant="ghost" size="sm" onClick={handleMarkAllRead} disabled={marking} className="text-xs">
                 <CheckCheck className="h-3.5 w-3.5 mr-1" />

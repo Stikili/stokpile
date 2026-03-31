@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/presentation/ui/card';
 import { Button } from '@/presentation/ui/button';
 import { X, Lightbulb, TrendingUp, Users, DollarSign, Calendar } from 'lucide-react';
 import { LucideIcon } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
 
 interface Tip {
   id: string;
@@ -148,14 +149,19 @@ export function ContextualTips({ context, isAdmin, hasData, onAction }: Contextu
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-3 mb-1">
               <h4 className="text-sm">{currentTip.title}</h4>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-5 w-5 flex-shrink-0"
-                onClick={() => handleDismiss(currentTip.id)}
-              >
-                <X className="h-3.5 w-3.5" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 flex-shrink-0"
+                    onClick={() => handleDismiss(currentTip.id)}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Dismiss tip</TooltipContent>
+              </Tooltip>
             </div>
             <p className="text-xs text-muted-foreground mb-2">
               {currentTip.description}

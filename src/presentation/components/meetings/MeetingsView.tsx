@@ -13,6 +13,7 @@ import { Calendar, Plus, MapPin, FileText, Edit2, Trash2, Clock, Eye, RefreshCw,
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
 import { ConfirmationDialog } from '@/presentation/shared/ConfirmationDialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
 import type { Meeting, RSVPSummary } from '@/domain/types';
 
 interface MeetingsViewProps {
@@ -377,30 +378,42 @@ export function MeetingsView({ groupId, isAdmin, userEmail }: MeetingsViewProps)
                             <TableCell>
                               <div className="flex flex-col gap-1.5">
                                 <div className="flex gap-1">
-                                  <button
-                                    onClick={() => handleRSVP(meeting.id, 'yes')}
-                                    disabled={rsvpLoading === meeting.id}
-                                    title="Yes, I'll attend"
-                                    className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors ${myResponse === 'yes' ? 'bg-green-600 text-white' : 'bg-muted hover:bg-green-100 dark:hover:bg-green-900/20 text-muted-foreground'}`}
-                                  >
-                                    <Check className="h-3 w-3" />Yes
-                                  </button>
-                                  <button
-                                    onClick={() => handleRSVP(meeting.id, 'maybe')}
-                                    disabled={rsvpLoading === meeting.id}
-                                    title="Maybe"
-                                    className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors ${myResponse === 'maybe' ? 'bg-amber-500 text-white' : 'bg-muted hover:bg-amber-100 dark:hover:bg-amber-900/20 text-muted-foreground'}`}
-                                  >
-                                    <HelpCircle className="h-3 w-3" />?
-                                  </button>
-                                  <button
-                                    onClick={() => handleRSVP(meeting.id, 'no')}
-                                    disabled={rsvpLoading === meeting.id}
-                                    title="No, I can't attend"
-                                    className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors ${myResponse === 'no' ? 'bg-red-500 text-white' : 'bg-muted hover:bg-red-100 dark:hover:bg-red-900/20 text-muted-foreground'}`}
-                                  >
-                                    <X className="h-3 w-3" />No
-                                  </button>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        onClick={() => handleRSVP(meeting.id, 'yes')}
+                                        disabled={rsvpLoading === meeting.id}
+                                        className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors ${myResponse === 'yes' ? 'bg-green-600 text-white' : 'bg-muted hover:bg-green-100 dark:hover:bg-green-900/20 text-muted-foreground'}`}
+                                      >
+                                        <Check className="h-3 w-3" />Yes
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Yes, I'll attend</TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        onClick={() => handleRSVP(meeting.id, 'maybe')}
+                                        disabled={rsvpLoading === meeting.id}
+                                        className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors ${myResponse === 'maybe' ? 'bg-amber-500 text-white' : 'bg-muted hover:bg-amber-100 dark:hover:bg-amber-900/20 text-muted-foreground'}`}
+                                      >
+                                        <HelpCircle className="h-3 w-3" />?
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Maybe — not sure yet</TooltipContent>
+                                  </Tooltip>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        onClick={() => handleRSVP(meeting.id, 'no')}
+                                        disabled={rsvpLoading === meeting.id}
+                                        className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors ${myResponse === 'no' ? 'bg-red-500 text-white' : 'bg-muted hover:bg-red-100 dark:hover:bg-red-900/20 text-muted-foreground'}`}
+                                      >
+                                        <X className="h-3 w-3" />No
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>No, I can't attend</TooltipContent>
+                                  </Tooltip>
                                 </div>
                                 {rsvp && (
                                   <p className="text-xs text-muted-foreground">
@@ -421,20 +434,30 @@ export function MeetingsView({ groupId, isAdmin, userEmail }: MeetingsViewProps)
                                 </Button>
                                 {isAdmin && (
                                   <>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleEdit(meeting)}
-                                    >
-                                      <Edit2 className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => setDeleteConfirm({ open: true, meetingId: meeting.id })}
-                                    >
-                                      <Trash2 className="h-4 w-4 text-destructive" />
-                                    </Button>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleEdit(meeting)}
+                                        >
+                                          <Edit2 className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Edit meeting</TooltipContent>
+                                    </Tooltip>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => setDeleteConfirm({ open: true, meetingId: meeting.id })}
+                                        >
+                                          <Trash2 className="h-4 w-4 text-destructive" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Delete meeting</TooltipContent>
+                                    </Tooltip>
                                   </>
                                 )}
                               </div>

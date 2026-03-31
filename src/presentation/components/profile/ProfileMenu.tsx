@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@/presentation/ui/dropdown-menu';
 import { User, Plus, UserPlus, Search, LogOut, Trash2, Bell } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
 import { NotificationPrefsDialog } from '@/presentation/components/profile/NotificationPrefsDialog';
 import { ProfileDialog } from '@/presentation/components/profile/ProfileDialog';
 import { CreateGroupDialog } from '@/presentation/components/groups/CreateGroupDialog';
@@ -41,11 +42,16 @@ export function ProfileMenu({
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon">
-            <User className="h-5 w-5" />
-          </Button>
-        </DropdownMenuTrigger>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <User className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent>Account & groups</TooltipContent>
+        </Tooltip>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel>My Account</DropdownMenuLabel>
           <DropdownMenuSeparator />

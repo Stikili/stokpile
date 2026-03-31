@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Alert, AlertDescription } from '@/presentation/ui/alert';
 import { Edit, Info } from 'lucide-react';
 import { api } from '@/infrastructure/api';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
 import { toast } from 'sonner';
 
 interface EditTotalContributionsDialogProps {
@@ -49,11 +50,16 @@ export function EditTotalContributionsDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-6 w-6">
-          <Edit className="h-3.5 w-3.5" />
-        </Button>
-      </DialogTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-6 w-6">
+              <Edit className="h-3.5 w-3.5" />
+            </Button>
+          </DialogTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Adjust total contributions</TooltipContent>
+      </Tooltip>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit Total Contributions</DialogTitle>
