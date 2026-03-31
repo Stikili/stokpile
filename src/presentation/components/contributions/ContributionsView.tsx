@@ -41,6 +41,8 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
   const [payingId, setPayingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [duplicateWarning, setDuplicateWarning] = useState<{ open: boolean; pendingSubmit: (() => Promise<void>) | null }>({ open: false, pendingSubmit: null });
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkMarking, setBulkMarking] = useState(false);
 
   // Derive filtered list from contributions + search query (no extra state or useEffect needed)
   const filteredContributions = useMemo(() => {
@@ -163,6 +165,38 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
     }
   };
 
+  const handleBulkMark = async (paid: boolean) => {
+    if (selectedIds.size === 0) return;
+    setBulkMarking(true);
+    try {
+      const data = await api.bulkMarkContributions(groupId, Array.from(selectedIds), paid);
+      toast.success(`${data.updated} contribution${data.updated !== 1 ? 's' : ''} marked as ${paid ? 'paid' : 'unpaid'}`);
+      setSelectedIds(new Set());
+      loadContributions();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update contributions');
+    } finally {
+      setBulkMarking(false);
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredContributions.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredContributions.map(c => c.id)));
+    }
+  };
+
   const handlePayNow = async (contribution: Contribution) => {
     setPayingId(contribution.id);
     try {
@@ -207,6 +241,19 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle>Contributions</CardTitle>
           <div className="flex gap-2">
+            {isAdmin && selectedIds.size > 0 && (
+              <>
+                <Button variant="outline" size="sm" onClick={() => handleBulkMark(true)} disabled={bulkMarking} className="text-green-700 border-green-300">
+                  {bulkMarking ? 'Marking...' : `Mark ${selectedIds.size} Paid`}
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => handleBulkMark(false)} disabled={bulkMarking} className="text-orange-700 border-orange-300">
+                  Mark Unpaid
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())} disabled={bulkMarking}>
+                  Clear
+                </Button>
+              </>
+            )}
             {contributions.length > 0 && isAdmin && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -415,6 +462,14 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {isAdmin && (
+                      <TableHead className="w-8">
+                        <Checkbox
+                          checked={filteredContributions.length > 0 && selectedIds.size === filteredContributions.length}
+                          onCheckedChange={toggleSelectAll}
+                        />
+                      </TableHead>
+                    )}
                     <TableHead>Member</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Date</TableHead>
@@ -424,7 +479,15 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
                 </TableHeader>
                 <TableBody>
                   {filteredContributions.map((contribution) => (
-                    <TableRow key={contribution.id}>
+                    <TableRow key={contribution.id} className={selectedIds.has(contribution.id) ? 'bg-muted/40' : ''}>
+                      {isAdmin && (
+                        <TableCell className="w-8">
+                          <Checkbox
+                            checked={selectedIds.has(contribution.id)}
+                            onCheckedChange={() => toggleSelect(contribution.id)}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <MemberStatsDialog

@@ -9,11 +9,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/presentation/ui/badge';
 import { Skeleton } from '@/presentation/ui/skeleton';
 import { EmptyState } from '@/presentation/shared/EmptyState';
-import { Calendar, Plus, MapPin, FileText, Edit2, Trash2, Clock, Eye, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Calendar, Plus, MapPin, FileText, Edit2, Trash2, Clock, Eye, RefreshCw, AlertTriangle, Check, X, HelpCircle } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
 import { ConfirmationDialog } from '@/presentation/shared/ConfirmationDialog';
-import type { Meeting } from '@/domain/types';
+import type { Meeting, RSVPSummary } from '@/domain/types';
 
 interface MeetingsViewProps {
   groupId: string;
@@ -21,7 +21,7 @@ interface MeetingsViewProps {
   userEmail: string;
 }
 
-export function MeetingsView({ groupId, isAdmin, userEmail: _userEmail }: MeetingsViewProps) {
+export function MeetingsView({ groupId, isAdmin, userEmail }: MeetingsViewProps) {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -29,6 +29,8 @@ export function MeetingsView({ groupId, isAdmin, userEmail: _userEmail }: Meetin
   const [open, setOpen] = useState(false);
   const [editingMeeting, setEditingMeeting] = useState<Meeting | null>(null);
   const [_viewingMeeting, setViewingMeeting] = useState<Meeting | null>(null);
+  const [rsvpSummaries, setRsvpSummaries] = useState<Record<string, RSVPSummary>>({});
+  const [rsvpLoading, setRsvpLoading] = useState<string | null>(null);
 
   // Form fields
   const [date, setDate] = useState('');
@@ -51,11 +53,45 @@ export function MeetingsView({ groupId, isAdmin, userEmail: _userEmail }: Meetin
     setLoadError(null);
     try {
       const data = await api.getMeetings(groupId);
-      setMeetings(data.meetings || []);
+      const loaded = data.meetings || [];
+      setMeetings(loaded);
+      // Load RSVP summaries for upcoming meetings
+      const upcoming = loaded.filter(m => new Date(`${m.date}T${m.time}`) >= new Date());
+      const summaries: Record<string, RSVPSummary> = {};
+      await Promise.all(upcoming.map(async m => {
+        try {
+          const d = await api.getMeetingRSVPs(m.id);
+          summaries[m.id] = d.summary;
+        } catch { /* silent */ }
+      }));
+      setRsvpSummaries(summaries);
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : 'Failed to load meetings');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRSVP = async (meetingId: string, response: 'yes' | 'no' | 'maybe') => {
+    setRsvpLoading(meetingId);
+    try {
+      await api.rsvpMeeting(meetingId, response);
+      toast.success(`RSVP recorded: ${response}`);
+      // Update local summary optimistically
+      setRsvpSummaries(prev => {
+        const cur = prev[meetingId] || { yes: 0, no: 0, maybe: 0, myResponse: null };
+        const next = { ...cur };
+        // Remove old response count
+        if (cur.myResponse) next[cur.myResponse] = Math.max(0, (next[cur.myResponse] as number) - 1);
+        // Add new response count
+        next[response] = (next[response] as number) + 1;
+        next.myResponse = response;
+        return { ...prev, [meetingId]: next as RSVPSummary };
+      });
+    } catch {
+      toast.error('Failed to save RSVP');
+    } finally {
+      setRsvpLoading(null);
     }
   };
 
@@ -300,11 +336,15 @@ export function MeetingsView({ groupId, isAdmin, userEmail: _userEmail }: Meetin
                           <TableHead>Date & Time</TableHead>
                           <TableHead>Venue</TableHead>
                           <TableHead>Agenda</TableHead>
+                          <TableHead>RSVP</TableHead>
                           <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {upcomingMeetings.map((meeting) => (
+                        {upcomingMeetings.map((meeting) => {
+                          const rsvp = rsvpSummaries[meeting.id];
+                          const myResponse = rsvp?.myResponse;
+                          return (
                           <TableRow key={meeting.id} className="hover:bg-muted/50">
                             <TableCell>
                               <div className="space-y-1">
@@ -333,6 +373,41 @@ export function MeetingsView({ groupId, isAdmin, userEmail: _userEmail }: Meetin
                               ) : (
                                 <span className="text-sm text-muted-foreground">No agenda</span>
                               )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col gap-1.5">
+                                <div className="flex gap-1">
+                                  <button
+                                    onClick={() => handleRSVP(meeting.id, 'yes')}
+                                    disabled={rsvpLoading === meeting.id}
+                                    title="Yes, I'll attend"
+                                    className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors ${myResponse === 'yes' ? 'bg-green-600 text-white' : 'bg-muted hover:bg-green-100 dark:hover:bg-green-900/20 text-muted-foreground'}`}
+                                  >
+                                    <Check className="h-3 w-3" />Yes
+                                  </button>
+                                  <button
+                                    onClick={() => handleRSVP(meeting.id, 'maybe')}
+                                    disabled={rsvpLoading === meeting.id}
+                                    title="Maybe"
+                                    className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors ${myResponse === 'maybe' ? 'bg-amber-500 text-white' : 'bg-muted hover:bg-amber-100 dark:hover:bg-amber-900/20 text-muted-foreground'}`}
+                                  >
+                                    <HelpCircle className="h-3 w-3" />?
+                                  </button>
+                                  <button
+                                    onClick={() => handleRSVP(meeting.id, 'no')}
+                                    disabled={rsvpLoading === meeting.id}
+                                    title="No, I can't attend"
+                                    className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors ${myResponse === 'no' ? 'bg-red-500 text-white' : 'bg-muted hover:bg-red-100 dark:hover:bg-red-900/20 text-muted-foreground'}`}
+                                  >
+                                    <X className="h-3 w-3" />No
+                                  </button>
+                                </div>
+                                {rsvp && (
+                                  <p className="text-xs text-muted-foreground">
+                                    ✓{rsvp.yes} ?{rsvp.maybe} ✗{rsvp.no}
+                                  </p>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-2">
@@ -365,7 +440,8 @@ export function MeetingsView({ groupId, isAdmin, userEmail: _userEmail }: Meetin
                               </div>
                             </TableCell>
                           </TableRow>
-                        ))}
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>

@@ -38,6 +38,7 @@ export function PayoutsView({ groupId, isAdmin }: PayoutsViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'scheduled' | 'completed' | 'cancelled'>('all');
   const [updateConfirm, setUpdateConfirm] = useState<{ open: boolean; payoutId: string; status: string; label: string } | null>(null);
+  const [referenceNumber, setReferenceNumber] = useState('');
 
   useEffect(() => {
     loadData();
@@ -93,8 +94,9 @@ export function PayoutsView({ groupId, isAdmin }: PayoutsViewProps) {
 
   const handleUpdateStatus = async (payoutId: string, status: string) => {
     try {
-      await api.updatePayout(payoutId, { status });
+      await api.updatePayout(payoutId, { status, ...(status === 'completed' && referenceNumber ? { referenceNumber } : {}) });
       toast.success(`Payout marked as ${status}`);
+      setReferenceNumber('');
       loadData();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to update payout');
@@ -367,6 +369,7 @@ export function PayoutsView({ groupId, isAdmin }: PayoutsViewProps) {
                     <TableHead>Amount</TableHead>
                     <TableHead>Scheduled Date</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Reference</TableHead>
                     {isAdmin && <TableHead>Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
@@ -395,13 +398,18 @@ export function PayoutsView({ groupId, isAdmin }: PayoutsViewProps) {
                       <TableCell className="font-medium">{formatCurrency(payout.amount)}</TableCell>
                       <TableCell>{formatDate(payout.scheduledDate)}</TableCell>
                       <TableCell>{getStatusBadge(payout.status)}</TableCell>
+                      <TableCell>
+                        {payout.referenceNumber
+                          ? <span className="text-xs font-mono text-muted-foreground">{payout.referenceNumber}</span>
+                          : <span className="text-xs text-muted-foreground">—</span>}
+                      </TableCell>
                       {isAdmin && (
                         <TableCell>
                           {payout.status === 'scheduled' && (
                             <div className="flex gap-2">
                               <Button
                                 size="sm"
-                                onClick={() => setUpdateConfirm({ open: true, payoutId: payout.id, status: 'completed', label: 'complete' })}
+                                onClick={() => { setReferenceNumber(''); setUpdateConfirm({ open: true, payoutId: payout.id, status: 'completed', label: 'complete' }); }}
                               >
                                 Complete
                               </Button>
@@ -428,7 +436,7 @@ export function PayoutsView({ groupId, isAdmin }: PayoutsViewProps) {
       {updateConfirm && (
         <ConfirmationDialog
           open={updateConfirm.open}
-          onOpenChange={(open) => setUpdateConfirm(open ? updateConfirm : null)}
+          onOpenChange={(open) => { setUpdateConfirm(open ? updateConfirm : null); if (!open) setReferenceNumber(''); }}
           title={updateConfirm.status === 'completed' ? 'Complete Payout' : 'Cancel Payout'}
           description={
             updateConfirm.status === 'completed'
@@ -441,7 +449,19 @@ export function PayoutsView({ groupId, isAdmin }: PayoutsViewProps) {
             handleUpdateStatus(updateConfirm!.payoutId, updateConfirm!.status);
             setUpdateConfirm(null);
           }}
-        />
+        >
+          {updateConfirm.status === 'completed' && (
+            <div className="space-y-2 py-2">
+              <Label htmlFor="ref-number">Reference Number <span className="text-muted-foreground text-xs">(optional)</span></Label>
+              <Input
+                id="ref-number"
+                value={referenceNumber}
+                onChange={(e) => setReferenceNumber(e.target.value)}
+                placeholder="e.g. EFT12345 or bank ref"
+              />
+            </div>
+          )}
+        </ConfirmationDialog>
       )}
     </>
   );

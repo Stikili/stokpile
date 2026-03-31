@@ -20,6 +20,7 @@ interface ConfirmationDialogProps {
   cancelText?: string;
   variant?: 'default' | 'destructive' | 'warning' | 'success';
   loading?: boolean;
+  children?: React.ReactNode;
 }
 
 export function ConfirmationDialog({
@@ -32,6 +33,7 @@ export function ConfirmationDialog({
   cancelText = 'Cancel',
   variant = 'default',
   loading = false,
+  children,
 }: ConfirmationDialogProps) {
   const getIcon = () => {
     switch (variant) {
@@ -55,6 +57,7 @@ export function ConfirmationDialog({
           </AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
+        {children}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={loading}>{cancelText}</AlertDialogCancel>
           <AlertDialogAction

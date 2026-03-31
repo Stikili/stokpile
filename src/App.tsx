@@ -10,6 +10,7 @@ const ContributionsView = lazy(() => import("@/presentation/components/contribut
 const PayoutsView = lazy(() => import("@/presentation/components/payouts/PayoutsView").then(m => ({ default: m.PayoutsView })));
 const MeetingsView = lazy(() => import("@/presentation/components/meetings/MeetingsView").then(m => ({ default: m.MeetingsView })));
 const GroupInfoView = lazy(() => import("@/presentation/components/groups/GroupInfoView").then(m => ({ default: m.GroupInfoView })));
+const AuditLogView = lazy(() => import("@/presentation/components/groups/AuditLogView").then(m => ({ default: m.AuditLogView })));
 import { GroupActionsButtons } from "@/presentation/components/groups/GroupActionsButtons";
 import { PendingInvitesView } from "@/presentation/components/members/PendingInvitesView";
 import { PublicJoinView } from "@/presentation/components/groups/PublicJoinView";
@@ -52,6 +53,7 @@ import {
   Keyboard,
   Calendar,
   Lock,
+  ClipboardList,
 } from "lucide-react";
 import { Toaster } from "@/presentation/ui/sonner";
 import { useSession } from "@/application/hooks/useSession";
@@ -346,6 +348,12 @@ export default function App() {
                         <Settings className="h-3.5 w-3.5 mr-1.5" />
                         Group Settings
                       </TabsTrigger>
+                      {isAdmin && (
+                        <TabsTrigger value="audit" className="text-sm">
+                          <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
+                          Audit Log
+                        </TabsTrigger>
+                      )}
                     </TabsList>
 
                     <Suspense fallback={<LoadingProgress message="Loading..." />}>
@@ -387,8 +395,14 @@ export default function App() {
 
                       <TabsContent value="info" className="space-y-3">
                         <ContextualTips context="info" isAdmin={isAdmin} hasData onAction={handleQuickAction} />
-                        <GroupInfoView group={selectedGroup} onGroupUpdate={refreshGroups} />
+                        <GroupInfoView group={selectedGroup} onGroupUpdate={refreshGroups} userEmail={session.user.email} />
                       </TabsContent>
+
+                      {isAdmin && (
+                        <TabsContent value="audit" className="space-y-3">
+                          <AuditLogView groupId={selectedGroup.id} />
+                        </TabsContent>
+                      )}
                     </Suspense>
                   </Tabs>
                   

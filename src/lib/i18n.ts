@@ -1,4 +1,4 @@
-export type Language = 'en' | 'zu';
+export type Language = 'en' | 'zu' | 'xh' | 'st';
 
 export const translations = {
   en: {
@@ -113,7 +113,121 @@ export const translations = {
     label_group_name: 'Igama Leqembu',
     label_description: 'Incazelo',
     label_phone: 'Inombolo ye-WhatsApp',
-    label_group_type: 'Uhlobo Lwequembu',
+    label_group_type: 'Uhlobo Lweqembu',
+  },
+  xh: {
+    // Navigation
+    nav_dashboard: 'Ikhasi',
+    nav_contributions: 'Iminikelo',
+    nav_payouts: 'Intlawulo',
+    nav_meetings: 'Iintlanganiso',
+    nav_info: 'Ulwazi',
+    nav_more: 'Okunye',
+
+    // Actions
+    action_add_contribution: 'Yongeza Umnikelo',
+    action_schedule_payout: 'Hlela Intlawulo',
+    action_create_meeting: 'Yenza Intlanganiso',
+    action_create_group: 'Yenza Iqela',
+    action_join_group: 'Joyina Iqela',
+    action_invite_members: 'Mema Amalungu',
+    action_export: 'Khuphumla',
+    action_save: 'Gcina',
+    action_cancel: 'Rhoxisa',
+    action_delete: 'Cima',
+    action_confirm: 'Qinisekisa',
+    action_pay_now: 'Hlawula Ngoku',
+
+    // Status
+    status_paid: 'Kuhlawuliwe',
+    status_unpaid: 'Akuhlawuliwanga',
+    status_scheduled: 'Kuhleliwe',
+    status_completed: 'Kuphelisiwe',
+    status_cancelled: 'Kurhoxisiwe',
+    status_pending: 'Kulindwe',
+
+    // Group types
+    group_type_rotating: 'Iguquguqukayo (Merry-go-round)',
+    group_type_burial: 'Inhlangano Yokungcwaba',
+    group_type_grocery: 'Stokvel Yokutya',
+    group_type_investment: 'Iclubhu Yokutyala Imali',
+
+    // Dashboard
+    dashboard_total_contributions: 'Yonke Iminikelo',
+    dashboard_total_payouts: 'Yonke Intlawulo',
+    dashboard_net_balance: 'Ibhalansi',
+    dashboard_next_payout: 'Intlawulo Elandelayo',
+
+    // Notifications
+    notify_contribution_added: 'Umnikelo uongezwe',
+    notify_payout_scheduled: 'Intlawulo ihlelelwe',
+    notify_meeting_created: 'Intlanganiso yenziwe',
+
+    // Labels
+    label_amount: 'Imali (ZAR)',
+    label_date: 'Umhla',
+    label_member: 'Ilungu',
+    label_group_name: 'Igama Leqela',
+    label_description: 'Inkcazelo',
+    label_phone: 'Inombolo ye-WhatsApp',
+    label_group_type: 'Uhlobo Lweqela',
+  },
+  st: {
+    // Navigation
+    nav_dashboard: 'Letlapa la Tshebetso',
+    nav_contributions: 'Ditjhefo',
+    nav_payouts: 'Ditshehelo',
+    nav_meetings: 'Dikopano',
+    nav_info: 'Tsebo',
+    nav_more: 'Tse ding',
+
+    // Actions
+    action_add_contribution: 'Kenya Tjhefo',
+    action_schedule_payout: 'Beha Tshehetso',
+    action_create_meeting: 'Theha Kopano',
+    action_create_group: 'Theha Sehlopha',
+    action_join_group: 'Kena Setjhabeng',
+    action_invite_members: 'Mema Maloko',
+    action_export: 'Romella Kantle',
+    action_save: 'Boloka',
+    action_cancel: 'Hana',
+    action_delete: 'Hlakola',
+    action_confirm: 'Netefatsa',
+    action_pay_now: 'Lefa Jwale',
+
+    // Status
+    status_paid: 'Ho Lefetswe',
+    status_unpaid: 'Ha Ho Lefuwe',
+    status_scheduled: 'Ho Behilwe',
+    status_completed: 'Ho Phethilwe',
+    status_cancelled: 'Ho Hanilwe',
+    status_pending: 'Ho Emetse',
+
+    // Group types
+    group_type_rotating: 'E Phepholang (Merry-go-round)',
+    group_type_burial: 'Mokgatlo wa Diphulo',
+    group_type_grocery: 'Stokvel ya Dijo',
+    group_type_investment: 'Kalafo ya Tjhelete',
+
+    // Dashboard
+    dashboard_total_contributions: 'Ditjhefo Tsohle',
+    dashboard_total_payouts: 'Ditshehelo Tsohle',
+    dashboard_net_balance: 'Tekanyo',
+    dashboard_next_payout: 'Tshehetso e Latelang',
+
+    // Notifications
+    notify_contribution_added: 'Tjhefo e kenyeletsitswe',
+    notify_payout_scheduled: 'Tshehetso e behilwe',
+    notify_meeting_created: 'Kopano e thehilwe',
+
+    // Labels
+    label_amount: 'Tjhelete (ZAR)',
+    label_date: 'Letsatsi',
+    label_member: 'Setho',
+    label_group_name: 'Lebitso la Sehlopha',
+    label_description: 'Tlhaloso',
+    label_phone: 'Nomoro ya WhatsApp',
+    label_group_type: 'Mofuta wa Sehlopha',
   },
 } as const;
 

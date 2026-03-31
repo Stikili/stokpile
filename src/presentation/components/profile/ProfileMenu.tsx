@@ -8,7 +8,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/presentation/ui/dropdown-menu';
-import { User, Plus, UserPlus, Search, LogOut, Trash2 } from 'lucide-react';
+import { User, Plus, UserPlus, Search, LogOut, Trash2, Bell } from 'lucide-react';
+import { NotificationPrefsDialog } from '@/presentation/components/profile/NotificationPrefsDialog';
 import { ProfileDialog } from '@/presentation/components/profile/ProfileDialog';
 import { CreateGroupDialog } from '@/presentation/components/groups/CreateGroupDialog';
 import { JoinGroupDialog } from '@/presentation/components/groups/JoinGroupDialog';
@@ -52,6 +53,12 @@ export function ProfileMenu({
             <User className="h-4 w-4 mr-2" />
             Edit Profile
           </DropdownMenuItem>
+          <NotificationPrefsDialog>
+            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+              <Bell className="h-4 w-4 mr-2" />
+              Notification Settings
+            </DropdownMenuItem>
+          </NotificationPrefsDialog>
           <DropdownMenuSeparator />
           <DropdownMenuLabel>Groups</DropdownMenuLabel>
           <DropdownMenuItem onClick={() => setShowCreateGroup(true)}>

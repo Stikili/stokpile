@@ -6,6 +6,8 @@ import { useLanguage } from '@/application/context/LanguageContext';
 const LANGUAGES = [
   { code: 'en', label: 'English' },
   { code: 'zu', label: 'IsiZulu' },
+  { code: 'xh', label: 'IsiXhosa' },
+  { code: 'st', label: 'Sesotho' },
 ] as const;
 
 export function LanguageToggle() {

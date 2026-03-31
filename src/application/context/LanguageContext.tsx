@@ -17,7 +17,7 @@ const LanguageContext = createContext<LanguageContextValue>({
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>(() => {
     const stored = localStorage.getItem('stokpile-language');
-    return (stored === 'zu' ? 'zu' : 'en') as Language;
+    return (['en', 'zu', 'xh', 'st'].includes(stored ?? '') ? stored : 'en') as Language;
   });
 
   const setLanguage = (lang: Language) => {

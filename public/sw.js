@@ -1,4 +1,8 @@
-const CACHE_NAME = 'stokpile-v1';
+const CACHE_NAME = 'stokpile-v2';
+const API_CACHE_NAME = 'stokpile-api-v2';
+
+// How long to keep cached API responses (5 minutes)
+const API_CACHE_TTL_MS = 5 * 60 * 1000;
 
 const STATIC_ASSETS = [
   '/',
@@ -18,7 +22,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+      Promise.all(keys.filter((k) => k !== CACHE_NAME && k !== API_CACHE_NAME).map((k) => caches.delete(k)))
     )
   );
   self.clients.claim();
@@ -35,9 +39,65 @@ self.addEventListener('fetch', (event) => {
   // Skip non-GET and cross-origin except supabase
   if (request.method !== 'GET') return;
 
-  // API calls — network only
+  // API calls — GET endpoints: stale-while-revalidate for offline support
+  // Mutating requests (POST/PUT/DELETE) are skipped above (method !== 'GET')
   if (url.hostname.includes('supabase.co')) {
-    event.respondWith(fetch(request));
+    // Only cache safe read endpoints (groups, contributions, payouts, meetings, profile)
+    const isCacheable = /\/(groups|contributions|payouts|meetings|profile|votes|notes|chat|members|selected-group)/.test(url.pathname);
+
+    if (isCacheable) {
+      event.respondWith(
+        (async () => {
+          const cache = await caches.open(API_CACHE_NAME);
+          const cachedResponse = await cache.match(request);
+
+          // Start a network fetch regardless
+          const fetchPromise = fetch(request).then(async (networkResponse) => {
+            if (networkResponse.ok) {
+              // Add timestamp header for TTL check
+              const headers = new Headers(networkResponse.headers);
+              headers.set('sw-cached-at', Date.now().toString());
+              const responseToCache = new Response(await networkResponse.clone().arrayBuffer(), {
+                status: networkResponse.status,
+                statusText: networkResponse.statusText,
+                headers,
+              });
+              cache.put(request, responseToCache);
+            }
+            return networkResponse;
+          }).catch(() => null);
+
+          // Return cache immediately if available and not stale, else wait for network
+          if (cachedResponse) {
+            const cachedAt = cachedResponse.headers.get('sw-cached-at');
+            const age = cachedAt ? Date.now() - parseInt(cachedAt) : Infinity;
+            if (age < API_CACHE_TTL_MS) {
+              // Fresh enough — return cache and update in background
+              fetchPromise; // fire and forget
+              return cachedResponse;
+            }
+          }
+
+          // No fresh cache — wait for network, fall back to stale cache if offline
+          const networkResult = await fetchPromise;
+          if (networkResult) return networkResult;
+          if (cachedResponse) return cachedResponse; // Serve stale when offline
+          return new Response(JSON.stringify({ error: 'Offline – no cached data available' }), {
+            status: 503,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        })()
+      );
+      return;
+    }
+
+    // Non-cacheable API calls — network only
+    event.respondWith(fetch(request).catch(() =>
+      new Response(JSON.stringify({ error: 'You are offline' }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    ));
     return;
   }
 

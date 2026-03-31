@@ -35,6 +35,9 @@ export interface Group {
   payoutsAllowed: boolean;
   contributionFrequency?: string;
   groupType?: GroupType;
+  contributionTarget?: number | null;
+  archived?: boolean;
+  archivedAt?: string | null;
   createdBy: string;
   createdAt: string;
   admin1?: string;
@@ -84,6 +87,7 @@ export interface Payout {
   status: 'scheduled' | 'completed' | 'cancelled';
   scheduledDate: string;
   completedAt?: string;
+  referenceNumber?: string;
   createdAt: string;
   recipient?: {
     fullName: string;
@@ -240,6 +244,79 @@ export interface InviteLinkInfo {
   groupName: string;
   groupDescription?: string;
   memberCount: number;
+}
+
+// === App Notification ===
+export interface AppNotification {
+  id: string;
+  recipientEmail: string;
+  groupId: string;
+  title: string;
+  message: string;
+  type: 'info' | 'success' | 'warning';
+  read: boolean;
+  createdAt: string;
+}
+
+// === Notification Preferences ===
+export interface NotificationPrefs {
+  emailEnabled: boolean;
+  whatsappEnabled: boolean;
+  pushEnabled: boolean;
+}
+
+// === RSVP ===
+export interface MeetingRSVP {
+  meetingId: string;
+  groupId: string;
+  userEmail: string;
+  response: 'yes' | 'no' | 'maybe';
+  updatedAt: string;
+}
+
+export interface RSVPSummary {
+  yes: number;
+  no: number;
+  maybe: number;
+  myResponse: 'yes' | 'no' | 'maybe' | null;
+}
+
+// === Overdue Member ===
+export interface OverdueMember {
+  email: string;
+  totalPaid: number;
+  unpaidAmount: number;
+  contributionCount: number;
+  isOverdue: boolean;
+  deficit: number;
+  target: number;
+}
+
+// === Audit Log ===
+export interface AuditEntry {
+  id: string;
+  groupId: string;
+  actorEmail: string;
+  action: string;
+  details: Record<string, unknown>;
+  timestamp: string;
+}
+
+// === Group Health ===
+export interface GroupHealth {
+  score: number;
+  paymentRate: number;
+  streak: number;
+  trend: 'up' | 'down' | 'stable';
+  memberCount: number;
+  totalContributions: number;
+  paidContributions: number;
+  monthlyBreakdown: { label: string; paid: number; total: number }[];
+}
+
+// === Payout with proof ===
+export interface PayoutProof {
+  referenceNumber?: string;
 }
 
 // === Payout status badge variants ===

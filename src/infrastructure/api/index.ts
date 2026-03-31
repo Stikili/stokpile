@@ -3,7 +3,8 @@ import { fetchClient } from "@/infrastructure/api/client";
 import type {
   Group, Member, Contribution, Payout, Meeting, Vote, Note,
   ChatMessage, Invite, JoinRequest, Constitution, MemberStats,
-  UserSearchResult, InviteLinkInfo, Profile,
+  UserSearchResult, InviteLinkInfo, Profile, AuditEntry, GroupHealth,
+  AppNotification, NotificationPrefs, RSVPSummary, MeetingRSVP, OverdueMember,
 } from "@/domain/types";
 
 const API_URL = `https://${projectId}.supabase.co/functions/v1/make-server-34d0b231`;
@@ -97,7 +98,7 @@ export const api = {
     request<{ url: string }>("/profile/picture", { method: "POST", body: formData }),
 
   // Groups
-  createGroup: (data: { name: string; description?: string; contributionFrequency?: string; isPublic: boolean; groupType?: string }) =>
+  createGroup: (data: { name: string; description?: string; contributionFrequency?: string; isPublic: boolean; groupType?: string; contributionTarget?: number | null }) =>
     request<{ group: Group; groupCode: string }>("/groups", { method: "POST", body: data }),
 
   getGroups: () =>
@@ -109,8 +110,26 @@ export const api = {
   updateGroupFrequency: (groupId: string, frequency: string) =>
     request<{ message: string }>(`/groups/${groupId}/frequency`, { method: "PUT", body: { frequency } }),
 
-  updateGroup: (id: string, data: { isPublic?: boolean; payoutsAllowed?: boolean; name?: string; description?: string }) =>
+  updateGroup: (id: string, data: { isPublic?: boolean; payoutsAllowed?: boolean; name?: string; description?: string; contributionTarget?: number | null }) =>
     request<{ message: string }>(`/groups/${id}`, { method: "PUT", body: data }),
+
+  archiveGroup: (id: string) =>
+    request<{ message: string }>(`/groups/${id}/archive`, { method: "PUT" }),
+
+  unarchiveGroup: (id: string) =>
+    request<{ message: string }>(`/groups/${id}/unarchive`, { method: "PUT" }),
+
+  getArchivedGroups: () =>
+    request<{ groups: Group[] }>("/groups/archived"),
+
+  transferAdmin: (groupId: string, newOwnerEmail: string) =>
+    request<{ message: string }>(`/groups/${groupId}/transfer-admin`, { method: "POST", body: { newOwnerEmail } }),
+
+  getOverdueMembers: (groupId: string) =>
+    request<{ members: OverdueMember[]; target: number }>(`/groups/${groupId}/overdue`),
+
+  sendWeeklyDigest: (groupId: string) =>
+    request<{ message: string }>("/admin/send-weekly-digest", { method: "POST", body: { groupId } }),
 
   searchPublicGroups: (query: string) =>
     request<{ groups: Group[] }>(`/groups/search/public?q=${encodeURIComponent(query)}`),
@@ -190,7 +209,7 @@ export const api = {
   getPayouts: (groupId: string) =>
     request<{ payouts: Payout[] }>(`/payouts?groupId=${groupId}`),
 
-  updatePayout: (id: string, data: { status: string }) =>
+  updatePayout: (id: string, data: { status: string; referenceNumber?: string }) =>
     request<{ message: string }>(`/payouts/${id}`, { method: "PUT", body: data }),
 
   // Meetings
@@ -310,4 +329,37 @@ export const api = {
   // Push notification subscription storage
   storePushSubscription: (subscription: object) =>
     request<{ message: string }>("/push-subscription", { method: "POST", body: subscription }),
+
+  // In-app notifications
+  getNotifications: () =>
+    request<{ notifications: AppNotification[] }>("/notifications"),
+
+  markAllNotificationsRead: () =>
+    request<{ message: string }>("/notifications/read-all", { method: "PUT" }),
+
+  // Notification preferences
+  getNotificationPrefs: () =>
+    request<NotificationPrefs>("/notification-preferences"),
+
+  updateNotificationPrefs: (prefs: Partial<NotificationPrefs>) =>
+    request<{ message: string }>("/notification-preferences", { method: "PUT", body: prefs }),
+
+  // Meeting RSVP
+  rsvpMeeting: (meetingId: string, response: 'yes' | 'no' | 'maybe') =>
+    request<{ message: string }>(`/meetings/${meetingId}/rsvp`, { method: "POST", body: { response } }),
+
+  getMeetingRSVPs: (meetingId: string) =>
+    request<{ rsvps: MeetingRSVP[]; summary: RSVPSummary }>(`/meetings/${meetingId}/rsvps`),
+
+  // Bulk mark contributions paid/unpaid (admin only)
+  bulkMarkContributions: (groupId: string, contributionIds: string[], paid: boolean) =>
+    request<{ updated: number }>("/contributions/bulk-mark", { method: "POST", body: { groupId, contributionIds, paid } }),
+
+  // Audit log (admin only)
+  getAuditLog: (groupId: string) =>
+    request<{ auditLog: AuditEntry[] }>(`/groups/${groupId}/audit-log`),
+
+  // Group health score
+  getGroupHealth: (groupId: string) =>
+    request<GroupHealth>(`/groups/${groupId}/health`),
 };

@@ -16,10 +16,12 @@ import { MemberDetailsDialog } from '@/presentation/components/members/MemberDet
 import { EmptyState } from '@/presentation/shared/EmptyState';
 import { ConfirmationDialog } from '@/presentation/shared/ConfirmationDialog';
 import { DeleteGroupDialog } from '@/presentation/components/groups/DeleteGroupDialog';
-import { Copy, ArrowUp, ArrowDown, Loader2, Users, FileText, Upload, Download, Trash2, File, UserX, UserCheck, X, Check, ExternalLink } from 'lucide-react';
+import { Copy, ArrowUp, ArrowDown, Loader2, Users, FileText, Upload, Download, Trash2, File, UserX, UserCheck, X, Check, ExternalLink, Archive, ArchiveRestore, ShieldAlert } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/presentation/ui/dropdown-menu';
 import { MoreHorizontal } from 'lucide-react';
+import { Input } from '@/presentation/ui/input';
+import { Label } from '@/presentation/ui/label';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
 import type { Group, Member, Constitution } from '@/domain/types';
@@ -27,9 +29,10 @@ import type { Group, Member, Constitution } from '@/domain/types';
 interface GroupInfoViewProps {
   group: Group;
   onGroupUpdate?: () => void;
+  userEmail?: string;
 }
 
-export function GroupInfoView({ group, onGroupUpdate }: GroupInfoViewProps) {
+export function GroupInfoView({ group, onGroupUpdate, userEmail }: GroupInfoViewProps) {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [promotingEmail, setPromotingEmail] = useState<string | null>(null);
@@ -42,6 +45,12 @@ export function GroupInfoView({ group, onGroupUpdate }: GroupInfoViewProps) {
   const [uploadingConstitution, setUploadingConstitution] = useState(false);
   const [deletingConstitution, setDeletingConstitution] = useState(false);
   const [showDeleteGroup, setShowDeleteGroup] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+  const [archiveConfirm, setArchiveConfirm] = useState(false);
+  const [unarchiveConfirm, setUnarchiveConfirm] = useState(false);
+  const [transferEmail, setTransferEmail] = useState('');
+  const [transferring, setTransferring] = useState(false);
+  const [transferConfirm, setTransferConfirm] = useState(false);
   const [deactivateConfirm, setDeactivateConfirm] = useState<{ open: boolean; email: string | null; name: string }>({ open: false, email: null, name: '' });
   const [removeConfirm, setRemoveConfirm] = useState<{ open: boolean; email: string | null; name: string }>({ open: false, email: null, name: '' });
   const [deleteConstitutionConfirm, setDeleteConstitutionConfirm] = useState(false);
@@ -241,6 +250,50 @@ export function GroupInfoView({ group, onGroupUpdate }: GroupInfoViewProps) {
     } finally {
       setDeletingConstitution(false);
       setDeleteConstitutionConfirm(false);
+    }
+  };
+
+  const handleArchive = async () => {
+    setArchiving(true);
+    try {
+      await api.archiveGroup(group.id);
+      toast.success('Group archived');
+      if (onGroupUpdate) onGroupUpdate();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to archive group');
+    } finally {
+      setArchiving(false);
+      setArchiveConfirm(false);
+    }
+  };
+
+  const handleUnarchive = async () => {
+    setArchiving(true);
+    try {
+      await api.unarchiveGroup(group.id);
+      toast.success('Group unarchived');
+      if (onGroupUpdate) onGroupUpdate();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to unarchive group');
+    } finally {
+      setArchiving(false);
+      setUnarchiveConfirm(false);
+    }
+  };
+
+  const handleTransferAdmin = async () => {
+    if (!transferEmail.trim()) return;
+    setTransferring(true);
+    try {
+      await api.transferAdmin(group.id, transferEmail.trim());
+      toast.success(`Ownership transferred to ${transferEmail.trim()}`);
+      setTransferEmail('');
+      if (onGroupUpdate) onGroupUpdate();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to transfer ownership');
+    } finally {
+      setTransferring(false);
+      setTransferConfirm(false);
     }
   };
 
@@ -737,6 +790,71 @@ export function GroupInfoView({ group, onGroupUpdate }: GroupInfoViewProps) {
         </CardContent>
       </Card>
 
+      {/* Admin Actions - Archive & Transfer (Admin Only) */}
+      {group.userRole === 'admin' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShieldAlert className="h-5 w-5" />
+              Admin Actions
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Archive / Unarchive */}
+            <div>
+              <h3 className="text-sm font-medium mb-1">
+                {group.archived ? 'Unarchive Group' : 'Archive Group'}
+              </h3>
+              <p className="text-sm text-muted-foreground mb-3">
+                {group.archived
+                  ? 'Restore this group so members can access it again.'
+                  : 'Hide this group from the active list. Members will lose access until it is unarchived.'}
+              </p>
+              {group.archived ? (
+                <Button variant="outline" onClick={() => setUnarchiveConfirm(true)} disabled={archiving}>
+                  {archiving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ArchiveRestore className="h-4 w-4 mr-2" />}
+                  Unarchive Group
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={() => setArchiveConfirm(true)} disabled={archiving}>
+                  {archiving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Archive className="h-4 w-4 mr-2" />}
+                  Archive Group
+                </Button>
+              )}
+            </div>
+
+            {/* Transfer Ownership (creator only) */}
+            {userEmail && userEmail === group.createdBy && (
+              <div className="pt-4 border-t">
+                <h3 className="text-sm font-medium mb-1">Transfer Ownership</h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Transfer primary admin ownership to another member. You will become a regular admin.
+                </p>
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1">
+                    <Label htmlFor="transfer-email" className="text-xs mb-1 block">New owner email</Label>
+                    <Input
+                      id="transfer-email"
+                      type="email"
+                      placeholder="member@example.com"
+                      value={transferEmail}
+                      onChange={(e) => setTransferEmail(e.target.value)}
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => setTransferConfirm(true)}
+                    disabled={!transferEmail.trim() || transferring}
+                  >
+                    Transfer
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Danger Zone - Delete Group (Admin Only) */}
       {group.userRole === 'admin' && (
         <Card className="border-destructive">
@@ -753,8 +871,8 @@ export function GroupInfoView({ group, onGroupUpdate }: GroupInfoViewProps) {
                 <p className="text-sm text-muted-foreground mb-4">
                   Permanently delete this group and all associated data. This action cannot be undone.
                 </p>
-                <Button 
-                  variant="destructive" 
+                <Button
+                  variant="destructive"
                   onClick={() => setShowDeleteGroup(true)}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
@@ -765,6 +883,38 @@ export function GroupInfoView({ group, onGroupUpdate }: GroupInfoViewProps) {
           </CardContent>
         </Card>
       )}
+
+      {/* Archive Confirmation */}
+      <ConfirmationDialog
+        open={archiveConfirm}
+        onOpenChange={setArchiveConfirm}
+        title="Archive Group"
+        description="Archiving this group will hide it from all members until it is unarchived. Are you sure?"
+        confirmText="Archive"
+        variant="warning"
+        onConfirm={handleArchive}
+      />
+
+      {/* Unarchive Confirmation */}
+      <ConfirmationDialog
+        open={unarchiveConfirm}
+        onOpenChange={setUnarchiveConfirm}
+        title="Unarchive Group"
+        description="This will restore the group and make it visible and accessible to all members."
+        confirmText="Unarchive"
+        onConfirm={handleUnarchive}
+      />
+
+      {/* Transfer Ownership Confirmation */}
+      <ConfirmationDialog
+        open={transferConfirm}
+        onOpenChange={setTransferConfirm}
+        title="Transfer Ownership"
+        description={`Transfer primary admin ownership to ${transferEmail}? You will remain an admin but will lose creator privileges. This cannot be undone.`}
+        confirmText="Transfer"
+        variant="warning"
+        onConfirm={handleTransferAdmin}
+      />
 
       {/* Delete Group Dialog */}
       <DeleteGroupDialog

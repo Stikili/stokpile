@@ -440,7 +440,7 @@ app.post('/make-server-34d0b231/groups', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    const { name, description, contributionFrequency, isPublic, groupType } = await c.req.json();
+    const { name, description, contributionFrequency, isPublic, groupType, contributionTarget } = await c.req.json();
 
     // Check if group name is unique
     const nameIsUnique = await isGroupNameUnique(name);
@@ -460,6 +460,7 @@ app.post('/make-server-34d0b231/groups', async (c) => {
       groupType: groupType || 'rotating',
       groupCode,
       payoutsAllowed: true,
+      contributionTarget: contributionTarget || null,
       admin1: user.email,
       admin2: null,
       admin3: null,
@@ -509,6 +510,7 @@ app.get('/make-server-34d0b231/groups', async (c) => {
     for (const membership of userMemberships) {
       const group = await kv.get(`group:${membership.groupId}`);
       if (group) {
+        if (group.archived) continue; // Skip archived groups (they can be viewed via /groups/archived)
         groups.push({
           ...group,
           userRole: membership.role
@@ -619,7 +621,7 @@ app.put('/make-server-34d0b231/groups/:id', async (c) => {
       return c.json({ error: 'Not authorized - admin only' }, 403);
     }
 
-    const { isPublic, payoutsAllowed, name, description } = await c.req.json();
+    const { isPublic, payoutsAllowed, name, description, contributionTarget } = await c.req.json();
     
     const group = await kv.get(`group:${groupId}`);
     if (!group) {
@@ -644,7 +646,8 @@ app.put('/make-server-34d0b231/groups/:id', async (c) => {
     if (description !== undefined && description !== null) {
       group.description = description.trim();
     }
-    
+    if (contributionTarget !== undefined) group.contributionTarget = contributionTarget || null;
+
     group.updatedAt = new Date().toISOString();
     group.updatedBy = user.email;
 
@@ -1069,6 +1072,23 @@ app.post('/make-server-34d0b231/groups/:id/requests/:email/approve', async (c) =
 
     await kv.set(`membership:${groupId}:${memberEmail}`, membership);
 
+    // Email the new member
+    const joinedGroup = await kv.get(`group:${groupId}`);
+    const joinedGroupName = joinedGroup?.name || 'the group';
+    sendEmail(
+      memberEmail,
+      `You've been approved – ${joinedGroupName}`,
+      `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;">
+        <h2 style="color:#1e293b;margin-bottom:8px;">Welcome to ${joinedGroupName}! 🎉</h2>
+        <p style="color:#475569;">Your request to join <strong>${joinedGroupName}</strong> has been approved. You can now log in to Stokpile and start participating.</p>
+        <p style="color:#94a3b8;font-size:13px;margin-top:24px;">Log in to view your group dashboard, contributions, and upcoming payouts.</p>
+      </div>`
+    ).catch(console.warn);
+    storeNotification(memberEmail, groupId, 'Join request approved', `You are now a member of ${joinedGroupName}`, 'success').catch(console.warn);
+
+    // Audit log
+    logAudit(groupId, user.email, 'member_approved', { memberEmail }).catch(console.warn);
+
     return c.json({ success: true, membership });
   } catch (error) {
     console.log(`Approve request error: ${error.message}`);
@@ -1409,6 +1429,22 @@ app.post('/make-server-34d0b231/contributions', async (c) => {
       url: '/',
     }).catch(console.warn);
 
+    // Email confirmation to the contribution owner
+    sendEmail(
+      targetUserEmail,
+      `Contribution recorded – ${groupName}`,
+      `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;">
+        <h2 style="color:#1e293b;margin-bottom:8px;">Contribution recorded 💰</h2>
+        <p style="color:#475569;">A contribution of <strong>${amountFormatted}</strong> has been recorded for you in <strong>${groupName}</strong> on ${new Date(contribution.date).toLocaleDateString('en-ZA')}.</p>
+        ${user.email !== targetUserEmail ? `<p style="color:#64748b;font-size:13px;">This contribution was added on your behalf by an admin.</p>` : ''}
+        <p style="color:#94a3b8;font-size:13px;margin-top:24px;">Log in to Stokpile to view your contribution history.</p>
+      </div>`
+    ).catch(console.warn);
+    storeNotification(targetUserEmail, groupId, 'Contribution recorded', `R ${contribution.amount.toFixed(2)} logged for ${new Date(contribution.date).toLocaleDateString('en-ZA')} in ${groupName}`, 'success').catch(console.warn);
+
+    // Audit log
+    logAudit(groupId, user.email, 'contribution_created', { contributionId, targetUserEmail, amount: contribution.amount, date: contribution.date }).catch(console.warn);
+
     return c.json({ success: true, contribution });
   } catch (error) {
     console.log(`Create contribution error: ${error.message}`);
@@ -1608,6 +1644,22 @@ app.post('/make-server-34d0b231/payouts', async (c) => {
       url: '/',
     }).catch(console.warn);
 
+    // Email notification to recipient
+    sendEmail(
+      recipientEmail,
+      `Payout scheduled – ${payoutGroupName}`,
+      `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;">
+        <h2 style="color:#1e293b;margin-bottom:8px;">You have a payout scheduled! 🎉</h2>
+        <p style="color:#475569;">A payout of <strong>${payoutAmount}</strong> has been scheduled for you from <strong>${payoutGroupName}</strong> on ${new Date(payout.scheduledDate).toLocaleDateString('en-ZA')}.</p>
+        <p style="color:#475569;">Your group admin will process this payment soon. Log in to Stokpile to track the status.</p>
+        <p style="color:#94a3b8;font-size:13px;margin-top:24px;">If you have questions, contact your group admin.</p>
+      </div>`
+    ).catch(console.warn);
+    storeNotification(recipientEmail, groupId, 'Payout scheduled', `R ${payout.amount.toFixed(2)} is scheduled for you in ${payoutGroupName}`, 'success').catch(console.warn);
+
+    // Audit log
+    logAudit(groupId, user.email, 'payout_scheduled', { payoutId, recipientEmail, amount: payout.amount, scheduledDate: payout.scheduledDate }).catch(console.warn);
+
     return c.json({ success: true, payout });
   } catch (error) {
     console.log(`Create payout error: ${error.message}`);
@@ -1670,12 +1722,12 @@ app.put('/make-server-34d0b231/payouts/:id', async (c) => {
     }
 
     const payoutId = c.req.param('id');
-    const { status } = await c.req.json();
-    
+    const { status, referenceNumber } = await c.req.json();
+
     // Find payout
     const allPayouts = await kv.getByPrefix('payout:');
     const payout = allPayouts.find(p => p.id === payoutId);
-    
+
     if (!payout) {
       return c.json({ error: 'Payout not found' }, 404);
     }
@@ -1688,11 +1740,29 @@ app.put('/make-server-34d0b231/payouts/:id', async (c) => {
 
     payout.status = status;
     payout.updatedAt = new Date().toISOString();
+    if (referenceNumber !== undefined) payout.referenceNumber = referenceNumber;
     if (status === 'completed') {
       payout.completedAt = new Date().toISOString();
+      // Email recipient on completion
+      const completedGroup = await kv.get(`group:${payout.groupId}`);
+      const groupNameForEmail = completedGroup?.name || 'your group';
+      const payoutAmountStr = `R ${payout.amount.toFixed(2)}`;
+      sendEmail(
+        payout.recipientEmail,
+        `Payout completed – ${groupNameForEmail}`,
+        `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;">
+          <h2 style="color:#1e293b;margin-bottom:8px;">Your payout has been paid! ✅</h2>
+          <p style="color:#475569;">Your payout of <strong>${payoutAmountStr}</strong> from <strong>${groupNameForEmail}</strong> has been marked as completed.</p>
+          ${referenceNumber ? `<p style="color:#475569;">Reference number: <strong>${referenceNumber}</strong></p>` : ''}
+          <p style="color:#94a3b8;font-size:13px;margin-top:24px;">Log in to Stokpile to view your payout history.</p>
+        </div>`
+      ).catch(console.warn);
     }
 
     await kv.set(`payout:${payout.groupId}:${payoutId}`, payout);
+
+    // Audit log
+    logAudit(payout.groupId, user.email, `payout_${status}`, { payoutId, recipientEmail: payout.recipientEmail, referenceNumber }).catch(console.warn);
 
     return c.json({ success: true, payout });
   } catch (error) {
@@ -3138,6 +3208,50 @@ app.put('/make-server-34d0b231/groups/:groupId/contribution-adjustment', async (
   }
 });
 
+// === EMAIL HELPER ===
+
+async function sendEmail(to: string, subject: string, html: string) {
+  const resendApiKey = Deno.env.get('RESEND_API_KEY');
+  if (!resendApiKey) return;
+  // Check user opt-out preferences
+  const prefs = await kv.get(`notif-prefs:${to}`).catch(() => null);
+  if (prefs && prefs.emailEnabled === false) return;
+  try {
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: Deno.env.get('EMAIL_FROM') || 'Stokpile <onboarding@resend.dev>',
+        to: [to],
+        subject,
+        html,
+      }),
+    });
+  } catch (err) {
+    console.log(`Email send error: ${err.message}`);
+  }
+}
+
+// === IN-APP NOTIFICATION HELPER ===
+
+async function storeNotification(recipientEmail: string, groupId: string, title: string, message: string, type: 'info' | 'success' | 'warning' = 'info') {
+  const id = generateId();
+  const timestamp = new Date().toISOString();
+  await kv.set(`notification:${recipientEmail}:${timestamp}:${id}`, {
+    id,
+    recipientEmail,
+    groupId,
+    title,
+    message,
+    type,
+    read: false,
+    createdAt: timestamp,
+  }).catch(console.warn);
+}
+
 // === WHATSAPP HELPER ===
 
 async function sendWhatsApp(to: string, message: string) {
@@ -3171,11 +3285,17 @@ async function getGroupMemberPhones(groupId: string): Promise<string[]> {
   const emails = approved.map((m) => m.userEmail);
   if (emails.length === 0) return [];
 
+  // Filter out users who opted out of WhatsApp
+  const prefsEntries = await Promise.all(emails.map(async e => ({ email: e, prefs: await kv.get(`notif-prefs:${e}`).catch(() => null) })));
+  const filteredEmails = prefsEntries.filter(({ prefs }) => !prefs || prefs.whatsappEnabled !== false).map(e => e.email);
+  const filteredApproved = approved.filter(m => filteredEmails.includes(m.userEmail));
+  if (filteredApproved.length === 0) return [];
+
   // Prefer profiles table over KV store
   const { data: profileRows } = await supabaseAdmin
     .from('profiles')
     .select('phone')
-    .in('email', emails)
+    .in('email', filteredEmails)
     .not('phone', 'is', null);
 
   if (profileRows && profileRows.length > 0) {
@@ -3184,7 +3304,7 @@ async function getGroupMemberPhones(groupId: string): Promise<string[]> {
 
   // Fallback to KV store
   const phones: string[] = [];
-  for (const email of emails) {
+  for (const email of filteredEmails) {
     const profile = await kv.get(`user:${email}`);
     if (profile?.phone) phones.push(profile.phone);
   }
@@ -3309,6 +3429,578 @@ app.post('/make-server-34d0b231/contributions/:id/payment-link', async (c) => {
     return c.json({ error: error.message }, 500);
   }
 });
+
+// === BULK CONTRIBUTION MARKING ===
+
+app.post('/make-server-34d0b231/contributions/bulk-mark', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const { groupId, contributionIds, paid } = await c.req.json();
+
+    if (!groupId || !Array.isArray(contributionIds) || typeof paid !== 'boolean') {
+      return c.json({ error: 'groupId, contributionIds[], and paid are required' }, 400);
+    }
+
+    // Verify user is admin
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.role !== 'admin') {
+      return c.json({ error: 'Not authorized - admin only' }, 403);
+    }
+
+    let updated = 0;
+    for (const id of contributionIds) {
+      const allContribs = await kv.getByPrefix(`contribution:${groupId}:`);
+      const contribution = allContribs.find((c) => c.id === id);
+      if (contribution) {
+        contribution.paid = paid;
+        contribution.updatedAt = new Date().toISOString();
+        await kv.set(`contribution:${groupId}:${id}`, contribution);
+        updated++;
+      }
+    }
+
+    logAudit(groupId, user.email, 'bulk_mark_contributions', { count: updated, paid, contributionIds }).catch(console.warn);
+
+    return c.json({ success: true, updated });
+  } catch (error) {
+    console.log(`Bulk mark contributions error: ${error.message}`);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// === AUDIT LOG ===
+
+async function logAudit(groupId: string, actorEmail: string, action: string, details: Record<string, unknown> = {}) {
+  const id = generateId();
+  const timestamp = new Date().toISOString();
+  await kv.set(`audit:${groupId}:${timestamp}:${id}`, {
+    id,
+    groupId,
+    actorEmail,
+    action,
+    details,
+    timestamp,
+  });
+}
+
+app.get('/make-server-34d0b231/groups/:groupId/audit-log', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+
+    // Verify user is admin
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.role !== 'admin') {
+      return c.json({ error: 'Not authorized - admin only' }, 403);
+    }
+
+    const entries = await kv.getByPrefix(`audit:${groupId}:`);
+    const sorted = entries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    return c.json({ auditLog: sorted.slice(0, 200) });
+  } catch (error) {
+    console.log(`Get audit log error: ${error.message}`);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// === GROUP HEALTH SCORE ===
+
+app.get('/make-server-34d0b231/groups/:groupId/health', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.status !== 'approved') {
+      return c.json({ error: 'Not a member of this group' }, 403);
+    }
+
+    const allContribs = await kv.getByPrefix(`contribution:${groupId}:`);
+    const allMembers = (await kv.getByPrefix(`membership:${groupId}:`)).filter((m) => m.status === 'approved');
+
+    // Payment rate: % of contributions that are paid
+    const totalContribs = allContribs.length;
+    const paidContribs = allContribs.filter((c) => c.paid).length;
+    const paymentRate = totalContribs > 0 ? Math.round((paidContribs / totalContribs) * 100) : 0;
+
+    // Monthly breakdown for trend analysis (last 6 months)
+    const now = new Date();
+    const months: { label: string; paid: number; total: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const label = d.toLocaleDateString('en-ZA', { month: 'short', year: 'numeric' });
+      const monthContribs = allContribs.filter((c) => {
+        const cd = new Date(c.date);
+        return cd.getFullYear() === d.getFullYear() && cd.getMonth() === d.getMonth();
+      });
+      months.push({ label, paid: monthContribs.filter((c) => c.paid).length, total: monthContribs.length });
+    }
+
+    // Trend: compare last 3 months vs previous 3 months payment rate
+    const recent = months.slice(3);
+    const older = months.slice(0, 3);
+    const recentRate = recent.reduce((s, m) => s + m.total, 0) > 0
+      ? Math.round((recent.reduce((s, m) => s + m.paid, 0) / recent.reduce((s, m) => s + m.total, 0)) * 100)
+      : 0;
+    const olderRate = older.reduce((s, m) => s + m.total, 0) > 0
+      ? Math.round((older.reduce((s, m) => s + m.paid, 0) / older.reduce((s, m) => s + m.total, 0)) * 100)
+      : 0;
+    const trend: 'up' | 'down' | 'stable' = recentRate > olderRate + 5 ? 'up' : recentRate < olderRate - 5 ? 'down' : 'stable';
+
+    // Participation streak: consecutive months the group had at least 1 paid contribution
+    let streak = 0;
+    for (let i = months.length - 1; i >= 0; i--) {
+      if (months[i].paid > 0) streak++;
+      else break;
+    }
+
+    // Composite score (0–100)
+    const score = Math.round(
+      paymentRate * 0.6 +
+      Math.min(streak * 10, 30) * 0.3 +
+      (trend === 'up' ? 10 : trend === 'stable' ? 5 : 0)
+    );
+
+    return c.json({
+      score: Math.min(score, 100),
+      paymentRate,
+      streak,
+      trend,
+      memberCount: allMembers.length,
+      totalContributions: totalContribs,
+      paidContributions: paidContribs,
+      monthlyBreakdown: months,
+    });
+  } catch (error) {
+    console.log(`Group health error: ${error.message}`);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// === IN-APP NOTIFICATIONS ===
+
+app.get('/make-server-34d0b231/notifications', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const all = await kv.getByPrefix(`notification:${user.email}:`);
+    const sorted = all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return c.json({ notifications: sorted.slice(0, 100) });
+  } catch (error) {
+    console.log(`Get notifications error: ${error.message}`);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.put('/make-server-34d0b231/notifications/read-all', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const all = await kv.getByPrefix(`notification:${user.email}:`);
+    for (const n of all) {
+      if (!n.read) {
+        n.read = true;
+        await kv.set(`notification:${user.email}:${n.createdAt}:${n.id}`, n);
+      }
+    }
+    return c.json({ success: true });
+  } catch (error) {
+    console.log(`Read all notifications error: ${error.message}`);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// === NOTIFICATION PREFERENCES ===
+
+app.get('/make-server-34d0b231/notification-preferences', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const prefs = await kv.get(`notif-prefs:${user.email}`);
+    return c.json({
+      emailEnabled: prefs?.emailEnabled ?? true,
+      whatsappEnabled: prefs?.whatsappEnabled ?? true,
+      pushEnabled: prefs?.pushEnabled ?? true,
+    });
+  } catch (error) {
+    console.log(`Get notif prefs error: ${error.message}`);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.put('/make-server-34d0b231/notification-preferences', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const { emailEnabled, whatsappEnabled, pushEnabled } = await c.req.json();
+    await kv.set(`notif-prefs:${user.email}`, {
+      emailEnabled: emailEnabled ?? true,
+      whatsappEnabled: whatsappEnabled ?? true,
+      pushEnabled: pushEnabled ?? true,
+    });
+    return c.json({ success: true });
+  } catch (error) {
+    console.log(`Update notif prefs error: ${error.message}`);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// === GROUP ARCHIVING ===
+
+app.put('/make-server-34d0b231/groups/:id/archive', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('id');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.role !== 'admin') return c.json({ error: 'Not authorized - admin only' }, 403);
+
+    const group = await kv.get(`group:${groupId}`);
+    if (!group) return c.json({ error: 'Group not found' }, 404);
+
+    group.archived = true;
+    group.archivedAt = new Date().toISOString();
+    group.archivedBy = user.email;
+    await kv.set(`group:${groupId}`, group);
+
+    logAudit(groupId, user.email, 'group_archived', {}).catch(console.warn);
+    return c.json({ success: true, group });
+  } catch (error) {
+    console.log(`Archive group error: ${error.message}`);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.put('/make-server-34d0b231/groups/:id/unarchive', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('id');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.role !== 'admin') return c.json({ error: 'Not authorized - admin only' }, 403);
+
+    const group = await kv.get(`group:${groupId}`);
+    if (!group) return c.json({ error: 'Group not found' }, 404);
+
+    group.archived = false;
+    group.archivedAt = null;
+    group.archivedBy = null;
+    await kv.set(`group:${groupId}`, group);
+
+    logAudit(groupId, user.email, 'group_unarchived', {}).catch(console.warn);
+    return c.json({ success: true, group });
+  } catch (error) {
+    console.log(`Unarchive group error: ${error.message}`);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.get('/make-server-34d0b231/groups/archived', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const allMemberships = await kv.getByPrefix('membership:');
+    const userMemberships = allMemberships.filter(m => m.userEmail === user.email && m.status === 'approved');
+
+    const groups = [];
+    for (const membership of userMemberships) {
+      const group = await kv.get(`group:${membership.groupId}`);
+      if (group && group.archived) {
+        groups.push({ ...group, userRole: membership.role });
+      }
+    }
+    return c.json({ groups });
+  } catch (error) {
+    console.log(`Get archived groups error: ${error.message}`);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// === OVERDUE CONTRIBUTIONS ===
+
+app.get('/make-server-34d0b231/groups/:groupId/overdue', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.status !== 'approved') return c.json({ error: 'Not a member of this group' }, 403);
+
+    const group = await kv.get(`group:${groupId}`);
+    const target = group?.contributionTarget || 0;
+
+    const allMemberships = await kv.getByPrefix(`membership:${groupId}:`);
+    const approved = allMemberships.filter(m => m.status === 'approved');
+
+    const allContribs = await kv.getByPrefix(`contribution:${groupId}:`);
+
+    const result = approved.map(m => {
+      const memberContribs = allContribs.filter(c => c.userEmail === m.userEmail);
+      const totalPaid = memberContribs.filter(c => c.paid).reduce((s, c) => s + c.amount, 0);
+      const unpaidAmount = memberContribs.filter(c => !c.paid).reduce((s, c) => s + c.amount, 0);
+      const isOverdue = target > 0 && totalPaid < target;
+      const deficit = target > 0 ? Math.max(0, target - totalPaid) : 0;
+      return {
+        email: m.userEmail,
+        totalPaid,
+        unpaidAmount,
+        contributionCount: memberContribs.length,
+        isOverdue,
+        deficit,
+        target,
+      };
+    });
+
+    return c.json({ members: result, target });
+  } catch (error) {
+    console.log(`Get overdue error: ${error.message}`);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// === MEETING RSVP ===
+
+app.post('/make-server-34d0b231/meetings/:id/rsvp', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const meetingId = c.req.param('id');
+    const { response } = await c.req.json(); // 'yes' | 'no' | 'maybe'
+
+    if (!['yes', 'no', 'maybe'].includes(response)) {
+      return c.json({ error: 'Response must be yes, no, or maybe' }, 400);
+    }
+
+    // Find meeting to get groupId
+    const allMeetings = await kv.getByPrefix('meeting:');
+    const meeting = allMeetings.find(m => m.id === meetingId);
+    if (!meeting) return c.json({ error: 'Meeting not found' }, 404);
+
+    // Verify membership
+    const membership = await kv.get(`membership:${meeting.groupId}:${user.email}`);
+    if (!membership || membership.status !== 'approved') return c.json({ error: 'Not a member of this group' }, 403);
+
+    await kv.set(`rsvp:${meeting.groupId}:${meetingId}:${user.email}`, {
+      meetingId,
+      groupId: meeting.groupId,
+      userEmail: user.email,
+      response,
+      updatedAt: new Date().toISOString(),
+    });
+
+    return c.json({ success: true, response });
+  } catch (error) {
+    console.log(`RSVP error: ${error.message}`);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.get('/make-server-34d0b231/meetings/:id/rsvps', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const meetingId = c.req.param('id');
+
+    const allMeetings = await kv.getByPrefix('meeting:');
+    const meeting = allMeetings.find(m => m.id === meetingId);
+    if (!meeting) return c.json({ error: 'Meeting not found' }, 404);
+
+    const membership = await kv.get(`membership:${meeting.groupId}:${user.email}`);
+    if (!membership || membership.status !== 'approved') return c.json({ error: 'Not a member of this group' }, 403);
+
+    const rsvps = await kv.getByPrefix(`rsvp:${meeting.groupId}:${meetingId}:`);
+    const summary = {
+      yes: rsvps.filter(r => r.response === 'yes').length,
+      no: rsvps.filter(r => r.response === 'no').length,
+      maybe: rsvps.filter(r => r.response === 'maybe').length,
+      myResponse: rsvps.find(r => r.userEmail === user.email)?.response || null,
+    };
+
+    return c.json({ rsvps, summary });
+  } catch (error) {
+    console.log(`Get RSVPs error: ${error.message}`);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// === ADMIN HANDOVER ===
+
+app.post('/make-server-34d0b231/groups/:id/transfer-admin', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('id');
+    const { newOwnerEmail } = await c.req.json();
+
+    const group = await kv.get(`group:${groupId}`);
+    if (!group) return c.json({ error: 'Group not found' }, 404);
+
+    // Only the creator (admin1 = createdBy) can transfer ownership
+    if (group.createdBy !== user.email) {
+      return c.json({ error: 'Only the group creator can transfer ownership' }, 403);
+    }
+
+    // Verify new owner is an approved member
+    const newOwnerMembership = await kv.get(`membership:${groupId}:${newOwnerEmail}`);
+    if (!newOwnerMembership || newOwnerMembership.status !== 'approved') {
+      return c.json({ error: 'New owner must be an approved group member' }, 400);
+    }
+
+    // Promote new owner to admin if not already
+    if (newOwnerMembership.role !== 'admin') {
+      newOwnerMembership.role = 'admin';
+      newOwnerMembership.promotedAt = new Date().toISOString();
+      newOwnerMembership.promotedBy = user.email;
+      await kv.set(`membership:${groupId}:${newOwnerEmail}`, newOwnerMembership);
+    }
+
+    // Update group ownership
+    const oldOwner = group.createdBy;
+    group.createdBy = newOwnerEmail;
+    // Move new owner into admin1 slot; push current admin1 to admin2 slot
+    if (group.admin1 !== newOwnerEmail) {
+      group.admin2 = group.admin1;
+      group.admin1 = newOwnerEmail;
+    }
+    await kv.set(`group:${groupId}`, group);
+
+    logAudit(groupId, user.email, 'admin_handover', { from: oldOwner, to: newOwnerEmail }).catch(console.warn);
+
+    // Notify new owner
+    const groupNameForHandover = group.name;
+    storeNotification(newOwnerEmail, groupId, 'You are now the group owner', `${user.email} has transferred ownership of "${groupNameForHandover}" to you.`, 'success').catch(console.warn);
+    sendEmail(newOwnerEmail, `You are now the owner of ${groupNameForHandover}`,
+      `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;">
+        <h2 style="color:#1e293b;margin-bottom:8px;">Group ownership transferred 🎉</h2>
+        <p style="color:#475569;"><strong>${user.email}</strong> has transferred ownership of <strong>${groupNameForHandover}</strong> to you.</p>
+        <p style="color:#475569;">You are now the primary admin for this group.</p>
+      </div>`
+    ).catch(console.warn);
+
+    return c.json({ success: true, group });
+  } catch (error) {
+    console.log(`Transfer admin error: ${error.message}`);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// === WEEKLY DIGEST ===
+
+async function sendGroupDigest(groupId: string) {
+  const group = await kv.get(`group:${groupId}`);
+  if (!group || group.archived) return;
+
+  const allMemberships = await kv.getByPrefix(`membership:${groupId}:`);
+  const admins = allMemberships.filter(m => m.role === 'admin' && m.status === 'approved');
+  if (admins.length === 0) return;
+
+  const allContribs = await kv.getByPrefix(`contribution:${groupId}:`);
+  const allPayouts = await kv.getByPrefix(`payout:${groupId}:`);
+
+  // Stats for last 7 days
+  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const recentContribs = allContribs.filter(c => c.createdAt >= cutoff);
+  const paidThisWeek = recentContribs.filter(c => c.paid).reduce((s, c) => s + c.amount, 0);
+  const unpaidCount = allContribs.filter(c => !c.paid).length;
+  const scheduledPayouts = allPayouts.filter(p => p.status === 'scheduled');
+
+  // Overdue members (if target set)
+  const target = group.contributionTarget || 0;
+  const overdueList: string[] = [];
+  if (target > 0) {
+    const approvedMembers = allMemberships.filter(m => m.status === 'approved');
+    for (const m of approvedMembers) {
+      const paid = allContribs.filter(c => c.userEmail === m.userEmail && c.paid).reduce((s, c) => s + c.amount, 0);
+      if (paid < target) overdueList.push(m.userEmail);
+    }
+  }
+
+  const subject = `Weekly digest – ${group.name}`;
+  const html = `
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px;">
+      <h2 style="color:#1e293b;margin-bottom:4px;">Weekly Group Digest 📊</h2>
+      <p style="color:#64748b;margin-top:0;">${group.name} · ${new Date().toLocaleDateString('en-ZA', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0;" />
+      <table style="width:100%;border-collapse:collapse;">
+        <tr><td style="padding:8px 0;color:#475569;">Contributions this week</td><td style="padding:8px 0;font-weight:600;text-align:right;">R ${paidThisWeek.toFixed(2)}</td></tr>
+        <tr><td style="padding:8px 0;color:#475569;">Unpaid contributions</td><td style="padding:8px 0;font-weight:600;text-align:right;color:${unpaidCount > 0 ? '#f59e0b' : '#22c55e'};">${unpaidCount}</td></tr>
+        <tr><td style="padding:8px 0;color:#475569;">Scheduled payouts</td><td style="padding:8px 0;font-weight:600;text-align:right;">${scheduledPayouts.length}</td></tr>
+        ${target > 0 ? `<tr><td style="padding:8px 0;color:#475569;">Members overdue</td><td style="padding:8px 0;font-weight:600;text-align:right;color:${overdueList.length > 0 ? '#ef4444' : '#22c55e'};">${overdueList.length}</td></tr>` : ''}
+      </table>
+      ${overdueList.length > 0 ? `<div style="background:#fef2f2;border-radius:8px;padding:16px;margin-top:16px;"><p style="color:#991b1b;font-size:13px;margin:0;"><strong>Overdue members:</strong> ${overdueList.join(', ')}</p></div>` : ''}
+      <p style="color:#94a3b8;font-size:12px;margin-top:32px;">You are receiving this because you are a group admin. Manage notification preferences in Stokpile settings.</p>
+    </div>
+  `;
+
+  for (const admin of admins) {
+    await sendEmail(admin.userEmail, subject, html).catch(console.warn);
+  }
+}
+
+app.post('/make-server-34d0b231/admin/send-weekly-digest', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const { groupId } = await c.req.json();
+
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.role !== 'admin') return c.json({ error: 'Not authorized - admin only' }, 403);
+
+    await sendGroupDigest(groupId);
+    return c.json({ success: true });
+  } catch (error) {
+    console.log(`Send digest error: ${error.message}`);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// Schedule weekly digest every Monday at 7am UTC
+try {
+  Deno.cron('weekly-group-digest', '0 7 * * 1', async () => {
+    const allGroups = await kv.getByPrefix('group:').catch(() => []);
+    for (const group of allGroups) {
+      if (!group.archived) {
+        await sendGroupDigest(group.id).catch(console.warn);
+      }
+    }
+  });
+} catch {
+  // Deno.cron may not be available in all environments
+}
 
 // === ERROR LOGGING ===
 

@@ -1,10 +1,11 @@
 import { useEffect, useState, useMemo } from 'react';
-import type { Contribution, Payout, DashboardStats, Meeting, Member } from '@/domain/types';
+import type { Contribution, Payout, DashboardStats, Meeting, Member, OverdueMember } from '@/domain/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/ui/card';
 import { Button } from '@/presentation/ui/button';
 import { Calendar, ArrowUpRight, ArrowDownLeft, Wallet, Users, AlertTriangle, TrendingUp, User, RefreshCw } from 'lucide-react';
 import { Badge } from '@/presentation/ui/badge';
 import { ContributionChart } from '@/presentation/components/contributions/ContributionChart';
+import { GroupHealthScore } from '@/presentation/components/dashboard/GroupHealthScore';
 import { EditTotalContributionsDialog } from '@/presentation/components/groups/EditTotalContributionsDialog';
 import { api } from '@/infrastructure/api';
 import { formatCurrency, formatDate } from '@/lib/export';
@@ -30,6 +31,8 @@ export function Dashboard({ groupId, isAdmin = false, userEmail }: DashboardProp
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
+  const [overdueMembers, setOverdueMembers] = useState<OverdueMember[]>([]);
+  const [contributionTarget, setContributionTarget] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,12 +46,13 @@ export function Dashboard({ groupId, isAdmin = false, userEmail }: DashboardProp
     try {
       setLoading(true);
       setError(null);
-      const [contributionsData, payoutsData, adjustmentData, meetingsData, membersData] = await Promise.all([
+      const [contributionsData, payoutsData, adjustmentData, meetingsData, membersData, overdueData] = await Promise.all([
         api.getContributions(groupId),
         api.getPayouts(groupId),
         api.getContributionAdjustment(groupId).catch(() => ({ adjustment: 0 })),
         api.getMeetings(groupId).catch(() => ({ meetings: [] })),
         api.getMembers(groupId).catch(() => ({ members: [] })),
+        isAdmin ? api.getOverdueMembers(groupId).catch(() => ({ members: [], target: 0 })) : Promise.resolve({ members: [], target: 0 }),
       ]);
 
       const allContributions = contributionsData.contributions || [];
@@ -60,6 +64,8 @@ export function Dashboard({ groupId, isAdmin = false, userEmail }: DashboardProp
       setPayouts(allPayouts);
       setMeetings(allMeetings);
       setMembers(allMembers);
+      setOverdueMembers(overdueData.members || []);
+      setContributionTarget(overdueData.target || 0);
 
       const calculatedContributions = allContributions
         .filter((c: Contribution) => c.paid)
@@ -355,6 +361,45 @@ export function Dashboard({ groupId, isAdmin = false, userEmail }: DashboardProp
           </CardContent>
         </Card>
       )}
+
+      {/* Overdue Members Widget (admin only) */}
+      {isAdmin && contributionTarget > 0 && overdueMembers.length > 0 && (
+        <Card className="border-orange-300 dark:border-orange-800">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-orange-500" />
+              Overdue Members
+            </CardTitle>
+            <Badge variant="outline" className="text-xs text-orange-600 border-orange-400">
+              Target: {formatCurrency(contributionTarget)}
+            </Badge>
+          </CardHeader>
+          <CardContent className="px-4 pb-4 pt-1">
+            <p className="text-xs text-muted-foreground mb-3">
+              {overdueMembers.length} member{overdueMembers.length !== 1 ? 's have' : ' has'} not yet reached the contribution target.
+            </p>
+            <div className="space-y-2">
+              {overdueMembers.slice(0, 5).map((m) => (
+                <div key={m.email} className="flex items-center justify-between text-sm">
+                  <span className="truncate max-w-[60%]">
+                    {m.fullName !== 'Unknown' ? `${m.fullName} ${m.surname}` : m.email}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-green-600 dark:text-green-400">{formatCurrency(m.totalPaid)}</span>
+                    <span className="text-muted-foreground text-xs">/ {formatCurrency(contributionTarget)}</span>
+                  </div>
+                </div>
+              ))}
+              {overdueMembers.length > 5 && (
+                <p className="text-xs text-muted-foreground pt-1">+{overdueMembers.length - 5} more</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Group Health Score */}
+      <GroupHealthScore groupId={groupId} />
 
       {/* Financial Flow Chart — only shown when there's actual data */}
       {hasAnyData && (
