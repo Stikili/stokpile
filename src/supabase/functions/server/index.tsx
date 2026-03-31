@@ -2991,12 +2991,19 @@ app.delete('/make-server-34d0b231/groups/:groupId/constitution', async (c) => {
 });
 
 // === ADMIN: CLEAR ALL DATA ===
-// WARNING: This endpoint clears ALL data for the authenticated user
+// WARNING: This endpoint clears ALL data for the authenticated user.
+// Requires the ALLOW_CLEAR_DATA=true env var to be set — never set this in production.
 app.delete('/make-server-34d0b231/admin/clear-all-data', async (c) => {
+  // Server-side guard: reject the request unless explicitly enabled via env var.
+  // The frontend also blocks this in non-DEV mode, but that check is bypassable.
+  if (Deno.env.get('ALLOW_CLEAR_DATA') !== 'true') {
+    return c.json({ error: 'This endpoint is disabled. Set ALLOW_CLEAR_DATA=true in your local .env to use it.' }, 403);
+  }
+
   try {
     const accessToken = c.req.header('Authorization')?.split(' ')[1];
     const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
-    
+
     if (!user) {
       return c.json({ error: 'Unauthorized' }, 401);
     }

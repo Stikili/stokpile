@@ -101,25 +101,51 @@ build_app() {
 }
 
 # Deploy Edge Function to Supabase
+# NOTE: This ONLY deploys function *code*. It intentionally does NOT run
+# `supabase db push` or `supabase db reset` — those commands can permanently
+# destroy production data. Run migrations manually after careful review.
 deploy_edge_function() {
     print_info "Deploying Edge Function to Supabase..."
-    
+
     if ! command -v supabase &> /dev/null; then
         print_warning "Supabase CLI not installed. Skipping Edge Function deployment"
         print_info "Install with: npm install -g supabase"
         echo ""
         return
     fi
-    
+
     read -p "Deploy Edge Function? (y/n) " -n 1 -r
     echo ""
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        cd supabase/functions
-        supabase functions deploy server
-        cd ../..
+        # Only deploy function code — never run db push/reset here
+        supabase functions deploy make-server-34d0b231
         print_success "Edge Function deployed"
     else
         print_info "Edge Function deployment skipped"
+    fi
+    echo ""
+}
+
+# Migrate production database (separate, intentionally manual step)
+# Run this ONLY when you have a new migration file that has been reviewed.
+# NEVER run `supabase db reset` against production — it drops all data.
+deploy_migrations() {
+    print_warning "DATABASE MIGRATION — this modifies the production schema."
+    print_warning "Ensure you have a backup before proceeding."
+    echo ""
+
+    read -p "Run pending migrations against production? (y/n) " -n 1 -r
+    echo ""
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        read -p "Type 'migrate' to confirm: " confirm
+        if [[ "$confirm" == "migrate" ]]; then
+            supabase db push
+            print_success "Migrations applied"
+        else
+            print_info "Migration aborted"
+        fi
+    else
+        print_info "Migration skipped"
     fi
     echo ""
 }
