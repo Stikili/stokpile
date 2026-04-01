@@ -14,6 +14,7 @@ import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
 import { ConfirmationDialog } from '@/presentation/shared/ConfirmationDialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
+import { MeetingDetailView } from '@/presentation/components/meetings/MeetingDetailView';
 import type { Meeting, RSVPSummary } from '@/domain/types';
 
 interface MeetingsViewProps {
@@ -29,7 +30,7 @@ export function MeetingsView({ groupId, isAdmin, userEmail }: MeetingsViewProps)
   const [submitting, setSubmitting] = useState(false);
   const [open, setOpen] = useState(false);
   const [editingMeeting, setEditingMeeting] = useState<Meeting | null>(null);
-  const [_viewingMeeting, setViewingMeeting] = useState<Meeting | null>(null);
+  const [viewingMeeting, setViewingMeeting] = useState<Meeting | null>(null);
   const [rsvpSummaries, setRsvpSummaries] = useState<Record<string, RSVPSummary>>({});
   const [rsvpLoading, setRsvpLoading] = useState<string | null>(null);
 
@@ -561,6 +562,20 @@ export function MeetingsView({ groupId, isAdmin, userEmail }: MeetingsViewProps)
         variant="destructive"
         onConfirm={() => handleDelete(deleteConfirm.meetingId)}
       />
+
+      {viewingMeeting && (
+        <Dialog open={!!viewingMeeting} onOpenChange={(o) => { if (!o) setViewingMeeting(null); }}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
+            <MeetingDetailView
+              meeting={viewingMeeting}
+              groupId={groupId}
+              isAdmin={isAdmin}
+              userEmail={userEmail || ''}
+              onBack={() => setViewingMeeting(null)}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

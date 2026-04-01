@@ -24,6 +24,7 @@ import { Input } from '@/presentation/ui/input';
 import { Label } from '@/presentation/ui/label';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
+import { formatDate } from '@/lib/export';
 import type { Group, Member, Constitution } from '@/domain/types';
 
 interface GroupInfoViewProps {
@@ -163,13 +164,6 @@ export function GroupInfoView({ group, onGroupUpdate, userEmail }: GroupInfoView
     setTimeout(() => setCopiedField(null), 2000);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-ZA', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
 
   const loadConstitution = async () => {
     // Don't attempt to load if no valid group

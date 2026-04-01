@@ -80,9 +80,8 @@ export function ShareInviteDialog({ groupId, groupName }: ShareInviteDialogProps
           text: `Join our group "${groupName}" on Stokpile!`,
           url: inviteLink
         });
-      } catch (error) {
-        // User cancelled or error occurred
-        console.log('Share cancelled');
+      } catch {
+        // User cancelled or share not supported — silent
       }
     }
   };

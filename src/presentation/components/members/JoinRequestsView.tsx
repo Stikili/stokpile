@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Check, X } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
+import { formatDateTime } from '@/lib/export';
 import type { JoinRequest } from '@/domain/types';
 
 interface JoinRequestsViewProps {
@@ -63,15 +64,6 @@ export function JoinRequestsView({ groupId }: JoinRequestsViewProps) {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-ZA', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
 
   return (
     <Card>
@@ -105,7 +97,7 @@ export function JoinRequestsView({ groupId }: JoinRequestsViewProps) {
                     </TableCell>
                     <TableCell>{request.userEmail}</TableCell>
                     <TableCell>{request.user?.country}</TableCell>
-                    <TableCell>{formatDate(request.requestedAt)}</TableCell>
+                    <TableCell>{formatDateTime(request.requestedAt)}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button

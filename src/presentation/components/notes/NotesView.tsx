@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Plus, FileText } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
+import { formatDateTime } from '@/lib/export';
 
 interface NotesViewProps {
   groupId: string;
@@ -58,15 +59,6 @@ export function NotesView({ groupId, meetingId }: NotesViewProps) {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-ZA', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
 
   return (
     <Card>
@@ -139,7 +131,7 @@ export function NotesView({ groupId, meetingId }: NotesViewProps) {
                         <p className="text-sm text-muted-foreground mt-1">
                           By {note.author && note.author.fullName !== 'Unknown'
                             ? `${note.author.fullName} ${note.author.surname}`
-                            : note.createdBy || 'Unknown Author'} • {formatDate(note.createdAt)}
+                            : note.createdBy || 'Unknown Author'} • {formatDateTime(note.createdAt)}
                         </p>
                       </div>
                     </div>
