@@ -41,6 +41,10 @@ import { LanguageToggle } from "@/presentation/shared/LanguageToggle";
 import { LanguageProvider } from "@/application/context/LanguageContext";
 import { LiteModeProvider } from "@/application/context/LiteModeContext";
 import { LiteModeToggle } from "@/presentation/shared/LiteModeToggle";
+import { SubscriptionProvider, useSubscription } from "@/application/context/SubscriptionContext";
+import { SubscriptionBanner } from "@/presentation/components/subscription/SubscriptionBanner";
+import { UpgradeDialog } from "@/presentation/components/subscription/UpgradeDialog";
+import { FeatureGate } from "@/presentation/components/subscription/FeatureGate";
 import { PushNotificationSetup } from "@/presentation/shared/PushNotificationSetup";
 import { PhonePrompt } from "@/presentation/shared/PhonePrompt";
 import { Logo } from "@/presentation/layout/Logo";
@@ -99,6 +103,7 @@ export default function App() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
+  const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [signOutLoading, setSignOutLoading] = useState(false);
   const [exportingCSV, setExportingCSV] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(
@@ -225,6 +230,7 @@ export default function App() {
       <ThemeProvider>
         <LanguageProvider>
         <LiteModeProvider>
+        <SubscriptionProvider groupId={selectedGroup?.id ?? null}>
         <TooltipProvider>
           <div className="min-h-screen bg-gradient-to-br from-slate-50/80 to-blue-50/30 dark:bg-transparent dark:bg-none dark:from-transparent dark:to-transparent">
             {/* Skip to main content for accessibility */}
@@ -259,6 +265,13 @@ export default function App() {
               isAdmin={isAdmin}
             />
             
+            {/* Upgrade Dialog */}
+            <UpgradeDialog
+              open={showUpgradeDialog}
+              onOpenChange={setShowUpgradeDialog}
+              groupId={selectedGroup?.id ?? ''}
+            />
+
             {/* Sign Out Confirmation Dialog */}
             <ConfirmationDialog
               open={showSignOutDialog}
@@ -347,6 +360,9 @@ export default function App() {
 
             {/* Main Content */}
             <main id="main-content" role="main" className="max-w-7xl mx-auto px-4 py-3 pb-20 lg:pb-3">
+              {selectedGroup && (
+                <SubscriptionBanner onUpgradeClick={() => setShowUpgradeDialog(true)} />
+              )}
               {/* Show pending invites */}
               <div className="mb-3">
                 <PendingInvitesView onInviteAccepted={refreshGroups} />
@@ -376,15 +392,15 @@ export default function App() {
 
                       // Overflow items (non-core)
                       const overflowItems = [
-                        ...(hasRotation ? [{ id: 'rotation', icon: RefreshCw, label: 'Rotation' }] : []),
-                        ...(groupType === 'grocery' ? [{ id: 'grocery', icon: ShoppingCart, label: 'Grocery List' }] : []),
-                        ...(groupType === 'burial'  ? [{ id: 'burial',  icon: HeartHandshake, label: 'Burial' }] : []),
+                        ...(hasRotation ? [{ id: 'rotation', icon: RefreshCw, label: 'Rotation', feature: 'rotation' as const }] : []),
+                        ...(groupType === 'grocery' ? [{ id: 'grocery', icon: ShoppingCart, label: 'Grocery List', feature: 'grocery' as const }] : []),
+                        ...(groupType === 'burial'  ? [{ id: 'burial',  icon: HeartHandshake, label: 'Burial', feature: 'burial' as const }] : []),
                       ];
                       const adminItems = isAdmin ? [
-                        { id: 'penalties', icon: Gavel,       label: 'Penalties' },
-                        { id: 'reports',   icon: FileBarChart, label: 'Reports' },
-                        { id: 'analytics', icon: Activity,    label: 'Analytics' },
-                        { id: 'audit',     icon: ClipboardList, label: 'Audit Log' },
+                        { id: 'penalties', icon: Gavel,        label: 'Penalties', feature: 'penalties' as const },
+                        { id: 'reports',   icon: FileBarChart,  label: 'Reports',   feature: 'reports' as const },
+                        { id: 'analytics', icon: Activity,     label: 'Analytics', feature: 'analytics' as const },
+                        { id: 'audit',     icon: ClipboardList, label: 'Audit Log', feature: 'audit' as const },
                       ] : [];
 
                       const allOverflow = [...overflowItems, ...adminItems];
@@ -445,7 +461,7 @@ export default function App() {
                                         className={activeTab === item.id ? 'text-primary font-medium bg-primary/5' : ''}
                                       >
                                         <item.icon className="h-4 w-4 mr-2" />
-                                        {item.label}
+                                        <FeatureGate feature={item.feature} mode="badge">{item.label}</FeatureGate>
                                       </DropdownMenuItem>
                                     ))}
                                   </>
@@ -461,7 +477,7 @@ export default function App() {
                                         className={activeTab === item.id ? 'text-primary font-medium bg-primary/5' : ''}
                                       >
                                         <item.icon className="h-4 w-4 mr-2" />
-                                        {item.label}
+                                        <FeatureGate feature={item.feature} mode="badge">{item.label}</FeatureGate>
                                       </DropdownMenuItem>
                                     ))}
                                   </>
@@ -521,43 +537,57 @@ export default function App() {
 
                       {(selectedGroup.groupType === 'rotating' || selectedGroup.groupType === 'susu' || selectedGroup.groupType === 'tontine' || selectedGroup.groupType === 'chama') && (
                         <TabsContent value="rotation" className="space-y-3">
-                          <RotationOrderView groupId={selectedGroup.id} isAdmin={isAdmin} groupType={selectedGroup.groupType || 'rotating'} />
+                          <FeatureGate feature="rotation" onUpgradeClick={() => setShowUpgradeDialog(true)}>
+                            <RotationOrderView groupId={selectedGroup.id} isAdmin={isAdmin} groupType={selectedGroup.groupType || 'rotating'} />
+                          </FeatureGate>
                         </TabsContent>
                       )}
 
                       {selectedGroup.groupType === 'grocery' && (
                         <TabsContent value="grocery" className="space-y-3">
-                          <GroceryCoordinationView groupId={selectedGroup.id} isAdmin={isAdmin} userEmail={session.user.email} />
+                          <FeatureGate feature="grocery" onUpgradeClick={() => setShowUpgradeDialog(true)}>
+                            <GroceryCoordinationView groupId={selectedGroup.id} isAdmin={isAdmin} userEmail={session.user.email} />
+                          </FeatureGate>
                         </TabsContent>
                       )}
 
                       {selectedGroup.groupType === 'burial' && (
                         <TabsContent value="burial" className="space-y-3">
-                          <BurialSocietyView groupId={selectedGroup.id} isAdmin={isAdmin} userEmail={session.user.email} />
+                          <FeatureGate feature="burial" onUpgradeClick={() => setShowUpgradeDialog(true)}>
+                            <BurialSocietyView groupId={selectedGroup.id} isAdmin={isAdmin} userEmail={session.user.email} />
+                          </FeatureGate>
                         </TabsContent>
                       )}
 
                       {isAdmin && (
                         <TabsContent value="penalties" className="space-y-3">
-                          <PenaltiesView groupId={selectedGroup.id} isAdmin={isAdmin} />
+                          <FeatureGate feature="penalties" onUpgradeClick={() => setShowUpgradeDialog(true)}>
+                            <PenaltiesView groupId={selectedGroup.id} isAdmin={isAdmin} />
+                          </FeatureGate>
                         </TabsContent>
                       )}
 
                       {isAdmin && (
                         <TabsContent value="reports" className="space-y-3">
-                          <FinancialReportsView groupId={selectedGroup.id} groupName={selectedGroup.name} isAdmin={isAdmin} />
+                          <FeatureGate feature="reports" onUpgradeClick={() => setShowUpgradeDialog(true)}>
+                            <FinancialReportsView groupId={selectedGroup.id} groupName={selectedGroup.name} isAdmin={isAdmin} />
+                          </FeatureGate>
                         </TabsContent>
                       )}
 
                       {isAdmin && (
                         <TabsContent value="analytics" className="space-y-3">
-                          <AnalyticsView groupId={selectedGroup.id} />
+                          <FeatureGate feature="analytics" onUpgradeClick={() => setShowUpgradeDialog(true)}>
+                            <AnalyticsView groupId={selectedGroup.id} />
+                          </FeatureGate>
                         </TabsContent>
                       )}
 
                       {isAdmin && (
                         <TabsContent value="audit" className="space-y-3">
-                          <AuditLogView groupId={selectedGroup.id} />
+                          <FeatureGate feature="audit" onUpgradeClick={() => setShowUpgradeDialog(true)}>
+                            <AuditLogView groupId={selectedGroup.id} />
+                          </FeatureGate>
                         </TabsContent>
                       )}
                     </Suspense>
@@ -590,6 +620,7 @@ export default function App() {
             </div>
           </div>
         </TooltipProvider>
+        </SubscriptionProvider>
         </LiteModeProvider>
         </LanguageProvider>
       </ThemeProvider>

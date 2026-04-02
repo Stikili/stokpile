@@ -7,6 +7,7 @@ import type {
   AppNotification, NotificationPrefs, RSVPSummary, MeetingRSVP, OverdueMember,
   Announcement, PaymentProof, RotationOrder, GroceryItem,
   BurialBeneficiary, BurialClaim, PenaltyRule, PenaltyCharge,
+  Subscription, SubscriptionTier,
 } from "@/domain/types";
 
 const API_URL = `https://${projectId}.supabase.co/functions/v1/make-server-34d0b231`;
@@ -457,4 +458,11 @@ export const api = {
 
   updatePenaltyCharge: (groupId: string, chargeId: string, data: { status: string }) =>
     request<{ message: string }>(`/groups/${groupId}/penalties/charges/${chargeId}`, { method: "PUT", body: data }),
+
+  // Subscription
+  getSubscription: (groupId: string) =>
+    request<Subscription>(`/groups/${groupId}/subscription`),
+
+  upgradeSubscription: (groupId: string, tier: SubscriptionTier) =>
+    request<Subscription>(`/groups/${groupId}/subscription`, { method: "POST", body: { tier } }),
 };

@@ -4819,4 +4819,73 @@ app.put('/make-server-34d0b231/groups/:groupId/penalties/charges/:chargeId', asy
   }
 });
 
+// === SUBSCRIPTION ===
+
+const VALID_TIERS = ['free', 'community', 'pro', 'enterprise'];
+const TRIAL_DAYS = 90;
+
+app.get('/groups/:groupId/subscription', requireAuth, async (c) => {
+  try {
+    const groupId = c.req.param('groupId');
+    const userId = c.get('userId');
+
+    const membership = await kv.get(`membership:${groupId}:${userId}`);
+    if (!membership) return c.json({ error: 'Not a member' }, 403);
+
+    let sub = await kv.get(`subscription:${groupId}`);
+
+    if (!sub) {
+      const now = new Date();
+      const trialEndsAt = new Date(now.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000);
+      sub = {
+        groupId,
+        tier: 'trial',
+        trialStartedAt: now.toISOString(),
+        trialEndsAt: trialEndsAt.toISOString(),
+        updatedAt: now.toISOString(),
+      };
+      await kv.set(`subscription:${groupId}`, sub);
+      return c.json(sub);
+    }
+
+    // Auto-downgrade expired trials
+    if (sub.tier === 'trial' && new Date(sub.trialEndsAt) < new Date()) {
+      sub = { ...sub, tier: 'free', updatedAt: new Date().toISOString() };
+      await kv.set(`subscription:${groupId}`, sub);
+    }
+
+    return c.json(sub);
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.post('/groups/:groupId/subscription', requireAuth, async (c) => {
+  try {
+    const groupId = c.req.param('groupId');
+    const userId = c.get('userId');
+
+    const membership = await kv.get(`membership:${groupId}:${userId}`);
+    if (!membership || membership.role !== 'admin') return c.json({ error: 'Admin only' }, 403);
+
+    const { tier } = await c.req.json();
+    if (!VALID_TIERS.includes(tier)) return c.json({ error: 'Invalid tier' }, 400);
+    if (tier === 'enterprise') return c.json({ error: 'Contact us to upgrade to Enterprise' }, 400);
+
+    const existing = await kv.get(`subscription:${groupId}`);
+    const now = new Date().toISOString();
+    const updated = {
+      groupId,
+      tier,
+      trialStartedAt: existing?.trialStartedAt ?? null,
+      trialEndsAt: existing?.trialEndsAt ?? null,
+      updatedAt: now,
+    };
+    await kv.set(`subscription:${groupId}`, updated);
+    return c.json(updated);
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
 Deno.serve(app.fetch);
