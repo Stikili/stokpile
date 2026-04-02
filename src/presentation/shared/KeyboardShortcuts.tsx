@@ -14,10 +14,14 @@ interface KeyboardShortcutsProps {
 }
 
 export function KeyboardShortcuts({ open, onOpenChange }: KeyboardShortcutsProps) {
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
+  const mod = isMac ? '⌘' : 'Ctrl';
+
   const shortcuts = [
-    { keys: ['Ctrl', 'N'], description: 'New Contribution' },
-    { keys: ['Ctrl', 'P'], description: 'New Payout' },
-    { keys: ['Ctrl', 'M'], description: 'Schedule Meeting' },
+    { keys: [mod, 'K'], description: 'Command palette' },
+    { keys: [mod, 'N'], description: 'New Contribution' },
+    { keys: [mod, 'P'], description: 'New Payout' },
+    { keys: [mod, 'M'], description: 'Schedule Meeting' },
     { keys: ['?'], description: 'Show shortcuts' },
     { keys: ['Esc'], description: 'Close dialog' },
   ];
@@ -53,16 +57,23 @@ export function useKeyboardShortcuts(handlers: {
   onNewPayout?: () => void;
   onNewMeeting?: () => void;
   onShowShortcuts?: () => void;
+  onCommandPalette?: () => void;
 }) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if typing in input/textarea
-      if (
+      const inInput =
         e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
-      ) {
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target instanceof HTMLElement && e.target.isContentEditable);
+
+      // Ctrl/Cmd+K always opens command palette (even in inputs)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        handlers.onCommandPalette?.();
         return;
       }
+
+      if (inInput) return;
 
       if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
         e.preventDefault();

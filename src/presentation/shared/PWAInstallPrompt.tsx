@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/pre
 import { Alert, AlertDescription } from '@/presentation/ui/alert';
 import { Download, X, Share, Plus, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -133,14 +134,20 @@ export function PWAInstallPrompt() {
                   </CardDescription>
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 -mt-1 hover:bg-muted"
-                onClick={handleDismiss}
-              >
-                <X className="h-4 w-4" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Dismiss"
+                    className="h-8 w-8 -mt-1 hover:bg-muted"
+                    onClick={handleDismiss}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Dismiss</TooltipContent>
+              </Tooltip>
             </div>
           </CardHeader>
           <CardContent className="space-y-4 pb-6">
@@ -229,14 +236,20 @@ export function PWAInstallPrompt() {
                 </CardDescription>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 -mt-1 hover:bg-muted"
-              onClick={handleDismiss}
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Dismiss"
+                  className="h-8 w-8 -mt-1 hover:bg-muted"
+                  onClick={handleDismiss}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Dismiss</TooltipContent>
+            </Tooltip>
           </div>
         </CardHeader>
         <CardContent className="space-y-4 pb-6">

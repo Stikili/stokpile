@@ -17,10 +17,11 @@ import { UserAvatar } from '@/presentation/components/profile/UserAvatar';
 import { MemberStatsDialog } from '@/presentation/components/members/MemberStatsDialog';
 import { DatePicker } from '@/presentation/shared/DatePicker';
 import { ConfirmationDialog } from '@/presentation/shared/ConfirmationDialog';
-import { Plus, Download, DollarSign, Trash2, Search, Info, CreditCard, Loader2 } from 'lucide-react';
+import { Plus, Download, DollarSign, Trash2, Search, Info, CreditCard, Loader2, Zap } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
 import { exportToCSV, formatCurrency, formatDate } from '@/lib/export';
+import { PaymentProofButton } from '@/presentation/components/shared/PaymentProofButton';
 
 interface ContributionsViewProps {
   groupId: string;
@@ -39,6 +40,7 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
   const [submitting, setSubmitting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
   const [payingId, setPayingId] = useState<string | null>(null);
+  const [flutterwaveId, setFlutterwaveId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [duplicateWarning, setDuplicateWarning] = useState<{ open: boolean; pendingSubmit: (() => Promise<void>) | null }>({ open: false, pendingSubmit: null });
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -206,6 +208,18 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
       toast.error(error instanceof Error ? error.message : 'Payment not available');
     } finally {
       setPayingId(null);
+    }
+  };
+
+  const handleFlutterwavePay = async (contribution: Contribution) => {
+    setFlutterwaveId(contribution.id);
+    try {
+      const data = await api.createFlutterwaveLink(contribution.id);
+      window.open(data.paymentLink, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Flutterwave payment not available');
+    } finally {
+      setFlutterwaveId(null);
     }
   };
 
@@ -535,24 +549,49 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
                           {!contribution.paid && contribution.userEmail === userEmail && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handlePayNow(contribution)}
-                                  disabled={payingId === contribution.id}
-                                  className="text-primary border-primary/30 hover:bg-primary/5 h-8 px-2"
-                                >
-                                  {payingId === contribution.id
-                                    ? <Loader2 className="h-3 w-3 animate-spin" />
-                                    : <><CreditCard className="h-3 w-3 mr-1" /><span className="text-xs">Pay</span></>
-                                  }
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Pay this contribution via Paystack</TooltipContent>
-                            </Tooltip>
+                            <>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handlePayNow(contribution)}
+                                    disabled={payingId === contribution.id}
+                                    className="text-primary border-primary/30 hover:bg-primary/5 h-8 px-2"
+                                  >
+                                    {payingId === contribution.id
+                                      ? <Loader2 className="h-3 w-3 animate-spin" />
+                                      : <><CreditCard className="h-3 w-3 mr-1" /><span className="text-xs">Pay</span></>
+                                    }
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Pay via Paystack (card/bank)</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleFlutterwavePay(contribution)}
+                                    disabled={flutterwaveId === contribution.id}
+                                    className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/20 h-8 px-2"
+                                  >
+                                    {flutterwaveId === contribution.id
+                                      ? <Loader2 className="h-3 w-3 animate-spin" />
+                                      : <><Zap className="h-3 w-3 mr-1" /><span className="text-xs">Flutterwave</span></>
+                                    }
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Pay via Flutterwave (mobile money, card)</TooltipContent>
+                              </Tooltip>
+                            </>
                           )}
+                          <PaymentProofButton
+                            groupId={groupId}
+                            linkedType="contribution"
+                            linkedId={contribution.id}
+                            isAdmin={isAdmin}
+                          />
                           {(contribution.userEmail === userEmail || isAdmin) && (
                             <Tooltip>
                               <TooltipTrigger asChild>

@@ -20,6 +20,7 @@ import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
 import { exportToCSV, formatCurrency, formatDate } from '@/lib/export';
 import { sanitizeAmount } from '@/lib/sanitize';
+import { PaymentProofButton } from '@/presentation/components/shared/PaymentProofButton';
 
 interface PayoutsViewProps {
   groupId: string;
@@ -370,6 +371,7 @@ export function PayoutsView({ groupId, isAdmin }: PayoutsViewProps) {
                     <TableHead>Scheduled Date</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Reference</TableHead>
+                    <TableHead>Proof</TableHead>
                     {isAdmin && <TableHead>Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
@@ -402,6 +404,14 @@ export function PayoutsView({ groupId, isAdmin }: PayoutsViewProps) {
                         {payout.referenceNumber
                           ? <span className="text-xs font-mono text-muted-foreground">{payout.referenceNumber}</span>
                           : <span className="text-xs text-muted-foreground">—</span>}
+                      </TableCell>
+                      <TableCell>
+                        <PaymentProofButton
+                          groupId={groupId}
+                          linkedType="payout"
+                          linkedId={payout.id}
+                          isAdmin={isAdmin}
+                        />
                       </TableCell>
                       {isAdmin && (
                         <TableCell>

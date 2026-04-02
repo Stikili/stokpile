@@ -5,6 +5,8 @@ import type {
   ChatMessage, Invite, JoinRequest, Constitution, MemberStats,
   UserSearchResult, InviteLinkInfo, Profile, AuditEntry, GroupHealth,
   AppNotification, NotificationPrefs, RSVPSummary, MeetingRSVP, OverdueMember,
+  Announcement, PaymentProof, RotationOrder, GroceryItem,
+  BurialBeneficiary, BurialClaim, PenaltyRule, PenaltyCharge,
 } from "@/domain/types";
 
 const API_URL = `https://${projectId}.supabase.co/functions/v1/make-server-34d0b231`;
@@ -362,4 +364,97 @@ export const api = {
   // Group health score
   getGroupHealth: (groupId: string) =>
     request<GroupHealth>(`/groups/${groupId}/health`),
+
+  // Announcements
+  getAnnouncements: (groupId: string) =>
+    request<{ announcements: Announcement[] }>(`/groups/${groupId}/announcements`),
+
+  createAnnouncement: (groupId: string, data: { title: string; content: string; urgent?: boolean; pinned?: boolean }) =>
+    request<{ announcement: Announcement }>(`/groups/${groupId}/announcements`, { method: "POST", body: data }),
+
+  updateAnnouncement: (groupId: string, announcementId: string, data: { title?: string; content?: string; urgent?: boolean; pinned?: boolean }) =>
+    request<{ message: string }>(`/groups/${groupId}/announcements/${announcementId}`, { method: "PUT", body: data }),
+
+  deleteAnnouncement: (groupId: string, announcementId: string) =>
+    request<{ message: string }>(`/groups/${groupId}/announcements/${announcementId}`, { method: "DELETE" }),
+
+  // Payment Proofs
+  uploadPaymentProof: (groupId: string, linkedType: 'contribution' | 'payout', linkedId: string, file: File, referenceNumber?: string, notes?: string) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (referenceNumber) formData.append("referenceNumber", referenceNumber);
+    if (notes) formData.append("notes", notes);
+    return request<{ proof: PaymentProof }>(`/groups/${groupId}/proofs/${linkedType}/${linkedId}`, { method: "POST", body: formData });
+  },
+
+  getPaymentProof: (groupId: string, linkedType: 'contribution' | 'payout', linkedId: string) =>
+    request<{ proof: PaymentProof | null }>(`/groups/${groupId}/proofs/${linkedType}/${linkedId}`),
+
+  deletePaymentProof: (groupId: string, linkedType: 'contribution' | 'payout', linkedId: string) =>
+    request<{ message: string }>(`/groups/${groupId}/proofs/${linkedType}/${linkedId}`, { method: "DELETE" }),
+
+  // Flutterwave
+  createFlutterwaveLink: (contributionId: string) =>
+    request<{ paymentLink: string; txRef: string }>(`/contributions/${contributionId}/flutterwave-link`, { method: "POST" }),
+
+  // Rotation Order
+  getRotationOrder: (groupId: string) =>
+    request<{ rotation: RotationOrder | null }>(`/groups/${groupId}/rotation`),
+
+  initRotationOrder: (groupId: string) =>
+    request<{ message: string; rotation: RotationOrder }>(`/groups/${groupId}/rotation/init`, { method: "POST" }),
+
+  advanceRotation: (groupId: string) =>
+    request<{ message: string; rotation: RotationOrder }>(`/groups/${groupId}/rotation/advance`, { method: "PUT" }),
+
+  reorderRotation: (groupId: string, slots: { email: string; position: number }[]) =>
+    request<{ message: string; rotation: RotationOrder }>(`/groups/${groupId}/rotation/reorder`, { method: "PUT", body: { slots } }),
+
+  // Grocery
+  getGroceryItems: (groupId: string) =>
+    request<{ items: GroceryItem[] }>(`/groups/${groupId}/grocery`),
+
+  createGroceryItem: (groupId: string, data: { name: string; quantity: number; unit: string; estimatedCost?: number; assignedTo?: string; notes?: string }) =>
+    request<{ item: GroceryItem }>(`/groups/${groupId}/grocery`, { method: "POST", body: data }),
+
+  updateGroceryItem: (groupId: string, itemId: string, data: Partial<GroceryItem>) =>
+    request<{ message: string }>(`/groups/${groupId}/grocery/${itemId}`, { method: "PUT", body: data }),
+
+  deleteGroceryItem: (groupId: string, itemId: string) =>
+    request<{ message: string }>(`/groups/${groupId}/grocery/${itemId}`, { method: "DELETE" }),
+
+  // Burial Society
+  getBurialBeneficiaries: (groupId: string) =>
+    request<{ beneficiaries: BurialBeneficiary[] }>(`/groups/${groupId}/burial/beneficiaries`),
+
+  addBurialBeneficiary: (groupId: string, data: { name: string; relationship: string; idNumber?: string; phone?: string }) =>
+    request<{ beneficiary: BurialBeneficiary }>(`/groups/${groupId}/burial/beneficiaries`, { method: "POST", body: data }),
+
+  deleteBurialBeneficiary: (groupId: string, beneficiaryId: string) =>
+    request<{ message: string }>(`/groups/${groupId}/burial/beneficiaries/${beneficiaryId}`, { method: "DELETE" }),
+
+  getBurialClaims: (groupId: string) =>
+    request<{ claims: BurialClaim[] }>(`/groups/${groupId}/burial/claims`),
+
+  submitBurialClaim: (groupId: string, data: { beneficiaryName: string; relationship: string; deceasedName: string; dateOfDeath: string; amount: number; notes?: string }) =>
+    request<{ claim: BurialClaim }>(`/groups/${groupId}/burial/claims`, { method: "POST", body: data }),
+
+  updateBurialClaim: (groupId: string, claimId: string, data: { status: string }) =>
+    request<{ message: string; claim: BurialClaim }>(`/groups/${groupId}/burial/claims/${claimId}`, { method: "PUT", body: data }),
+
+  // Penalties / Fines
+  getPenalties: (groupId: string) =>
+    request<{ rules: PenaltyRule[]; charges: PenaltyCharge[] }>(`/groups/${groupId}/penalties`),
+
+  createPenaltyRule: (groupId: string, data: { name: string; amount: number; description?: string }) =>
+    request<{ rule: PenaltyRule }>(`/groups/${groupId}/penalties/rules`, { method: "POST", body: data }),
+
+  deletePenaltyRule: (groupId: string, ruleId: string) =>
+    request<{ message: string }>(`/groups/${groupId}/penalties/rules/${ruleId}`, { method: "DELETE" }),
+
+  chargePenalty: (groupId: string, data: { memberEmail: string; ruleId: string; reason?: string }) =>
+    request<{ charge: PenaltyCharge }>(`/groups/${groupId}/penalties/charge`, { method: "POST", body: data }),
+
+  updatePenaltyCharge: (groupId: string, chargeId: string, data: { status: string }) =>
+    request<{ message: string }>(`/groups/${groupId}/penalties/charges/${chargeId}`, { method: "PUT", body: data }),
 };

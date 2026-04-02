@@ -131,17 +131,27 @@ export function CreateGroupDialog({ onSuccess, open: controlledOpen, onOpenChang
                 <SelectValue placeholder="Select group type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="rotating">Rotating (Merry-go-round)</SelectItem>
                 <SelectItem value="burial">Burial Society</SelectItem>
+                <SelectItem value="chama">Chama (East Africa)</SelectItem>
+                <SelectItem value="goal">Goal-Based Savings</SelectItem>
                 <SelectItem value="grocery">Grocery Stokvel</SelectItem>
                 <SelectItem value="investment">Investment Club</SelectItem>
+                <SelectItem value="rotating">Rotating / Merry-go-round</SelectItem>
+                <SelectItem value="susu">Susu / Esusu (West Africa)</SelectItem>
+                <SelectItem value="tontine">Tontine (Francophone Africa)</SelectItem>
+                <SelectItem value="vsla">VSLA — Village Savings & Loans</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
               {groupType === 'rotating' && 'Members take turns receiving the full pot. Payouts rotate through members.'}
+              {groupType === 'susu' && 'West African rotating savings — each member contributes and one person collects each round.'}
+              {groupType === 'chama' && 'East African investment group with lending and savings facilities. Common in Kenya.'}
+              {groupType === 'tontine' && 'Francophone African savings circle — contributions are pooled and one member receives each period.'}
+              {groupType === 'vsla' && 'Village Savings & Loan Association — members save together and can take small loans from the shared fund.'}
               {groupType === 'burial' && 'Members pool levies to cover funeral costs for families in the group.'}
               {groupType === 'grocery' && 'Members save together to bulk-buy groceries at a discount.'}
               {groupType === 'investment' && 'Members pool money to invest collectively and share returns.'}
+              {groupType === 'goal' && 'Save toward a shared goal — school fees, holiday, equipment, or any target amount.'}
             </p>
           </div>
 

@@ -746,3 +746,39 @@
   position: static; width: auto; height: auto; padding: inherit;
   margin: inherit; overflow: visible; clip: auto; white-space: normal;
 }
+
+/* ─── Print styles (for Financial Reports) ────────────────────────────────── */
+@media print {
+  header, nav, footer,
+  [data-slot="tabs-list"],
+  .fixed, .sticky,
+  button:not(.print-show) {
+    display: none !important;
+  }
+  body { background: white !important; color: black !important; }
+  .print-report { display: block !important; }
+  .print\:block { display: block !important; }
+  @page { margin: 20mm; }
+}
+
+/* ─── Lite Mode (low-data) ────────────────────────────────────────────────── */
+.lite-mode img:not([data-lite-show]) {
+  display: none !important;
+}
+.lite-mode [data-lite-hide] {
+  display: none !important;
+}
+.lite-mode .recharts-responsive-container,
+.lite-mode canvas {
+  display: none !important;
+}
+.lite-mode .lite-text-only::before {
+  content: '[Chart hidden in Lite Mode]';
+  display: block;
+  padding: 1rem;
+  text-align: center;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}

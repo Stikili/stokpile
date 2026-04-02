@@ -6,9 +6,14 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/toolt
 
 const LANGUAGES = [
   { code: 'en', label: 'English' },
-  { code: 'zu', label: 'IsiZulu' },
+  { code: 'fr', label: 'Français' },
   { code: 'xh', label: 'IsiXhosa' },
+  { code: 'zu', label: 'IsiZulu' },
+  { code: 'sw', label: 'Kiswahili' },
+  { code: 'pt', label: 'Português' },
   { code: 'st', label: 'Sesotho' },
+  { code: 'tn', label: 'Setswana' },
+  { code: 'sn', label: 'Shona' },
 ] as const;
 
 export function LanguageToggle() {

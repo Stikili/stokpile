@@ -11,6 +11,14 @@ const PayoutsView = lazy(() => import("@/presentation/components/payouts/Payouts
 const MeetingsView = lazy(() => import("@/presentation/components/meetings/MeetingsView").then(m => ({ default: m.MeetingsView })));
 const GroupInfoView = lazy(() => import("@/presentation/components/groups/GroupInfoView").then(m => ({ default: m.GroupInfoView })));
 const AuditLogView = lazy(() => import("@/presentation/components/groups/AuditLogView").then(m => ({ default: m.AuditLogView })));
+const AnnouncementsView = lazy(() => import("@/presentation/components/announcements/AnnouncementsView").then(m => ({ default: m.AnnouncementsView })));
+const FinancialReportsView = lazy(() => import("@/presentation/components/reports/FinancialReportsView").then(m => ({ default: m.FinancialReportsView })));
+const AnalyticsView = lazy(() => import("@/presentation/components/analytics/AnalyticsView").then(m => ({ default: m.AnalyticsView })));
+const RotationOrderView = lazy(() => import("@/presentation/components/rotation/RotationOrderView").then(m => ({ default: m.RotationOrderView })));
+const GroceryCoordinationView = lazy(() => import("@/presentation/components/grocery/GroceryCoordinationView").then(m => ({ default: m.GroceryCoordinationView })));
+const BurialSocietyView = lazy(() => import("@/presentation/components/burial/BurialSocietyView").then(m => ({ default: m.BurialSocietyView })));
+const PenaltiesView = lazy(() => import("@/presentation/components/penalties/PenaltiesView").then(m => ({ default: m.PenaltiesView })));
+import { CommandPalette } from "@/presentation/shared/CommandPalette";
 import { GroupActionsButtons } from "@/presentation/components/groups/GroupActionsButtons";
 import { PendingInvitesView } from "@/presentation/components/members/PendingInvitesView";
 import { PublicJoinView } from "@/presentation/components/groups/PublicJoinView";
@@ -31,6 +39,8 @@ import { ThemeProvider } from "@/presentation/shared/ThemeProvider";
 import { ThemeToggle } from "@/presentation/shared/ThemeToggle";
 import { LanguageToggle } from "@/presentation/shared/LanguageToggle";
 import { LanguageProvider } from "@/application/context/LanguageContext";
+import { LiteModeProvider } from "@/application/context/LiteModeContext";
+import { LiteModeToggle } from "@/presentation/shared/LiteModeToggle";
 import { PushNotificationSetup } from "@/presentation/shared/PushNotificationSetup";
 import { PhonePrompt } from "@/presentation/shared/PhonePrompt";
 import { Logo } from "@/presentation/layout/Logo";
@@ -44,6 +54,7 @@ import {
   TooltipTrigger,
 } from "@/presentation/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/presentation/ui/tabs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel, DropdownMenuTrigger } from "@/presentation/ui/dropdown-menu";
 import {
   PieChart,
   DollarSign,
@@ -54,6 +65,15 @@ import {
   Calendar,
   Lock,
   ClipboardList,
+  ChevronDown,
+  Search,
+  Megaphone,
+  FileBarChart,
+  Activity,
+  RefreshCw,
+  ShoppingCart,
+  HeartHandshake,
+  Gavel,
 } from "lucide-react";
 import { Toaster } from "@/presentation/ui/sonner";
 import { useSession } from "@/application/hooks/useSession";
@@ -77,6 +97,7 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [signOutLoading, setSignOutLoading] = useState(false);
   const [exportingCSV, setExportingCSV] = useState(false);
@@ -110,9 +131,22 @@ export default function App() {
       members: "info",
       info: "info",
       contributions: "contributions",
+      rotation: "rotation",
+      grocery: "grocery",
+      burial: "burial",
+      announcements: "announcements",
+      penalties: "penalties",
+      reports: "reports",
+      analytics: "analytics",
+      audit: "audit",
     };
     if (tabMap[action]) {
       setActiveTab(tabMap[action]);
+      return;
+    }
+    if (action === "lite-mode") {
+      // handled by LiteModeContext toggle — just trigger via DOM event for now
+      document.dispatchEvent(new CustomEvent("toggle-lite-mode"));
       return;
     }
     if (action === "export-contributions" && selectedGroup) {
@@ -136,6 +170,7 @@ export default function App() {
     onNewPayout: () => handleQuickAction("payout"),
     onNewMeeting: () => handleQuickAction("meeting"),
     onShowShortcuts: () => setShowShortcuts(true),
+    onCommandPalette: () => setShowCommandPalette(true),
   });
 
   const isAdmin = selectedGroup?.userRole === "admin";
@@ -189,6 +224,7 @@ export default function App() {
     <ErrorBoundary>
       <ThemeProvider>
         <LanguageProvider>
+        <LiteModeProvider>
         <TooltipProvider>
           <div className="min-h-screen bg-gradient-to-br from-slate-50/80 to-blue-50/30 dark:bg-transparent dark:bg-none dark:from-transparent dark:to-transparent">
             {/* Skip to main content for accessibility */}
@@ -205,6 +241,16 @@ export default function App() {
             <PushNotificationSetup />
             <PhonePrompt userId={session.user.id} />
             <KeyboardShortcuts open={showShortcuts} onOpenChange={setShowShortcuts} />
+            <CommandPalette
+              open={showCommandPalette}
+              onOpenChange={setShowCommandPalette}
+              selectedGroup={selectedGroup}
+              isAdmin={isAdmin}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              onAction={handleQuickAction}
+              onSignOut={() => setShowSignOutDialog(true)}
+            />
             <OnboardingTour
               show={showOnboarding && !!session}
               onComplete={handleOnboardingComplete}
@@ -248,6 +294,16 @@ export default function App() {
                 <div className="flex items-center gap-1.5">
                   <Tooltip>
                     <TooltipTrigger asChild>
+                      <Button variant="ghost" size="sm" onClick={() => setShowCommandPalette(true)} className="hidden lg:flex items-center gap-1.5 text-muted-foreground border border-border/60 h-8 px-3 rounded-lg hover:bg-muted/60" aria-label="Command palette">
+                        <Search className="h-3.5 w-3.5" />
+                        <span className="text-xs">Search</span>
+                        <kbd className="ml-1 text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded">⌘K</kbd>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Command palette (⌘K)</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
                       <Button variant="ghost" size="icon" onClick={() => setShowShortcuts(true)} className="hidden lg:flex" aria-label="Keyboard shortcuts">
                         <Keyboard className="h-5 w-5" aria-hidden="true" />
                       </Button>
@@ -259,6 +315,7 @@ export default function App() {
                     userEmail={session?.user?.email}
                   />
                   <ThemeToggle className="hidden lg:flex" />
+                  <LiteModeToggle className="hidden lg:flex" />
                   <LanguageToggle />
                   <ProfileMenu 
                     session={session}
@@ -313,48 +370,108 @@ export default function App() {
               ) : (
                 <div className="animate-slide-up">
                   <Tabs value={activeTab} onValueChange={setActiveTab}>
-                    <TabsList className="bg-white dark:bg-card mb-3 hidden lg:flex border border-border h-9">
-                      <TabsTrigger value="dashboard" className="text-sm">
-                        <PieChart className="h-3.5 w-3.5 mr-1.5" />
-                        Dashboard
-                      </TabsTrigger>
-                      <TabsTrigger value="contributions" className="text-sm">
-                        <DollarSign className="h-3.5 w-3.5 mr-1.5" />
-                        Contributions
-                      </TabsTrigger>
-                      {selectedGroup.payoutsAllowed ? (
-                        <TabsTrigger value="payouts" className="text-sm">
-                          <TrendingUp className="h-3.5 w-3.5 mr-1.5" />
-                          Payouts
-                        </TabsTrigger>
-                      ) : isAdmin && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground cursor-default select-none opacity-60">
-                              <Lock className="h-3.5 w-3.5" />
-                              Payouts
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            Payouts are disabled for this group. Enable them in Group Settings.
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                      <TabsTrigger value="meetings" className="text-sm">
-                        <Calendar className="h-3.5 w-3.5 mr-1.5" />
-                        Meetings
-                      </TabsTrigger>
-                      <TabsTrigger value="info" className="text-sm">
-                        <Settings className="h-3.5 w-3.5 mr-1.5" />
-                        Group Settings
-                      </TabsTrigger>
-                      {isAdmin && (
-                        <TabsTrigger value="audit" className="text-sm">
-                          <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
-                          Audit Log
-                        </TabsTrigger>
-                      )}
-                    </TabsList>
+                    {(() => {
+                      const groupType = selectedGroup.groupType;
+                      const hasRotation = groupType === 'rotating' || groupType === 'susu' || groupType === 'tontine' || groupType === 'chama';
+
+                      // Overflow items (non-core)
+                      const overflowItems = [
+                        ...(hasRotation ? [{ id: 'rotation', icon: RefreshCw, label: 'Rotation' }] : []),
+                        ...(groupType === 'grocery' ? [{ id: 'grocery', icon: ShoppingCart, label: 'Grocery List' }] : []),
+                        ...(groupType === 'burial'  ? [{ id: 'burial',  icon: HeartHandshake, label: 'Burial' }] : []),
+                      ];
+                      const adminItems = isAdmin ? [
+                        { id: 'penalties', icon: Gavel,       label: 'Penalties' },
+                        { id: 'reports',   icon: FileBarChart, label: 'Reports' },
+                        { id: 'analytics', icon: Activity,    label: 'Analytics' },
+                        { id: 'audit',     icon: ClipboardList, label: 'Audit Log' },
+                      ] : [];
+
+                      const allOverflow = [...overflowItems, ...adminItems];
+                      const activeInOverflow = allOverflow.some(i => i.id === activeTab);
+
+                      return (
+                        <TabsList className="bg-white dark:bg-card mb-3 hidden lg:flex border border-border h-9 w-full justify-start">
+                          {/* Core tabs — always visible */}
+                          <TabsTrigger value="dashboard" className="text-sm">
+                            <PieChart className="h-3.5 w-3.5 mr-1.5" />Dashboard
+                          </TabsTrigger>
+                          <TabsTrigger value="contributions" className="text-sm">
+                            <DollarSign className="h-3.5 w-3.5 mr-1.5" />Contributions
+                          </TabsTrigger>
+                          {selectedGroup.payoutsAllowed ? (
+                            <TabsTrigger value="payouts" className="text-sm">
+                              <TrendingUp className="h-3.5 w-3.5 mr-1.5" />Payouts
+                            </TabsTrigger>
+                          ) : isAdmin && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground cursor-default select-none opacity-50">
+                                  <Lock className="h-3.5 w-3.5" />Payouts
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>Payouts are disabled. Enable in Group Settings.</TooltipContent>
+                            </Tooltip>
+                          )}
+                          <TabsTrigger value="meetings" className="text-sm">
+                            <Calendar className="h-3.5 w-3.5 mr-1.5" />Meetings
+                          </TabsTrigger>
+                          <TabsTrigger value="announcements" className="text-sm">
+                            <Megaphone className="h-3.5 w-3.5 mr-1.5" />Announcements
+                          </TabsTrigger>
+                          <TabsTrigger value="info" className="text-sm">
+                            <Settings className="h-3.5 w-3.5 mr-1.5" />Settings
+                          </TabsTrigger>
+
+                          {/* Overflow "More ▾" dropdown */}
+                          {allOverflow.length > 0 && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-sm transition-colors ml-auto
+                                  ${activeInOverflow
+                                    ? 'text-primary font-medium bg-primary/10'
+                                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}>
+                                  More <ChevronDown className="h-3.5 w-3.5" />
+                                  {activeInOverflow && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-primary inline-block" />}
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-48">
+                                {overflowItems.length > 0 && (
+                                  <>
+                                    {overflowItems.map(item => (
+                                      <DropdownMenuItem
+                                        key={item.id}
+                                        onClick={() => setActiveTab(item.id)}
+                                        className={activeTab === item.id ? 'text-primary font-medium bg-primary/5' : ''}
+                                      >
+                                        <item.icon className="h-4 w-4 mr-2" />
+                                        {item.label}
+                                      </DropdownMenuItem>
+                                    ))}
+                                  </>
+                                )}
+                                {overflowItems.length > 0 && adminItems.length > 0 && <DropdownMenuSeparator />}
+                                {adminItems.length > 0 && (
+                                  <>
+                                    <DropdownMenuLabel className="text-xs text-muted-foreground">Admin</DropdownMenuLabel>
+                                    {adminItems.map(item => (
+                                      <DropdownMenuItem
+                                        key={item.id}
+                                        onClick={() => setActiveTab(item.id)}
+                                        className={activeTab === item.id ? 'text-primary font-medium bg-primary/5' : ''}
+                                      >
+                                        <item.icon className="h-4 w-4 mr-2" />
+                                        {item.label}
+                                      </DropdownMenuItem>
+                                    ))}
+                                  </>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </TabsList>
+                      );
+                    })()}
 
                     <Suspense fallback={<LoadingProgress message="Loading..." />}>
                       <TabsContent value="dashboard" className="space-y-4">
@@ -398,6 +515,46 @@ export default function App() {
                         <GroupInfoView group={selectedGroup} onGroupUpdate={refreshGroups} userEmail={session.user.email} />
                       </TabsContent>
 
+                      <TabsContent value="announcements" className="space-y-3">
+                        <AnnouncementsView groupId={selectedGroup.id} isAdmin={isAdmin} />
+                      </TabsContent>
+
+                      {(selectedGroup.groupType === 'rotating' || selectedGroup.groupType === 'susu' || selectedGroup.groupType === 'tontine' || selectedGroup.groupType === 'chama') && (
+                        <TabsContent value="rotation" className="space-y-3">
+                          <RotationOrderView groupId={selectedGroup.id} isAdmin={isAdmin} groupType={selectedGroup.groupType || 'rotating'} />
+                        </TabsContent>
+                      )}
+
+                      {selectedGroup.groupType === 'grocery' && (
+                        <TabsContent value="grocery" className="space-y-3">
+                          <GroceryCoordinationView groupId={selectedGroup.id} isAdmin={isAdmin} userEmail={session.user.email} />
+                        </TabsContent>
+                      )}
+
+                      {selectedGroup.groupType === 'burial' && (
+                        <TabsContent value="burial" className="space-y-3">
+                          <BurialSocietyView groupId={selectedGroup.id} isAdmin={isAdmin} userEmail={session.user.email} />
+                        </TabsContent>
+                      )}
+
+                      {isAdmin && (
+                        <TabsContent value="penalties" className="space-y-3">
+                          <PenaltiesView groupId={selectedGroup.id} isAdmin={isAdmin} />
+                        </TabsContent>
+                      )}
+
+                      {isAdmin && (
+                        <TabsContent value="reports" className="space-y-3">
+                          <FinancialReportsView groupId={selectedGroup.id} groupName={selectedGroup.name} isAdmin={isAdmin} />
+                        </TabsContent>
+                      )}
+
+                      {isAdmin && (
+                        <TabsContent value="analytics" className="space-y-3">
+                          <AnalyticsView groupId={selectedGroup.id} />
+                        </TabsContent>
+                      )}
+
                       {isAdmin && (
                         <TabsContent value="audit" className="space-y-3">
                           <AuditLogView groupId={selectedGroup.id} />
@@ -411,6 +568,7 @@ export default function App() {
                     onAction={handleQuickAction}
                     isAdmin={isAdmin}
                     payoutsAllowed={selectedGroup.payoutsAllowed}
+                    groupType={selectedGroup.groupType}
                   />
                 </div>
               )}
@@ -432,6 +590,7 @@ export default function App() {
             </div>
           </div>
         </TooltipProvider>
+        </LiteModeProvider>
         </LanguageProvider>
       </ThemeProvider>
     </ErrorBoundary>

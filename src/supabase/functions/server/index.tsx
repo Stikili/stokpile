@@ -4037,4 +4037,786 @@ app.post('/make-server-34d0b231/errors/log', async (c) => {
   }
 });
 
+// ============================================================
+// ANNOUNCEMENTS
+// ============================================================
+
+app.post('/make-server-34d0b231/groups/:groupId/announcements', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.status !== 'approved') return c.json({ error: 'Not a member' }, 403);
+    if (membership.role !== 'admin') return c.json({ error: 'Admins only' }, 403);
+
+    const { title, content, urgent = false, pinned = false } = await c.req.json();
+    if (!title?.trim() || !content?.trim()) return c.json({ error: 'Title and content are required' }, 400);
+
+    const id = generateId();
+    const now = new Date().toISOString();
+    const profile = await kv.get(`user:${user.email}`) || {};
+    const announcement = {
+      id, groupId, title: title.trim(), content: content.trim(),
+      urgent: !!urgent, pinned: !!pinned,
+      createdBy: user.email, createdAt: now,
+      author: { fullName: profile.fullName || '', surname: profile.surname || '', profilePictureUrl: profile.profilePictureUrl || null },
+    };
+    await kv.set(`announcement:${groupId}:${id}`, announcement);
+
+    logAudit(groupId, user.email, 'announcement_created', { id, title: title.trim(), urgent }).catch(console.warn);
+
+    // Notify all members
+    const allMemberships = await kv.getByPrefix(`membership:${groupId}:`);
+    const approved = allMemberships.filter(m => m.status === 'approved' && m.userEmail !== user.email);
+    const group = await kv.get(`group:${groupId}`);
+    const notifTitle = urgent ? `🚨 Urgent: ${title.trim()}` : `📢 ${title.trim()}`;
+    await Promise.all(approved.map(m =>
+      storeNotification(m.userEmail, groupId, notifTitle, content.trim().substring(0, 120), urgent ? 'warning' : 'info').catch(console.warn)
+    ));
+    if (urgent && group) {
+      const phones = await getGroupMemberPhones(groupId);
+      for (const phone of phones) {
+        sendWhatsApp(phone, `🚨 *${group.name}* — Urgent announcement: *${title.trim()}*\n\n${content.trim()}`).catch(console.warn);
+      }
+    }
+
+    return c.json({ announcement });
+  } catch (error) {
+    console.log(`Create announcement error: ${error.message}`);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.get('/make-server-34d0b231/groups/:groupId/announcements', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.status !== 'approved') return c.json({ error: 'Not a member' }, 403);
+
+    const all = await kv.getByPrefix(`announcement:${groupId}:`);
+    const announcements = all.sort((a, b) => {
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+    return c.json({ announcements });
+  } catch (error) {
+    console.log(`Get announcements error: ${error.message}`);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.put('/make-server-34d0b231/groups/:groupId/announcements/:announcementId', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const announcementId = c.req.param('announcementId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.role !== 'admin') return c.json({ error: 'Admins only' }, 403);
+
+    const existing = await kv.get(`announcement:${groupId}:${announcementId}`);
+    if (!existing) return c.json({ error: 'Announcement not found' }, 404);
+
+    const { title, content, urgent, pinned } = await c.req.json();
+    const updated = {
+      ...existing,
+      ...(title !== undefined && { title: title.trim() }),
+      ...(content !== undefined && { content: content.trim() }),
+      ...(urgent !== undefined && { urgent: !!urgent }),
+      ...(pinned !== undefined && { pinned: !!pinned }),
+      updatedAt: new Date().toISOString(),
+    };
+    await kv.set(`announcement:${groupId}:${announcementId}`, updated);
+    logAudit(groupId, user.email, 'announcement_updated', { id: announcementId }).catch(console.warn);
+    return c.json({ announcement: updated });
+  } catch (error) {
+    console.log(`Update announcement error: ${error.message}`);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.delete('/make-server-34d0b231/groups/:groupId/announcements/:announcementId', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const announcementId = c.req.param('announcementId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.role !== 'admin') return c.json({ error: 'Admins only' }, 403);
+
+    await kv.del(`announcement:${groupId}:${announcementId}`);
+    logAudit(groupId, user.email, 'announcement_deleted', { id: announcementId }).catch(console.warn);
+    return c.json({ message: 'Announcement deleted' });
+  } catch (error) {
+    console.log(`Delete announcement error: ${error.message}`);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// ============================================================
+// PAYMENT PROOFS
+// ============================================================
+
+const PROOF_BUCKET = 'make-34d0b231-payment-proofs';
+
+async function ensureProofBucket() {
+  const { data: buckets } = await supabaseAdmin.storage.listBuckets();
+  if (!buckets?.some(b => b.name === PROOF_BUCKET)) {
+    await supabaseAdmin.storage.createBucket(PROOF_BUCKET, { public: false, fileSizeLimit: 10485760 });
+  }
+}
+
+app.post('/make-server-34d0b231/groups/:groupId/proofs/:linkedType/:linkedId', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const linkedType = c.req.param('linkedType') as 'payout' | 'contribution';
+    const linkedId = c.req.param('linkedId');
+
+    if (!['payout', 'contribution'].includes(linkedType)) return c.json({ error: 'Invalid type' }, 400);
+
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.status !== 'approved') return c.json({ error: 'Not a member' }, 403);
+
+    // Verify the linked entity exists and belongs to this group
+    const entity = await kv.get(`${linkedType}:${groupId}:${linkedId}`);
+    if (!entity) return c.json({ error: `${linkedType} not found` }, 404);
+
+    // Permission: admin always allowed; for contributions the owner can also upload
+    const isAdmin = membership.role === 'admin';
+    if (!isAdmin) {
+      if (linkedType === 'contribution' && entity.userEmail !== user.email) return c.json({ error: 'Forbidden' }, 403);
+      if (linkedType === 'payout') return c.json({ error: 'Admins only for payout proofs' }, 403);
+    }
+
+    const formData = await c.req.formData();
+    const file = formData.get('file') as File | null;
+    if (!file) return c.json({ error: 'No file provided' }, 400);
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) return c.json({ error: 'Only JPEG, PNG, WebP, or PDF allowed' }, 400);
+    if (file.size > 10 * 1024 * 1024) return c.json({ error: 'File must be under 10 MB' }, 400);
+
+    const referenceNumber = formData.get('referenceNumber')?.toString() || undefined;
+    const notes = formData.get('notes')?.toString() || undefined;
+
+    await ensureProofBucket();
+
+    // Delete old proof file if one exists
+    const oldProof = await kv.get(`payment-proof:${groupId}:${linkedId}`);
+    if (oldProof?.filePath) {
+      await supabaseAdmin.storage.from(PROOF_BUCKET).remove([oldProof.filePath]).catch(console.warn);
+    }
+
+    const ext = file.name.split('.').pop();
+    const filePath = `proofs/${groupId}/${linkedId}-${Date.now()}.${ext}`;
+    const arrayBuffer = await file.arrayBuffer();
+    const { error: uploadError } = await supabaseAdmin.storage.from(PROOF_BUCKET)
+      .upload(filePath, arrayBuffer, { contentType: file.type, upsert: true });
+    if (uploadError) throw new Error(uploadError.message);
+
+    const proof = {
+      id: generateId(), groupId, linkedId, linkedType,
+      fileName: file.name, filePath, fileType: file.type, fileSize: file.size,
+      uploadedBy: user.email, uploadedAt: new Date().toISOString(),
+      referenceNumber, notes,
+    };
+    await kv.set(`payment-proof:${groupId}:${linkedId}`, proof);
+    logAudit(groupId, user.email, 'proof_uploaded', { linkedId, linkedType, fileName: file.name }).catch(console.warn);
+    return c.json({ proof });
+  } catch (error) {
+    console.log(`Upload proof error: ${error.message}`);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.get('/make-server-34d0b231/groups/:groupId/proofs/:linkedType/:linkedId', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const linkedId = c.req.param('linkedId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.status !== 'approved') return c.json({ error: 'Not a member' }, 403);
+
+    const proof = await kv.get(`payment-proof:${groupId}:${linkedId}`);
+    if (!proof) return c.json({ proof: null });
+
+    const { data: urlData } = await supabaseAdmin.storage.from(PROOF_BUCKET)
+      .createSignedUrl(proof.filePath, 3600);
+    return c.json({ proof: { ...proof, downloadUrl: urlData?.signedUrl || null } });
+  } catch (error) {
+    console.log(`Get proof error: ${error.message}`);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.delete('/make-server-34d0b231/groups/:groupId/proofs/:linkedType/:linkedId', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const linkedId = c.req.param('linkedId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.role !== 'admin') return c.json({ error: 'Admins only' }, 403);
+
+    const proof = await kv.get(`payment-proof:${groupId}:${linkedId}`);
+    if (proof?.filePath) {
+      await supabaseAdmin.storage.from(PROOF_BUCKET).remove([proof.filePath]).catch(console.warn);
+    }
+    await kv.del(`payment-proof:${groupId}:${linkedId}`);
+    logAudit(groupId, user.email, 'proof_deleted', { linkedId }).catch(console.warn);
+    return c.json({ message: 'Proof deleted' });
+  } catch (error) {
+    console.log(`Delete proof error: ${error.message}`);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// ─── SMS Helper (Africa's Talking) ───────────────────────────────────────────
+
+async function sendSMS(phone: string, message: string): Promise<void> {
+  const apiKey = Deno.env.get('AFRICAS_TALKING_API_KEY');
+  const username = Deno.env.get('AFRICAS_TALKING_USERNAME') || 'sandbox';
+  if (!apiKey || !phone) return;
+  try {
+    const params = new URLSearchParams({ username, to: phone, message });
+    await fetch('https://api.africastalking.com/version1/messaging', {
+      method: 'POST',
+      headers: { apiKey, Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+    });
+  } catch (e) {
+    console.warn('SMS send failed:', e.message);
+  }
+}
+
+// ─── Flutterwave Payment Link ─────────────────────────────────────────────────
+
+app.post('/make-server-34d0b231/contributions/:contributionId/flutterwave-link', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const secretKey = Deno.env.get('FLUTTERWAVE_SECRET_KEY');
+    if (!secretKey) return c.json({ error: 'Flutterwave not configured' }, 503);
+
+    const contributionId = c.req.param('contributionId');
+    const contribution = await kv.get(`contribution:${contributionId}`);
+    if (!contribution) return c.json({ error: 'Contribution not found' }, 404);
+
+    const membership = await kv.get(`membership:${contribution.groupId}:${user.email}`);
+    if (!membership) return c.json({ error: 'Not a group member' }, 403);
+    if (contribution.userEmail !== user.email) return c.json({ error: 'Not your contribution' }, 403);
+
+    const profile = await kv.get(`user:${user.email}`);
+    const txRef = `stk-${contributionId}-${Date.now()}`;
+
+    const payload = {
+      tx_ref: txRef,
+      amount: contribution.amount,
+      currency: contribution.currency || 'ZAR',
+      redirect_url: `${Deno.env.get('APP_URL') || 'https://stokpile.app'}/payment-callback`,
+      customer: { email: user.email, name: `${profile?.fullName || ''} ${profile?.surname || ''}`.trim() },
+      customizations: { title: 'Stokpile Contribution', description: `Contribution payment for group` },
+      meta: { contributionId, groupId: contribution.groupId },
+    };
+
+    const res = await fetch('https://api.flutterwave.com/v3/payments', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${secretKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data.status !== 'success') return c.json({ error: data.message || 'Flutterwave error' }, 400);
+    return c.json({ paymentLink: data.data.link, txRef });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// Flutterwave webhook — verify and mark contribution paid
+app.post('/make-server-34d0b231/flutterwave/webhook', async (c) => {
+  try {
+    const secretHash = Deno.env.get('FLUTTERWAVE_SECRET_HASH');
+    const sig = c.req.header('verif-hash');
+    if (secretHash && sig !== secretHash) return c.json({ error: 'Invalid signature' }, 401);
+
+    const body = await c.req.json();
+    if (body.event !== 'charge.completed' || body.data?.status !== 'successful') return c.json({ ok: true });
+
+    const contributionId = body.data?.meta?.contributionId;
+    if (!contributionId) return c.json({ ok: true });
+
+    const contribution = await kv.get(`contribution:${contributionId}`);
+    if (contribution && !contribution.paid) {
+      await kv.set(`contribution:${contributionId}`, { ...contribution, paid: true });
+      storeNotification(contribution.groupId, contribution.userEmail, 'Contribution Paid', `Payment of ${contribution.amount} received via Flutterwave`, 'success').catch(console.warn);
+    }
+    return c.json({ ok: true });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// ─── Rotation Order ───────────────────────────────────────────────────────────
+
+app.get('/make-server-34d0b231/groups/:groupId/rotation', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.status !== 'approved') return c.json({ error: 'Not a member' }, 403);
+
+    const rotation = await kv.get(`rotation:${groupId}`);
+    if (!rotation) return c.json({ rotation: null });
+
+    // Enrich slots with profile data
+    const enriched = await Promise.all(rotation.slots.map(async (slot: { email: string; position: number; cycleReceived: boolean }) => {
+      const profile = await kv.get(`user:${slot.email}`);
+      return { ...slot, fullName: profile?.fullName, surname: profile?.surname, profilePictureUrl: profile?.profilePictureUrl };
+    }));
+    return c.json({ rotation: { ...rotation, slots: enriched } });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.post('/make-server-34d0b231/groups/:groupId/rotation/init', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.role !== 'admin') return c.json({ error: 'Admins only' }, 403);
+
+    const allMemberships = await kv.getByPrefix(`membership:${groupId}:`);
+    const approved = allMemberships.filter((m: { status: string }) => m.status === 'approved');
+    const slots = approved.map((m: { email: string }, i: number) => ({ email: m.email, position: i + 1, cycleReceived: false }));
+
+    const rotation = { groupId, slots, currentPosition: 1, currentCycle: 1, updatedAt: new Date().toISOString() };
+    await kv.set(`rotation:${groupId}`, rotation);
+    logAudit(groupId, user.email, 'rotation_initialized', { memberCount: slots.length }).catch(console.warn);
+    return c.json({ message: 'Rotation initialized', rotation });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.put('/make-server-34d0b231/groups/:groupId/rotation/advance', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.role !== 'admin') return c.json({ error: 'Admins only' }, 403);
+
+    const rotation = await kv.get(`rotation:${groupId}`);
+    if (!rotation) return c.json({ error: 'Rotation not initialized' }, 404);
+
+    const updatedSlots = rotation.slots.map((s: { position: number; cycleReceived: boolean }) =>
+      s.position === rotation.currentPosition ? { ...s, cycleReceived: true } : s
+    );
+    const nextPosition = rotation.currentPosition + 1;
+    const allDone = nextPosition > rotation.slots.length;
+    const newRotation = {
+      ...rotation,
+      slots: allDone ? updatedSlots.map((s: { cycleReceived: boolean }) => ({ ...s, cycleReceived: false })) : updatedSlots,
+      currentPosition: allDone ? 1 : nextPosition,
+      currentCycle: allDone ? rotation.currentCycle + 1 : rotation.currentCycle,
+      updatedAt: new Date().toISOString(),
+    };
+    await kv.set(`rotation:${groupId}`, newRotation);
+    logAudit(groupId, user.email, 'rotation_advanced', { position: rotation.currentPosition, newCycle: allDone }).catch(console.warn);
+    return c.json({ message: 'Rotation advanced', rotation: newRotation });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.put('/make-server-34d0b231/groups/:groupId/rotation/reorder', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.role !== 'admin') return c.json({ error: 'Admins only' }, 403);
+
+    const { slots } = await c.req.json();
+    const rotation = await kv.get(`rotation:${groupId}`);
+    if (!rotation) return c.json({ error: 'Rotation not initialized' }, 404);
+
+    const updatedSlots = slots.map((s: { email: string; position: number }) => {
+      const existing = rotation.slots.find((r: { email: string }) => r.email === s.email);
+      return { ...existing, position: s.position };
+    });
+    const updated = { ...rotation, slots: updatedSlots, updatedAt: new Date().toISOString() };
+    await kv.set(`rotation:${groupId}`, updated);
+    return c.json({ message: 'Rotation reordered', rotation: updated });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// ─── Grocery Items ────────────────────────────────────────────────────────────
+
+app.get('/make-server-34d0b231/groups/:groupId/grocery', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.status !== 'approved') return c.json({ error: 'Not a member' }, 403);
+
+    const items = await kv.getByPrefix(`grocery-item:${groupId}:`);
+    return c.json({ items: items.sort((a: { createdAt: string }, b: { createdAt: string }) => a.createdAt.localeCompare(b.createdAt)) });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.post('/make-server-34d0b231/groups/:groupId/grocery', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.status !== 'approved') return c.json({ error: 'Not a member' }, 403);
+
+    const { name, quantity, unit, estimatedCost, assignedTo, notes } = await c.req.json();
+    if (!name || !quantity || !unit) return c.json({ error: 'name, quantity, and unit are required' }, 400);
+
+    const id = generateId();
+    const item = { id, groupId, name, quantity: Number(quantity), unit, estimatedCost: Number(estimatedCost) || 0, assignedTo: assignedTo || null, status: 'needed', notes: notes || null, addedBy: user.email, createdAt: new Date().toISOString() };
+    await kv.set(`grocery-item:${groupId}:${id}`, item);
+    return c.json({ item });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.put('/make-server-34d0b231/groups/:groupId/grocery/:itemId', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const itemId = c.req.param('itemId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.status !== 'approved') return c.json({ error: 'Not a member' }, 403);
+
+    const existing = await kv.get(`grocery-item:${groupId}:${itemId}`);
+    if (!existing) return c.json({ error: 'Item not found' }, 404);
+
+    const updates = await c.req.json();
+    await kv.set(`grocery-item:${groupId}:${itemId}`, { ...existing, ...updates, updatedAt: new Date().toISOString() });
+    return c.json({ message: 'Item updated' });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.delete('/make-server-34d0b231/groups/:groupId/grocery/:itemId', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const itemId = c.req.param('itemId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.role !== 'admin') return c.json({ error: 'Admins only' }, 403);
+
+    await kv.del(`grocery-item:${groupId}:${itemId}`);
+    return c.json({ message: 'Item removed' });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// ─── Burial Society — Beneficiaries ──────────────────────────────────────────
+
+app.get('/make-server-34d0b231/groups/:groupId/burial/beneficiaries', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.status !== 'approved') return c.json({ error: 'Not a member' }, 403);
+
+    const beneficiaries = await kv.getByPrefix(`burial-beneficiary:${groupId}:`);
+    return c.json({ beneficiaries: beneficiaries.sort((a: { createdAt: string }, b: { createdAt: string }) => a.createdAt.localeCompare(b.createdAt)) });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.post('/make-server-34d0b231/groups/:groupId/burial/beneficiaries', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.status !== 'approved') return c.json({ error: 'Not a member' }, 403);
+
+    const { name, relationship, idNumber, phone } = await c.req.json();
+    if (!name || !relationship) return c.json({ error: 'name and relationship are required' }, 400);
+
+    const id = generateId();
+    const beneficiary = { id, groupId, memberEmail: user.email, name, relationship, idNumber: idNumber || null, phone: phone || null, createdAt: new Date().toISOString() };
+    await kv.set(`burial-beneficiary:${groupId}:${id}`, beneficiary);
+    return c.json({ beneficiary });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.delete('/make-server-34d0b231/groups/:groupId/burial/beneficiaries/:beneficiaryId', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const beneficiaryId = c.req.param('beneficiaryId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.status !== 'approved') return c.json({ error: 'Not a member' }, 403);
+
+    const existing = await kv.get(`burial-beneficiary:${groupId}:${beneficiaryId}`);
+    if (!existing) return c.json({ error: 'Not found' }, 404);
+    if (existing.memberEmail !== user.email && membership.role !== 'admin') return c.json({ error: 'Forbidden' }, 403);
+
+    await kv.del(`burial-beneficiary:${groupId}:${beneficiaryId}`);
+    return c.json({ message: 'Beneficiary removed' });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// ─── Burial Society — Claims ──────────────────────────────────────────────────
+
+app.get('/make-server-34d0b231/groups/:groupId/burial/claims', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.status !== 'approved') return c.json({ error: 'Not a member' }, 403);
+
+    const claims = await kv.getByPrefix(`burial-claim:${groupId}:`);
+    return c.json({ claims: claims.sort((a: { createdAt: string }, b: { createdAt: string }) => b.createdAt.localeCompare(a.createdAt)) });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.post('/make-server-34d0b231/groups/:groupId/burial/claims', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.status !== 'approved') return c.json({ error: 'Not a member' }, 403);
+
+    const { beneficiaryName, relationship, deceasedName, dateOfDeath, amount, notes } = await c.req.json();
+    if (!beneficiaryName || !deceasedName || !dateOfDeath || !amount) return c.json({ error: 'Missing required fields' }, 400);
+
+    const id = generateId();
+    const claim = { id, groupId, claimantEmail: user.email, beneficiaryName, relationship: relationship || '', deceasedName, dateOfDeath, amount: Number(amount), status: 'pending', notes: notes || null, createdAt: new Date().toISOString() };
+    await kv.set(`burial-claim:${groupId}:${id}`, claim);
+
+    // Notify all admins
+    const memberships = await kv.getByPrefix(`membership:${groupId}:`);
+    const adminEmails = memberships.filter((m: { role: string; status: string }) => m.role === 'admin' && m.status === 'approved').map((m: { email: string }) => m.email);
+    for (const adminEmail of adminEmails) {
+      storeNotification(groupId, adminEmail, 'New Burial Claim', `A burial claim has been submitted by ${user.email}`, 'warning').catch(console.warn);
+    }
+    logAudit(groupId, user.email, 'burial_claim_submitted', { claimId: id, amount }).catch(console.warn);
+    return c.json({ claim });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.put('/make-server-34d0b231/groups/:groupId/burial/claims/:claimId', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const claimId = c.req.param('claimId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.role !== 'admin') return c.json({ error: 'Admins only' }, 403);
+
+    const claim = await kv.get(`burial-claim:${groupId}:${claimId}`);
+    if (!claim) return c.json({ error: 'Claim not found' }, 404);
+
+    const { status } = await c.req.json();
+    const updated = { ...claim, status, processedAt: new Date().toISOString(), processedBy: user.email };
+    await kv.set(`burial-claim:${groupId}:${claimId}`, updated);
+
+    storeNotification(groupId, claim.claimantEmail, 'Claim Updated', `Your burial claim status is now: ${status}`, status === 'approved' || status === 'paid' ? 'success' : 'warning').catch(console.warn);
+    logAudit(groupId, user.email, `burial_claim_${status}`, { claimId, claimantEmail: claim.claimantEmail }).catch(console.warn);
+    return c.json({ message: 'Claim updated', claim: updated });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// ─── Penalties / Fines ────────────────────────────────────────────────────────
+
+app.get('/make-server-34d0b231/groups/:groupId/penalties', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.status !== 'approved') return c.json({ error: 'Not a member' }, 403);
+
+    const rules = await kv.getByPrefix(`penalty-rule:${groupId}:`);
+    const charges = await kv.getByPrefix(`penalty-charge:${groupId}:`);
+    return c.json({ rules, charges });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.post('/make-server-34d0b231/groups/:groupId/penalties/rules', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.role !== 'admin') return c.json({ error: 'Admins only' }, 403);
+
+    const { name, amount, description } = await c.req.json();
+    if (!name || !amount) return c.json({ error: 'name and amount required' }, 400);
+
+    const id = generateId();
+    const rule = { id, groupId, name, amount: Number(amount), description: description || null, createdBy: user.email, createdAt: new Date().toISOString() };
+    await kv.set(`penalty-rule:${groupId}:${id}`, rule);
+    return c.json({ rule });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.delete('/make-server-34d0b231/groups/:groupId/penalties/rules/:ruleId', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.role !== 'admin') return c.json({ error: 'Admins only' }, 403);
+
+    await kv.del(`penalty-rule:${groupId}:${c.req.param('ruleId')}`);
+    return c.json({ message: 'Rule removed' });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.post('/make-server-34d0b231/groups/:groupId/penalties/charge', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.role !== 'admin') return c.json({ error: 'Admins only' }, 403);
+
+    const { memberEmail, ruleId, reason } = await c.req.json();
+    const rule = await kv.get(`penalty-rule:${groupId}:${ruleId}`);
+    if (!rule) return c.json({ error: 'Penalty rule not found' }, 404);
+
+    const id = generateId();
+    const charge = { id, groupId, memberEmail, ruleId, ruleName: rule.name, amount: rule.amount, reason: reason || rule.name, status: 'outstanding', createdBy: user.email, createdAt: new Date().toISOString() };
+    await kv.set(`penalty-charge:${groupId}:${id}`, charge);
+
+    storeNotification(groupId, memberEmail, 'Fine Issued', `A fine of ${rule.amount} has been issued: ${rule.name}`, 'warning').catch(console.warn);
+    logAudit(groupId, user.email, 'penalty_charged', { memberEmail, amount: rule.amount, reason: rule.name }).catch(console.warn);
+
+    // SMS notification if member has phone and smsEnabled
+    const prefs = await kv.get(`notification-prefs:${memberEmail}`);
+    if (prefs?.smsEnabled) {
+      const profile = await kv.get(`user:${memberEmail}`);
+      if (profile?.phone) sendSMS(profile.phone, `Stokpile: A fine of ${rule.amount} has been issued to your account: ${rule.name}`).catch(console.warn);
+    }
+    return c.json({ charge });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.put('/make-server-34d0b231/groups/:groupId/penalties/charges/:chargeId', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const chargeId = c.req.param('chargeId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.role !== 'admin') return c.json({ error: 'Admins only' }, 403);
+
+    const existing = await kv.get(`penalty-charge:${groupId}:${chargeId}`);
+    if (!existing) return c.json({ error: 'Charge not found' }, 404);
+
+    const { status } = await c.req.json();
+    await kv.set(`penalty-charge:${groupId}:${chargeId}`, { ...existing, status, updatedAt: new Date().toISOString() });
+    return c.json({ message: 'Charge updated' });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
 Deno.serve(app.fetch);

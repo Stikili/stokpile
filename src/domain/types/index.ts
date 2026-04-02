@@ -24,7 +24,7 @@ export interface Profile {
 }
 
 // === Groups ===
-export type GroupType = 'rotating' | 'burial' | 'grocery' | 'investment';
+export type GroupType = 'rotating' | 'burial' | 'grocery' | 'investment' | 'chama' | 'susu' | 'tontine' | 'vsla' | 'goal';
 
 export interface Group {
   id: string;
@@ -263,6 +263,7 @@ export interface NotificationPrefs {
   emailEnabled: boolean;
   whatsappEnabled: boolean;
   pushEnabled: boolean;
+  smsEnabled: boolean;
 }
 
 // === RSVP ===
@@ -316,16 +317,134 @@ export interface GroupHealth {
   monthlyBreakdown: { label: string; paid: number; total: number }[];
 }
 
-// === Payout with proof ===
-export interface PayoutProof {
+// === Payment Proof ===
+export interface PaymentProof {
+  id: string;
+  groupId: string;
+  linkedId: string;
+  linkedType: 'payout' | 'contribution';
+  fileName: string;
+  filePath: string;
+  fileType: string;
+  fileSize: number;
+  uploadedBy: string;
+  uploadedAt: string;
   referenceNumber?: string;
+  notes?: string;
+  downloadUrl?: string;
 }
 
 // === Payout status badge variants ===
 export type PayoutStatus = 'scheduled' | 'completed' | 'cancelled';
 
+// === Announcements ===
+export interface Announcement {
+  id: string;
+  groupId: string;
+  title: string;
+  content: string;
+  urgent: boolean;
+  pinned: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedAt?: string;
+  author?: {
+    fullName: string;
+    surname: string;
+    profilePictureUrl?: string | null;
+  };
+}
+
+// === Reports ===
+export type ReportType = 'contributions-summary' | 'monthly-statement' | 'payout-history';
+
 // === Delete confirmation state ===
 export interface DeleteConfirmState {
   open: boolean;
   id: string | null;
+}
+
+// === Rotation Order ===
+export interface RotationSlot {
+  email: string;
+  position: number;
+  fullName?: string;
+  surname?: string;
+  profilePictureUrl?: string | null;
+  cycleReceived: boolean;
+}
+
+export interface RotationOrder {
+  groupId: string;
+  slots: RotationSlot[];
+  currentPosition: number;
+  currentCycle: number;
+  updatedAt: string;
+}
+
+// === Grocery Items ===
+export interface GroceryItem {
+  id: string;
+  groupId: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  estimatedCost: number;
+  assignedTo?: string;
+  status: 'needed' | 'sourced' | 'purchased';
+  notes?: string;
+  addedBy: string;
+  createdAt: string;
+}
+
+// === Burial Society ===
+export interface BurialBeneficiary {
+  id: string;
+  groupId: string;
+  memberEmail: string;
+  name: string;
+  relationship: string;
+  idNumber?: string;
+  phone?: string;
+  createdAt: string;
+}
+
+export interface BurialClaim {
+  id: string;
+  groupId: string;
+  claimantEmail: string;
+  beneficiaryName: string;
+  relationship: string;
+  deceasedName: string;
+  dateOfDeath: string;
+  amount: number;
+  status: 'pending' | 'approved' | 'rejected' | 'paid';
+  notes?: string;
+  createdAt: string;
+  processedAt?: string;
+  processedBy?: string;
+}
+
+// === Penalties / Fines ===
+export interface PenaltyRule {
+  id: string;
+  groupId: string;
+  name: string;
+  amount: number;
+  description?: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface PenaltyCharge {
+  id: string;
+  groupId: string;
+  memberEmail: string;
+  ruleId: string;
+  ruleName: string;
+  amount: number;
+  reason: string;
+  status: 'outstanding' | 'waived' | 'paid';
+  createdBy: string;
+  createdAt: string;
 }

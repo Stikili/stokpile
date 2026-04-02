@@ -24,14 +24,23 @@ import { Logo } from "@/presentation/layout/Logo";
 import { api } from "@/infrastructure/api";
 
 const countries = [
+  "Angola",
   "Botswana",
+  "DRC (Congo)",
+  "Eswatini",
+  "Ethiopia",
   "Ghana",
   "Kenya",
   "Lesotho",
+  "Malawi",
+  "Mozambique",
   "Namibia",
   "Nigeria",
+  "Rwanda",
   "South Africa",
-  "Eswatini",
+  "Tanzania",
+  "Uganda",
+  "Zambia",
   "Zimbabwe",
   "Other",
 ];
