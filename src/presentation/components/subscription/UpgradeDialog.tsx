@@ -5,7 +5,7 @@ import { Button } from '@/presentation/ui/button';
 import { Badge } from '@/presentation/ui/badge';
 import { api } from '@/infrastructure/api';
 import { useSubscription } from '@/application/context/SubscriptionContext';
-import { TIER_PRICES, TIER_FEATURES } from '@/domain/types';
+import { TIER_PRICES } from '@/domain/types';
 import type { SubscriptionTier } from '@/domain/types';
 import { toast } from 'sonner';
 
