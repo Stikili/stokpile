@@ -463,6 +463,12 @@ export const api = {
   getSubscription: (groupId: string) =>
     request<Subscription>(`/groups/${groupId}/subscription`),
 
-  upgradeSubscription: (groupId: string, tier: SubscriptionTier) =>
-    request<Subscription>(`/groups/${groupId}/subscription`, { method: "POST", body: { tier } }),
+  initializeBilling: (groupId: string, tier: SubscriptionTier, email: string) =>
+    request<{ authorizationUrl: string; reference: string }>(`/billing/initialize`, {
+      method: "POST",
+      body: { groupId, tier, email },
+    }),
+
+  cancelSubscription: (groupId: string) =>
+    request<{ message: string }>(`/billing/cancel`, { method: "POST", body: { groupId } }),
 };

@@ -18,6 +18,9 @@ export interface Subscription {
   tier: SubscriptionTier;
   trialStartedAt: string | null;
   trialEndsAt: string | null;
+  paystackSubscriptionCode: string | null;
+  paystackCustomerCode: string | null;
+  nextBillingDate: string | null;
   updatedAt: string;
 }
 

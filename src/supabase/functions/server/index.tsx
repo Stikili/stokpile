@@ -4819,6 +4819,173 @@ app.put('/make-server-34d0b231/groups/:groupId/penalties/charges/:chargeId', asy
   }
 });
 
+// === BILLING ===
+
+const PLAN_CODES: Record<string, string | undefined> = {
+  community: Deno.env.get('PAYSTACK_COMMUNITY_PLAN_CODE'),
+  pro:       Deno.env.get('PAYSTACK_PRO_PLAN_CODE'),
+};
+
+app.post('/billing/initialize', requireAuth, async (c) => {
+  try {
+    const userId = c.get('userId');
+    const { groupId, tier, email } = await c.req.json();
+
+    if (!['community', 'pro'].includes(tier)) {
+      return c.json({ error: 'Invalid tier for billing' }, 400);
+    }
+
+    const membership = await kv.get(`membership:${groupId}:${userId}`);
+    if (!membership || membership.role !== 'admin') {
+      return c.json({ error: 'Admin only' }, 403);
+    }
+
+    const planCode = PLAN_CODES[tier];
+    if (!planCode) return c.json({ error: `Plan code for ${tier} not configured` }, 503);
+
+    const paystackSecretKey = Deno.env.get('PAYSTACK_SECRET_KEY');
+    if (!paystackSecretKey) return c.json({ error: 'Payment not configured' }, 503);
+
+    const appUrl = Deno.env.get('APP_URL') || 'https://stokpilev1.vercel.app';
+    const reference = `sub-${groupId}-${tier}-${Date.now()}`;
+
+    const res = await fetch('https://api.paystack.co/transaction/initialize', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${paystackSecretKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        amount: tier === 'community' ? 4900 : 14900, // ZAR cents (R49 / R149)
+        currency: 'ZAR',
+        plan: planCode,
+        reference,
+        callback_url: `${appUrl}?billing=success&groupId=${groupId}&tier=${tier}`,
+        metadata: { groupId, tier },
+      }),
+    });
+
+    const data = await res.json();
+    if (!data.status) return c.json({ error: data.message || 'Payment init failed' }, 400);
+
+    return c.json({
+      authorizationUrl: data.data.authorization_url,
+      reference: data.data.reference,
+    });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.post('/billing/webhook/paystack', async (c) => {
+  try {
+    const paystackSecretKey = Deno.env.get('PAYSTACK_SECRET_KEY');
+    if (!paystackSecretKey) return c.json({ error: 'Not configured' }, 503);
+
+    // Verify signature
+    const signature = c.req.header('x-paystack-signature');
+    const rawBody = await c.req.text();
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      'raw', encoder.encode(paystackSecretKey),
+      { name: 'HMAC', hash: 'SHA-512' }, false, ['sign']
+    );
+    const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(rawBody));
+    const hex = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
+    if (hex !== signature) return c.json({ error: 'Invalid signature' }, 401);
+
+    const event = JSON.parse(rawBody);
+    const { groupId, tier } = event.data?.metadata || {};
+
+    if (event.event === 'charge.success' && groupId && tier) {
+      const existing = await kv.get(`subscription:${groupId}`) || {};
+      await kv.set(`subscription:${groupId}`, {
+        ...existing,
+        groupId,
+        tier,
+        updatedAt: new Date().toISOString(),
+      });
+    }
+
+    if (event.event === 'subscription.create' && groupId) {
+      const existing = await kv.get(`subscription:${groupId}`) || {};
+      await kv.set(`subscription:${groupId}`, {
+        ...existing,
+        paystackSubscriptionCode: event.data?.subscription_code ?? null,
+        paystackCustomerCode: event.data?.customer?.customer_code ?? null,
+        nextBillingDate: event.data?.next_payment_date ?? null,
+        updatedAt: new Date().toISOString(),
+      });
+    }
+
+    if (event.event === 'subscription.disable' && groupId) {
+      const existing = await kv.get(`subscription:${groupId}`) || {};
+      await kv.set(`subscription:${groupId}`, {
+        ...existing,
+        tier: 'free',
+        paystackSubscriptionCode: null,
+        nextBillingDate: null,
+        updatedAt: new Date().toISOString(),
+      });
+    }
+
+    if (event.event === 'invoice.update' && groupId) {
+      const existing = await kv.get(`subscription:${groupId}`) || {};
+      await kv.set(`subscription:${groupId}`, {
+        ...existing,
+        nextBillingDate: event.data?.next_payment_date ?? existing.nextBillingDate,
+        updatedAt: new Date().toISOString(),
+      });
+    }
+
+    return c.json({ received: true });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.post('/billing/cancel', requireAuth, async (c) => {
+  try {
+    const userId = c.get('userId');
+    const { groupId } = await c.req.json();
+
+    const membership = await kv.get(`membership:${groupId}:${userId}`);
+    if (!membership || membership.role !== 'admin') return c.json({ error: 'Admin only' }, 403);
+
+    const sub = await kv.get(`subscription:${groupId}`);
+    if (!sub?.paystackSubscriptionCode) return c.json({ error: 'No active subscription' }, 400);
+
+    const paystackSecretKey = Deno.env.get('PAYSTACK_SECRET_KEY');
+    const res = await fetch(`https://api.paystack.co/subscription/disable`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${paystackSecretKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        code: sub.paystackSubscriptionCode,
+        token: sub.paystackCustomerCode,
+      }),
+    });
+
+    const data = await res.json();
+    if (!data.status) return c.json({ error: data.message }, 400);
+
+    // Webhook will handle the actual downgrade; optimistically clear code
+    await kv.set(`subscription:${groupId}`, {
+      ...sub,
+      paystackSubscriptionCode: null,
+      nextBillingDate: null,
+      updatedAt: new Date().toISOString(),
+    });
+
+    return c.json({ message: 'Subscription cancelled' });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
 // === SUBSCRIPTION ===
 
 const VALID_TIERS = ['free', 'community', 'pro', 'enterprise'];

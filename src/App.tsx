@@ -1,4 +1,4 @@
-import { useState, useCallback, lazy, Suspense } from "react";
+import { useState, useCallback, lazy, Suspense, useEffect } from "react";
 import { AuthForm } from "@/presentation/components/auth/AuthForm";
 import { GroupSelector } from "@/presentation/components/groups/GroupSelector";
 import { JoinRequestsView } from "@/presentation/components/members/JoinRequestsView";
@@ -179,6 +179,21 @@ export default function App() {
   });
 
   const isAdmin = selectedGroup?.userRole === "admin";
+
+  // Handle Paystack billing callback (?billing=success&groupId=xxx)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('billing') === 'success') {
+      const gid = params.get('groupId');
+      // Clean the URL without a reload
+      window.history.replaceState({}, '', window.location.pathname);
+      if (gid) {
+        // Switch to the group that was just upgraded and let SubscriptionContext refresh
+        const g = groups.find(g => g.id === gid);
+        if (g) selectGroup(g.id);
+      }
+    }
+  }, [groups, selectGroup]);
 
   // Loading state
   if (sessionLoading) {

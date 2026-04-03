@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Loader2, Sparkles, Zap, Building2 } from 'lucide-react';
+import { Check, Loader2, Sparkles, Zap, Building2, ExternalLink, XCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/presentation/ui/dialog';
 import { Button } from '@/presentation/ui/button';
 import { Badge } from '@/presentation/ui/badge';
@@ -8,6 +8,7 @@ import { useSubscription } from '@/application/context/SubscriptionContext';
 import { TIER_PRICES } from '@/domain/types';
 import type { SubscriptionTier } from '@/domain/types';
 import { toast } from 'sonner';
+import { useSession } from '@/application/hooks/useSession';
 
 interface UpgradeDialogProps {
   open: boolean;
@@ -71,21 +72,47 @@ const PLANS: {
   },
 ];
 
+function CancelButton({ groupId }: { groupId: string }) {
+  const { refresh } = useSubscription();
+  const [cancelling, setCancelling] = useState(false);
+
+  const handleCancel = async () => {
+    if (!confirm('Cancel your subscription? You\'ll keep access until the end of the billing period.')) return;
+    setCancelling(true);
+    try {
+      await api.cancelSubscription(groupId);
+      toast.success('Subscription cancelled. Access continues until end of billing period.');
+      refresh();
+    } catch {
+      toast.error('Failed to cancel. Please try again.');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  return (
+    <Button variant="ghost" size="sm" className="text-xs text-destructive hover:text-destructive h-7" onClick={handleCancel} disabled={cancelling}>
+      {cancelling ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <XCircle className="h-3 w-3 mr-1" />}
+      Cancel subscription
+    </Button>
+  );
+}
+
 export function UpgradeDialog({ open, onOpenChange, groupId }: UpgradeDialogProps) {
-  const { tier: currentTier, refresh } = useSubscription();
+  const { tier: currentTier, subscription } = useSubscription();
+  const { session } = useSession();
   const [upgrading, setUpgrading] = useState<SubscriptionTier | null>(null);
 
   const handleUpgrade = async (tier: SubscriptionTier) => {
     if (tier === 'enterprise') return;
+    if (!session?.user?.email) { toast.error('Not signed in'); return; }
     setUpgrading(tier);
     try {
-      await api.upgradeSubscription(groupId, tier);
-      toast.success(`Upgraded to ${tier.charAt(0).toUpperCase() + tier.slice(1)}!`);
-      refresh();
-      onOpenChange(false);
+      const { authorizationUrl } = await api.initializeBilling(groupId, tier, session.user.email);
+      // Redirect to Paystack hosted checkout; callback URL returns user to app
+      window.location.href = authorizationUrl;
     } catch {
-      toast.error('Upgrade failed. Please try again.');
-    } finally {
+      toast.error('Could not start payment. Please try again.');
       setUpgrading(null);
     }
   };
@@ -156,9 +183,9 @@ export function UpgradeDialog({ open, onOpenChange, groupId }: UpgradeDialogProp
                   disabled={!!upgrading}
                 >
                   {upgrading === plan.tier ? (
-                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Upgrading…</>
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Redirecting to payment…</>
                   ) : (
-                    `Upgrade to ${plan.label}`
+                    <><ExternalLink className="h-3.5 w-3.5 mr-2" />Upgrade to {plan.label}</>
                   )}
                 </Button>
               )}
@@ -166,9 +193,14 @@ export function UpgradeDialog({ open, onOpenChange, groupId }: UpgradeDialogProp
           ))}
         </div>
 
-        <p className="text-xs text-muted-foreground text-center mt-2">
-          All plans include a 3-month free trial for new groups. Prices in ZAR.
-        </p>
+        <div className="flex items-center justify-between mt-2">
+          <p className="text-xs text-muted-foreground">
+            All plans include a 3-month free trial for new groups. Prices in ZAR.
+          </p>
+          {subscription?.paystackSubscriptionCode && (
+            <CancelButton groupId={groupId} />
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
