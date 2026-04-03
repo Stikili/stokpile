@@ -44,7 +44,7 @@ export const TIER_PRICES: Record<SubscriptionTier, string> = {
   free:       'Free',
   trial:      'Free (3-month trial)',
   community:  'R49 / month',
-  pro:        'R149 / month',
+  pro:        'R99 / month',
   enterprise: 'Contact us',
 };
 

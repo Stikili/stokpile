@@ -4857,7 +4857,7 @@ app.post('/billing/initialize', requireAuth, async (c) => {
       },
       body: JSON.stringify({
         email,
-        amount: tier === 'community' ? 4900 : 14900, // ZAR cents (R49 / R149)
+        amount: tier === 'community' ? 4900 : 9900, // ZAR cents (R49 / R99)
         currency: 'ZAR',
         plan: planCode,
         reference,
