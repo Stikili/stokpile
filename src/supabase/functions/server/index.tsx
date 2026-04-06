@@ -4819,6 +4819,75 @@ app.put('/make-server-34d0b231/groups/:groupId/penalties/charges/:chargeId', asy
   }
 });
 
+// === ACCOUNT DELETION (Right to Deletion) ===
+
+app.delete('/account', requireAuth, async (c) => {
+  try {
+    const userId = c.get('userId');
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(
+      c.req.header('Authorization')?.split(' ')[1]
+    );
+    if (!user || userError) return c.json({ error: 'Unauthorized' }, 401);
+    const userEmail = user.email;
+
+    const deletedCount: Record<string, number> = {};
+
+    // 1. Delete all groups owned by this user and their associated data
+    const allGroups = await kv.getByPrefix('group:');
+    const ownedGroups = allGroups.filter((g) => g.createdBy === userEmail);
+    deletedCount.groups = ownedGroups.length;
+
+    for (const group of ownedGroups) {
+      const gid = group.id;
+      const prefixes = [
+        `contribution:${gid}:`, `payout:${gid}:`, `meeting:${gid}:`,
+        `vote:${gid}:`, `note:${gid}:`, `chat:${gid}:`,
+        `invite:${gid}:`, `join-request:${gid}:`, `constitution:${gid}`,
+        `membership:${gid}:`, `announcement:${gid}:`, `rotation:${gid}`,
+        `grocery-item:${gid}:`, `burial-beneficiary:${gid}:`, `burial-claim:${gid}:`,
+        `penalty-rule:${gid}:`, `penalty-charge:${gid}:`, `subscription:${gid}`,
+        `audit:${gid}:`, `notification:${gid}:`,
+      ];
+      for (const prefix of prefixes) {
+        const items = await kv.getByPrefix(prefix);
+        for (const item of items) {
+          await kv.delete(item._key || `${prefix}${item.id || ''}`);
+        }
+      }
+      await kv.delete(`group:${gid}`);
+    }
+
+    // 2. Remove memberships in groups user doesn't own
+    const allMemberships = await kv.getByPrefix('membership:');
+    const userMemberships = allMemberships.filter((m) => m.email === userEmail || m.userId === userId);
+    deletedCount.memberships = userMemberships.length;
+    for (const m of userMemberships) {
+      if (m._key) await kv.delete(m._key);
+    }
+
+    // 3. Delete user profile
+    const profile = await kv.get(`profile:${userId}`);
+    if (profile) await kv.delete(`profile:${userId}`);
+    deletedCount.profile = profile ? 1 : 0;
+
+    // 4. Delete notification prefs
+    const prefs = await kv.get(`notification-prefs:${userId}`);
+    if (prefs) await kv.delete(`notification-prefs:${userId}`);
+
+    // 5. Delete the auth user from Supabase
+    const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    if (deleteError) {
+      console.error('Failed to delete auth user:', deleteError.message);
+      return c.json({ error: 'Data deleted but auth account removal failed. Contact support.' }, 500);
+    }
+
+    deletedCount.authAccount = 1;
+    return c.json({ message: 'Account and all data permanently deleted', deletedCount });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
 // === BILLING ===
 
 const PLAN_CODES: Record<string, string | undefined> = {

@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/presentation/ui/dropdown-menu';
-import { User, Plus, UserPlus, Search, LogOut, Trash2, Bell } from 'lucide-react';
+import { User, Plus, UserPlus, Search, LogOut, Trash2, UserX, Bell } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
 import { NotificationPrefsDialog } from '@/presentation/components/profile/NotificationPrefsDialog';
 import { ProfileDialog } from '@/presentation/components/profile/ProfileDialog';
@@ -16,6 +16,7 @@ import { CreateGroupDialog } from '@/presentation/components/groups/CreateGroupD
 import { JoinGroupDialog } from '@/presentation/components/groups/JoinGroupDialog';
 import { SearchPublicGroupsDialog } from '@/presentation/components/groups/SearchPublicGroupsDialog';
 import { ClearDataDialog } from '@/presentation/shared/ClearDataDialog';
+import { DeleteAccountDialog } from '@/presentation/components/profile/DeleteAccountDialog';
 import type { Session } from '@/domain/types';
 
 interface ProfileMenuProps {
@@ -38,6 +39,7 @@ export function ProfileMenu({
   const [showJoinGroup, setShowJoinGroup] = useState(false);
   const [showSearchGroups, setShowSearchGroups] = useState(false);
   const [showClearData, setShowClearData] = useState(false);
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
 
   return (
     <>
@@ -86,6 +88,13 @@ export function ProfileMenu({
           >
             <Trash2 className="h-4 w-4 mr-2" />
             Clear All Data
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => setShowDeleteAccount(true)}
+            className="text-destructive focus:text-destructive"
+          >
+            <UserX className="h-4 w-4 mr-2" />
+            Delete Account
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={onSignOut}>
@@ -141,6 +150,12 @@ export function ProfileMenu({
             onGroupsChanged();
             setShowClearData(false);
           }}
+        />
+      )}
+      {showDeleteAccount && (
+        <DeleteAccountDialog
+          open={showDeleteAccount}
+          onOpenChange={setShowDeleteAccount}
         />
       )}
     </>

@@ -1,11 +1,11 @@
 {
-  "name": "Stokpile - Group Financial Management",
+  "name": "Stokpile - Group Savings & Payouts",
   "short_name": "Stokpile",
-  "description": "Modern stokvel and group savings management platform with contributions tracking, payouts, meetings, voting, and real-time collaboration. Secure, transparent, and built for mobile-first communities.",
+  "description": "Transparent group savings management. Track contributions, schedule payouts, and organise meetings for your stokvel or savings group.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#030213",
+  "theme_color": "#007a38",
   "orientation": "portrait-primary",
   "icons": [
     {
@@ -19,10 +19,14 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
     }
   ],
   "categories": ["finance", "productivity"],
-  "screenshots": [],
   "shortcuts": [
     {
       "name": "Dashboard",

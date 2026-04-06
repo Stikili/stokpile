@@ -61,6 +61,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [rememberMe, setRememberMe] = useState(false);
+  const [consentGiven, setConsentGiven] = useState(false);
 
   // Load remembered email on mount (sessionStorage — scoped to browser tab)
   useEffect(() => {
@@ -113,6 +114,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
         if (!country) errors.country = "Please select your country";
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = "Enter a valid email address";
         if (password.length < 12) errors.password = "Password must be at least 12 characters";
+        if (!consentGiven) errors.consent = "You must agree to data processing to continue";
         if (Object.keys(errors).length > 0) {
           setFieldErrors(errors);
           setLoading(false);
@@ -326,7 +328,34 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
               </div>
             )}
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            {isSignup && (
+              <div className="space-y-2">
+                <div className="flex items-start space-x-2">
+                  <Checkbox
+                    id="consent"
+                    checked={consentGiven}
+                    onCheckedChange={(checked: boolean) => {
+                      setConsentGiven(checked as boolean);
+                      if (checked) {
+                        const { consent: _, ...rest } = fieldErrors;
+                        setFieldErrors(rest);
+                      }
+                    }}
+                    disabled={loading}
+                    className="mt-0.5"
+                  />
+                  <Label
+                    htmlFor="consent"
+                    className="text-xs leading-relaxed cursor-pointer select-none text-muted-foreground"
+                  >
+                    I agree that Stokpile may process my data to provide the service. <span className="text-destructive">*</span>
+                  </Label>
+                </div>
+                {fieldErrors.consent && <p className="text-xs text-destructive">{fieldErrors.consent}</p>}
+              </div>
+            )}
+
+            <Button type="submit" className="w-full" disabled={loading || (isSignup && !consentGiven)}>
               {loading ? "Please wait..." : isSignup ? "Sign Up" : "Sign In"}
             </Button>
 

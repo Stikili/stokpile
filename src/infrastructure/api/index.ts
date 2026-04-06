@@ -459,6 +459,10 @@ export const api = {
   updatePenaltyCharge: (groupId: string, chargeId: string, data: { status: string }) =>
     request<{ message: string }>(`/groups/${groupId}/penalties/charges/${chargeId}`, { method: "PUT", body: data }),
 
+  // Account deletion
+  deleteAccount: () =>
+    request<{ message: string; deletedCount: Record<string, number> }>("/account", { method: "DELETE" }),
+
   // Subscription
   getSubscription: (groupId: string) =>
     request<Subscription>(`/groups/${groupId}/subscription`),
