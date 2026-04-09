@@ -131,7 +131,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
         {/* Headline group — vertically centered in remaining space */}
         <div className="flex-1 flex flex-col justify-center -mt-2">
           <h1 className="text-[2.6rem] leading-[1] font-extrabold tracking-tight bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">
-            Run your stokvel<br />the modern way
+            Run your stokvel the modern way
           </h1>
           <p className="text-base text-muted-foreground mt-5 px-2 leading-relaxed">
             Track contributions, payouts and members for your stokvel, burial society or chama.
@@ -255,7 +255,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
         </Badge>
 
         <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">
-          Run your stokvel<br />the modern way
+          Run your stokvel the modern way
         </h1>
 
         <p className="text-lg md:text-xl text-muted-foreground mt-5 max-w-2xl mx-auto px-2">
