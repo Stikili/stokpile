@@ -66,7 +66,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-blue-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-blue-950/30 no-overscroll pb-32 md:pb-0">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-blue-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-blue-950/30 no-overscroll pb-24 md:pb-0">
 
       {/* ─── Header (sticky, with safe area for iOS notch) ─── */}
       <header className="sticky top-0 z-50 bg-white/85 dark:bg-[#050e1c]/85 backdrop-blur-xl border-b border-border/40 pt-safe">
@@ -82,27 +82,124 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
         </div>
       </header>
 
-      {/* ─── Hero ─── */}
-      <section className="px-5 pt-10 md:pt-16 pb-8 md:pb-12 text-center max-w-3xl mx-auto">
+      {/* ═══════════════════════════════════════════════════════════════
+          MOBILE — single-viewport hero with everything in one screen
+          Desktop layout follows below (hidden md:block)
+          ═══════════════════════════════════════════════════════════════ */}
+
+      {/* ─── MOBILE HERO (fits one screen, swipeable cards below) ─── */}
+      <section className="md:hidden px-5 pt-4 pb-3 text-center">
+        <Badge className="mb-3 bg-primary/10 text-primary border-primary/20 px-2.5 py-0.5 text-[10px]">
+          <Sparkles className="h-3 w-3 mr-1" />
+          90 days free
+        </Badge>
+
+        <h1 className="text-[1.85rem] leading-[1.05] font-extrabold tracking-tight bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">
+          Run your stokvel<br />the modern way
+        </h1>
+
+        <p className="text-[13px] text-muted-foreground mt-2.5 px-2">
+          Track contributions, payouts and members — all in one app.
+        </p>
+      </section>
+
+      {/* ─── MOBILE feature pills row (3 chips, no scroll) ─── */}
+      <div className="md:hidden flex justify-center gap-1.5 px-4 mb-3">
+        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-card border text-[10px] text-muted-foreground">
+          <Shield className="h-2.5 w-2.5 text-primary" />POPIA
+        </div>
+        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-card border text-[10px] text-muted-foreground">
+          <Globe className="h-2.5 w-2.5 text-primary" />9 languages
+        </div>
+        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-card border text-[10px] text-muted-foreground">
+          <Sparkles className="h-2.5 w-2.5 text-primary" />Offline
+        </div>
+      </div>
+
+      {/* ─── MOBILE features carousel (replaces full features section) ─── */}
+      <div className="md:hidden flex gap-3 overflow-x-auto scrollbar-none snap-x-mandatory px-5 pb-3">
+        {FEATURES.map((f) => (
+          <div
+            key={f.title}
+            className="snap-start shrink-0 w-[68vw] max-w-[260px] rounded-2xl border bg-card p-3 tap-none"
+          >
+            <div className={`h-9 w-9 rounded-lg bg-gradient-to-br ${f.color} flex items-center justify-center mb-2 shadow-sm`}>
+              <f.icon className="h-4 w-4 text-white" />
+            </div>
+            <h3 className="font-semibold text-sm mb-0.5">{f.title}</h3>
+            <p className="text-[11px] text-muted-foreground leading-snug">{f.desc}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* ─── MOBILE pricing carousel ─── */}
+      <section className="md:hidden bg-muted/20 py-5 border-y border-border/40">
+        <div className="text-center mb-3 px-5">
+          <h2 className="text-base font-bold tracking-tight">Pricing</h2>
+          <p className="text-[11px] text-muted-foreground">All paid plans get a 90-day Pro trial.</p>
+        </div>
+        <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x-mandatory px-5 pb-1">
+          {PRICING.map((p) => (
+            <div
+              key={p.name}
+              className={`snap-start shrink-0 w-[72vw] max-w-[280px] rounded-2xl border bg-card p-4 ${
+                p.highlight ? 'border-primary shadow-lg shadow-primary/15 ring-1 ring-primary/30' : ''
+              }`}
+            >
+              {p.highlight && (
+                <Badge className="mb-2 bg-primary text-primary-foreground text-[9px] py-0">Most Popular</Badge>
+              )}
+              <h3 className="font-semibold text-base">{p.name}</h3>
+              <div className="mt-1 mb-3 flex items-baseline gap-1">
+                <span className="text-2xl font-bold tracking-tight">{p.price}</span>
+                <span className="text-muted-foreground text-xs">/{p.period}</span>
+              </div>
+              <ul className="space-y-1 mb-3">
+                {p.features.slice(0, 4).map((f) => (
+                  <li key={f} className="flex items-start gap-1.5 text-[11px]">
+                    <Check className="h-3 w-3 text-green-500 shrink-0 mt-0.5" />
+                    <span className="leading-snug">{f}</span>
+                  </li>
+                ))}
+                {p.features.length > 4 && (
+                  <li className="text-[10px] text-muted-foreground pl-4">+ {p.features.length - 4} more</li>
+                )}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ─── MOBILE compact footer ─── */}
+      <footer className="md:hidden py-4 px-5 text-center text-[10px] text-muted-foreground">
+        © {new Date().getFullYear()} Stokpile · <a href="mailto:hello@stokpile.app" className="hover:text-foreground">Contact</a> · <a href="mailto:privacy@stokpile.app" className="hover:text-foreground">Privacy</a>
+      </footer>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          DESKTOP — full multi-section layout
+          ═══════════════════════════════════════════════════════════════ */}
+
+      {/* ─── DESKTOP Hero ─── */}
+      <section className="hidden md:block px-5 pt-16 pb-12 text-center max-w-3xl mx-auto">
         <Badge className="mb-5 bg-primary/10 text-primary border-primary/20 hover:bg-primary/15 px-3 py-1 text-xs">
           <Sparkles className="h-3 w-3 mr-1" />
           90 days free for new groups
         </Badge>
 
-        <h1 className="text-[2.25rem] leading-[1.05] sm:text-5xl md:text-6xl font-extrabold tracking-tight bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">
+        <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">
           Run your stokvel<br />the modern way
         </h1>
 
-        <p className="text-base sm:text-lg md:text-xl text-muted-foreground mt-5 max-w-2xl mx-auto px-2">
+        <p className="text-lg md:text-xl text-muted-foreground mt-5 max-w-2xl mx-auto px-2">
           Track contributions, payouts, and members for your stokvel,
           burial society, or chama — built for your phone.
         </p>
 
-        <div className="flex flex-col sm:flex-row sm:justify-center gap-2.5 mt-7 max-w-sm mx-auto sm:max-w-none">
+        <div className="flex sm:flex-row justify-center gap-2.5 mt-7">
           <Button
             size="lg"
             onClick={onGetStarted}
-            className="h-12 sm:h-12 text-base font-semibold tap-none shadow-lg shadow-primary/20"
+            className="h-12 text-base font-semibold tap-none shadow-lg shadow-primary/20"
           >
             Start Free
             <ArrowRight className="h-4 w-4 ml-1.5" />
@@ -122,12 +219,11 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
         </p>
       </section>
 
-      {/* ─── App preview / phone mockup ─── */}
-      <section className="px-4 pb-10">
+      {/* ─── DESKTOP App preview / phone mockup ─── */}
+      <section className="hidden md:block px-4 pb-10">
         <div className="max-w-md mx-auto relative">
           <div className="aspect-[9/19] rounded-[2.5rem] bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 dark:from-slate-700 dark:via-slate-800 dark:to-slate-900 p-1.5 shadow-2xl shadow-slate-900/20 mx-auto max-w-[280px]">
             <div className="h-full w-full rounded-[2.1rem] bg-card flex flex-col p-4 overflow-hidden">
-              {/* Mock status bar */}
               <div className="flex items-center justify-between text-[10px] font-semibold text-muted-foreground mb-3">
                 <span>9:41</span>
                 <span className="flex items-center gap-1">
@@ -135,7 +231,6 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                   <span className="h-1.5 w-2 rounded-sm bg-foreground/60" />
                 </span>
               </div>
-              {/* Mock app content */}
               <div className="flex-1 space-y-2">
                 <div className="rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 p-3">
                   <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">Group Balance</p>
@@ -163,14 +258,13 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
               </div>
             </div>
           </div>
-          {/* Floating badges around the phone */}
-          <div className="absolute -top-2 -right-4 bg-card rounded-2xl border shadow-xl px-3 py-2 hidden sm:block">
+          <div className="absolute -top-2 -right-4 bg-card rounded-2xl border shadow-xl px-3 py-2">
             <div className="flex items-center gap-1.5 text-xs">
               <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
               <span className="font-semibold">90 days free</span>
             </div>
           </div>
-          <div className="absolute -bottom-2 -left-4 bg-card rounded-2xl border shadow-xl px-3 py-2 hidden sm:block">
+          <div className="absolute -bottom-2 -left-4 bg-card rounded-2xl border shadow-xl px-3 py-2">
             <div className="flex items-center gap-1.5 text-xs">
               <Shield className="h-3 w-3 text-primary" />
               <span className="font-semibold">POPIA</span>
@@ -179,43 +273,25 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
         </div>
       </section>
 
-      {/* ─── Country strip (horizontal scroll on mobile) ─── */}
-      <section className="border-y border-border/40 bg-muted/20 py-4">
+      {/* ─── DESKTOP Country strip ─── */}
+      <section className="hidden md:block border-y border-border/40 bg-muted/20 py-4">
         <p className="text-[10px] text-center text-muted-foreground uppercase tracking-wider font-semibold mb-2 px-4">
           Built for groups across Africa
         </p>
-        <div className="flex gap-5 overflow-x-auto scrollbar-none px-4 snap-x-mandatory text-sm md:justify-center md:flex-wrap">
+        <div className="flex gap-5 justify-center flex-wrap text-sm px-4">
           {COUNTRIES.map((c) => (
-            <span key={c} className="text-muted-foreground whitespace-nowrap snap-start tap-none">{c}</span>
+            <span key={c} className="text-muted-foreground whitespace-nowrap">{c}</span>
           ))}
         </div>
       </section>
 
-      {/* ─── Features (horizontal swipe carousel on mobile, grid on desktop) ─── */}
-      <section id="features" className="py-12 md:py-16">
-        <div className="text-center mb-7 md:mb-10 px-5">
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Everything your group needs</h2>
-          <p className="text-sm md:text-base text-muted-foreground mt-2">From rotating savings to burial societies.</p>
+      {/* ─── DESKTOP Features grid ─── */}
+      <section id="features" className="hidden md:block py-16">
+        <div className="text-center mb-10 px-5">
+          <h2 className="text-3xl font-bold tracking-tight">Everything your group needs</h2>
+          <p className="text-base text-muted-foreground mt-2">From rotating savings to burial societies.</p>
         </div>
-
-        {/* Mobile: horizontal swipeable carousel */}
-        <div className="md:hidden flex gap-3 overflow-x-auto scrollbar-none snap-x-mandatory px-5 pb-2 -mr-5">
-          {FEATURES.map((f) => (
-            <div
-              key={f.title}
-              className="snap-start shrink-0 w-[72vw] max-w-[280px] rounded-2xl border bg-card p-4 tap-none"
-            >
-              <div className={`h-11 w-11 rounded-xl bg-gradient-to-br ${f.color} flex items-center justify-center mb-3 shadow-md`}>
-                <f.icon className="h-5 w-5 text-white" />
-              </div>
-              <h3 className="font-semibold text-base mb-1">{f.title}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Desktop: grid */}
-        <div className="hidden md:grid max-w-6xl mx-auto px-4 grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid max-w-6xl mx-auto px-4 grid-cols-2 lg:grid-cols-4 gap-3">
           {FEATURES.map((f) => (
             <div key={f.title} className="rounded-2xl border bg-card p-4">
               <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${f.color} flex items-center justify-center mb-3 shadow-md`}>
@@ -228,17 +304,14 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
         </div>
       </section>
 
-      {/* ─── Pricing ─── */}
-      <section className="bg-muted/20 py-12 md:py-16">
-        <div className="px-5 md:max-w-5xl md:mx-auto">
-          <div className="text-center mb-7 md:mb-10">
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Honest African pricing</h2>
-            <p className="text-sm md:text-base text-muted-foreground mt-2">
-              All paid plans include a 90-day Pro trial.
-            </p>
+      {/* ─── DESKTOP Pricing ─── */}
+      <section className="hidden md:block bg-muted/20 py-16">
+        <div className="px-5 max-w-5xl mx-auto">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-bold tracking-tight">Honest African pricing</h2>
+            <p className="text-base text-muted-foreground mt-2">All paid plans include a 90-day Pro trial.</p>
           </div>
-
-          <div className="space-y-3 md:space-y-0 md:grid md:grid-cols-3 md:gap-4">
+          <div className="grid grid-cols-3 gap-4">
             {PRICING.map((p) => (
               <div
                 key={p.name}
@@ -277,14 +350,14 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
         </div>
       </section>
 
-      {/* ─── Trust ─── */}
-      <section className="px-5 py-12 md:py-16 max-w-3xl mx-auto text-center">
-        <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-3">Trusted by communities</h2>
-        <p className="text-sm md:text-base text-muted-foreground mb-6 px-2">
+      {/* ─── DESKTOP Trust ─── */}
+      <section className="hidden md:block px-5 py-16 max-w-3xl mx-auto text-center">
+        <h2 className="text-3xl font-bold tracking-tight mb-3">Trusted by communities</h2>
+        <p className="text-base text-muted-foreground mb-6 px-2">
           Stokpile is not a bank. Funds stay where you trust them — your group.
           We give you the tools to keep everything transparent.
         </p>
-        <div className="flex flex-wrap justify-center gap-3 md:gap-6 text-xs md:text-sm text-muted-foreground">
+        <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border">
             <Shield className="h-3.5 w-3.5" />
             POPIA compliant
@@ -300,15 +373,15 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
         </div>
       </section>
 
-      {/* ─── Final CTA ─── */}
-      <section className="bg-gradient-to-br from-primary via-primary to-emerald-700 text-primary-foreground py-12 md:py-16">
+      {/* ─── DESKTOP Final CTA ─── */}
+      <section className="hidden md:block bg-gradient-to-br from-primary via-primary to-emerald-700 text-primary-foreground py-16">
         <div className="max-w-2xl mx-auto px-5 text-center">
-          <h2 className="text-2xl md:text-3xl font-bold mb-3">Start your group in 2 minutes</h2>
-          <p className="opacity-90 mb-6 text-sm md:text-base">No credit card. Free forever for small groups.</p>
+          <h2 className="text-3xl font-bold mb-3">Start your group in 2 minutes</h2>
+          <p className="opacity-90 mb-6 text-base">No credit card. Free forever for small groups.</p>
           <Button
             size="lg"
             onClick={onGetStarted}
-            className="h-12 text-base bg-white text-primary hover:bg-white/95 font-semibold tap-none shadow-lg w-full sm:w-auto sm:px-10"
+            className="h-12 text-base bg-white text-primary hover:bg-white/95 font-semibold tap-none shadow-lg px-10"
           >
             Get Started Free
             <ArrowRight className="h-4 w-4 ml-1.5" />
@@ -316,8 +389,8 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
         </div>
       </section>
 
-      {/* ─── Footer ─── */}
-      <footer className="border-t border-border/40 py-6 px-5">
+      {/* ─── DESKTOP Footer ─── */}
+      <footer className="hidden md:block border-t border-border/40 py-6 px-5">
         <div className="max-w-6xl mx-auto flex flex-col items-center gap-3 text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
             <Logo showText={false} />
