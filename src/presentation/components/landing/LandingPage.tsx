@@ -83,94 +83,133 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
       </header>
 
       {/* ═══════════════════════════════════════════════════════════════
-          MOBILE — single-viewport hero with everything in one screen
-          Desktop layout follows below (hidden md:block)
+          MOBILE — full-bleed, fills viewport, uses every pixel
           ═══════════════════════════════════════════════════════════════ */}
 
-      {/* ─── MOBILE HERO (fits one screen, swipeable cards below) ─── */}
-      <section className="md:hidden px-5 pt-4 pb-3 text-center">
-        <Badge className="mb-3 bg-primary/10 text-primary border-primary/20 px-2.5 py-0.5 text-[10px]">
-          <Sparkles className="h-3 w-3 mr-1" />
-          90 days free
-        </Badge>
-
-        <h1 className="text-[1.85rem] leading-[1.05] font-extrabold tracking-tight bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">
-          Run your stokvel<br />the modern way
-        </h1>
-
-        <p className="text-[13px] text-muted-foreground mt-2.5 px-2">
-          Track contributions, payouts and members — all in one app.
-        </p>
-      </section>
-
-      {/* ─── MOBILE feature pills row (3 chips, no scroll) ─── */}
-      <div className="md:hidden flex justify-center gap-1.5 px-4 mb-3">
-        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-card border text-[10px] text-muted-foreground">
-          <Shield className="h-2.5 w-2.5 text-primary" />POPIA
+      {/* HERO — fills the visible viewport between sticky header & sticky bar */}
+      <section
+        className="md:hidden flex flex-col px-6 text-center"
+        style={{ minHeight: 'calc(100dvh - 56px - 96px)' }}
+      >
+        {/* Top spacer + badge */}
+        <div className="pt-6">
+          <Badge className="bg-primary/10 text-primary border-primary/20 px-3 py-1 text-[11px]">
+            <Sparkles className="h-3 w-3 mr-1" />
+            90 days free trial
+          </Badge>
         </div>
-        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-card border text-[10px] text-muted-foreground">
-          <Globe className="h-2.5 w-2.5 text-primary" />9 languages
-        </div>
-        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-card border text-[10px] text-muted-foreground">
-          <Sparkles className="h-2.5 w-2.5 text-primary" />Offline
-        </div>
-      </div>
 
-      {/* ─── MOBILE features carousel (replaces full features section) ─── */}
-      <div className="md:hidden flex gap-3 overflow-x-auto scrollbar-none snap-x-mandatory px-5 pb-3">
-        {FEATURES.map((f) => (
-          <div
-            key={f.title}
-            className="snap-start shrink-0 w-[68vw] max-w-[260px] rounded-2xl border bg-card p-3 tap-none"
-          >
-            <div className={`h-9 w-9 rounded-lg bg-gradient-to-br ${f.color} flex items-center justify-center mb-2 shadow-sm`}>
-              <f.icon className="h-4 w-4 text-white" />
+        {/* Headline group — vertically centered in remaining space */}
+        <div className="flex-1 flex flex-col justify-center -mt-2">
+          <h1 className="text-[2.6rem] leading-[1] font-extrabold tracking-tight bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">
+            Run your stokvel<br />the modern way
+          </h1>
+          <p className="text-base text-muted-foreground mt-5 px-2 leading-relaxed">
+            Track contributions, payouts and members for your stokvel, burial society or chama.
+          </p>
+
+          {/* 3 trust chips */}
+          <div className="flex justify-center gap-2 mt-6">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border text-xs text-muted-foreground">
+              <Shield className="h-3 w-3 text-primary" />POPIA
             </div>
-            <h3 className="font-semibold text-sm mb-0.5">{f.title}</h3>
-            <p className="text-[11px] text-muted-foreground leading-snug">{f.desc}</p>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border text-xs text-muted-foreground">
+              <Globe className="h-3 w-3 text-primary" />9 languages
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border text-xs text-muted-foreground">
+              <Sparkles className="h-3 w-3 text-primary" />Offline
+            </div>
           </div>
-        ))}
-      </div>
-
-      {/* ─── MOBILE pricing carousel ─── */}
-      <section className="md:hidden bg-muted/20 py-5 border-y border-border/40">
-        <div className="text-center mb-3 px-5">
-          <h2 className="text-base font-bold tracking-tight">Pricing</h2>
-          <p className="text-[11px] text-muted-foreground">All paid plans get a 90-day Pro trial.</p>
         </div>
-        <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x-mandatory px-5 pb-1">
-          {PRICING.map((p) => (
-            <div
-              key={p.name}
-              className={`snap-start shrink-0 w-[72vw] max-w-[280px] rounded-2xl border bg-card p-4 ${
-                p.highlight ? 'border-primary shadow-lg shadow-primary/15 ring-1 ring-primary/30' : ''
-              }`}
-            >
-              {p.highlight && (
-                <Badge className="mb-2 bg-primary text-primary-foreground text-[9px] py-0">Most Popular</Badge>
-              )}
-              <h3 className="font-semibold text-base">{p.name}</h3>
-              <div className="mt-1 mb-3 flex items-baseline gap-1">
-                <span className="text-2xl font-bold tracking-tight">{p.price}</span>
-                <span className="text-muted-foreground text-xs">/{p.period}</span>
+
+        {/* Scroll hint at bottom of hero */}
+        <button
+          onClick={() => document.getElementById('mobile-features')?.scrollIntoView({ behavior: 'smooth' })}
+          className="pb-4 text-[11px] text-muted-foreground tap-none animate-bounce"
+        >
+          Swipe up to explore ↓
+        </button>
+      </section>
+
+      {/* FEATURES — full-bleed swipeable carousel, cards almost fill the screen */}
+      <section
+        id="mobile-features"
+        className="md:hidden flex flex-col py-8"
+        style={{ minHeight: 'calc(100dvh - 96px)' }}
+      >
+        <div className="px-6 mb-5">
+          <h2 className="text-2xl font-bold tracking-tight">Everything your group needs</h2>
+          <p className="text-sm text-muted-foreground mt-1">Swipe through to see what's included.</p>
+        </div>
+
+        <div className="flex-1 flex items-center">
+          <div className="flex gap-4 overflow-x-auto scrollbar-none snap-x-mandatory px-6 pb-4 w-full">
+            {FEATURES.map((f) => (
+              <div
+                key={f.title}
+                className="snap-center shrink-0 w-[85vw] max-w-[360px] rounded-3xl border bg-card p-6 tap-none shadow-sm"
+                style={{ minHeight: '60vh' }}
+              >
+                <div className={`h-16 w-16 rounded-2xl bg-gradient-to-br ${f.color} flex items-center justify-center mb-5 shadow-lg`}>
+                  <f.icon className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="font-bold text-2xl mb-3">{f.title}</h3>
+                <p className="text-base text-muted-foreground leading-relaxed">{f.desc}</p>
               </div>
-              <ul className="space-y-1 mb-3">
-                {p.features.slice(0, 4).map((f) => (
-                  <li key={f} className="flex items-start gap-1.5 text-[11px]">
-                    <Check className="h-3 w-3 text-green-500 shrink-0 mt-0.5" />
-                    <span className="leading-snug">{f}</span>
-                  </li>
-                ))}
-                {p.features.length > 4 && (
-                  <li className="text-[10px] text-muted-foreground pl-4">+ {p.features.length - 4} more</li>
-                )}
-              </ul>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* ─── MOBILE compact footer ─── */}
+      {/* PRICING — full-bleed swipeable carousel */}
+      <section
+        className="md:hidden bg-muted/20 border-y border-border/40 py-8 flex flex-col"
+        style={{ minHeight: 'calc(100dvh - 96px)' }}
+      >
+        <div className="px-6 mb-5">
+          <h2 className="text-2xl font-bold tracking-tight">Honest African pricing</h2>
+          <p className="text-sm text-muted-foreground mt-1">All paid plans get a 90-day Pro trial.</p>
+        </div>
+
+        <div className="flex-1 flex items-center">
+          <div className="flex gap-4 overflow-x-auto scrollbar-none snap-x-mandatory px-6 pb-4 w-full">
+            {PRICING.map((p) => (
+              <div
+                key={p.name}
+                className={`snap-center shrink-0 w-[85vw] max-w-[360px] rounded-3xl border bg-card p-6 tap-none ${
+                  p.highlight ? 'border-primary shadow-xl shadow-primary/20 ring-2 ring-primary/30' : 'shadow-sm'
+                }`}
+              >
+                {p.highlight && (
+                  <Badge className="mb-3 bg-primary text-primary-foreground text-xs">Most Popular</Badge>
+                )}
+                <h3 className="font-bold text-2xl">{p.name}</h3>
+                <div className="mt-2 mb-5 flex items-baseline gap-1.5">
+                  <span className="text-5xl font-extrabold tracking-tight">{p.price}</span>
+                  <span className="text-muted-foreground text-base">/{p.period}</span>
+                </div>
+                <ul className="space-y-2.5 mb-5">
+                  {p.features.map((f) => (
+                    <li key={f} className="flex items-start gap-2 text-sm">
+                      <Check className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Button
+                  className="w-full h-12 tap-none font-semibold text-base"
+                  variant={p.highlight ? 'default' : 'outline'}
+                  onClick={onGetStarted}
+                >
+                  {p.cta}
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* MOBILE compact footer */}
       <footer className="md:hidden py-4 px-5 text-center text-[10px] text-muted-foreground">
         © {new Date().getFullYear()} Stokpile · <a href="mailto:hello@stokpile.app" className="hover:text-foreground">Contact</a> · <a href="mailto:privacy@stokpile.app" className="hover:text-foreground">Privacy</a>
       </footer>
