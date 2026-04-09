@@ -125,7 +125,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
       {/* ─── App preview / phone mockup ─── */}
       <section className="px-4 pb-10">
         <div className="max-w-md mx-auto relative">
-          <div className="aspect-[9/19] rounded-[2.5rem] bg-gradient-to-br from-primary via-primary to-emerald-700 p-1.5 shadow-2xl shadow-primary/20 mx-auto max-w-[280px]">
+          <div className="aspect-[9/19] rounded-[2.5rem] bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 dark:from-slate-700 dark:via-slate-800 dark:to-slate-900 p-1.5 shadow-2xl shadow-slate-900/20 mx-auto max-w-[280px]">
             <div className="h-full w-full rounded-[2.1rem] bg-card flex flex-col p-4 overflow-hidden">
               {/* Mock status bar */}
               <div className="flex items-center justify-between text-[10px] font-semibold text-muted-foreground mb-3">
