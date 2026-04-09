@@ -24,10 +24,17 @@ interface ContextualTipsProps {
 }
 
 export function ContextualTips({ context, isAdmin, hasData, onAction }: ContextualTipsProps) {
-  const [dismissedTips, setDismissedTips] = useState<string[]>(() => {
+  const [dismissedContexts, setDismissedContexts] = useState<string[]>(() => {
+    const saved = localStorage.getItem('dismissedTipContexts');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [dismissedTips] = useState<string[]>(() => {
     const saved = localStorage.getItem('dismissedTips');
     return saved ? JSON.parse(saved) : [];
   });
+
+  // Whole-context dismiss takes precedence
+  if (dismissedContexts.includes(context)) return null;
 
   const allTips: Record<string, Tip[]> = {
     dashboard: [
@@ -125,10 +132,11 @@ export function ContextualTips({ context, isAdmin, hasData, onAction }: Contextu
   const tips = allTips[context] || [];
   const visibleTips = tips.filter(tip => !dismissedTips.includes(tip.id));
 
-  const handleDismiss = (tipId: string) => {
-    const updated = [...dismissedTips, tipId];
-    setDismissedTips(updated);
-    localStorage.setItem('dismissedTips', JSON.stringify(updated));
+  // Dismiss the entire context (all tips for this tab) — single click closes for good
+  const handleDismiss = (_tipId: string) => {
+    const updated = [...dismissedContexts, context];
+    setDismissedContexts(updated);
+    localStorage.setItem('dismissedTipContexts', JSON.stringify(updated));
   };
 
   if (visibleTips.length === 0) return null;
@@ -181,4 +189,5 @@ export function ContextualTips({ context, isAdmin, hasData, onAction }: Contextu
 // Reset dismissed tips utility
 export function resetContextualTips() {
   localStorage.removeItem('dismissedTips');
+  localStorage.removeItem('dismissedTipContexts');
 }

@@ -66,9 +66,11 @@ export function ProfileMenu({
           </TooltipTrigger>
           <TooltipContent>Account & groups</TooltipContent>
         </Tooltip>
-        <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel>My Account</DropdownMenuLabel>
-          <DropdownMenuSeparator />
+        <DropdownMenuContent align="end" className="w-60">
+          {/* Account */}
+          <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
+            Account
+          </DropdownMenuLabel>
           <DropdownMenuItem onClick={() => setShowProfile(true)}>
             <User className="h-4 w-4 mr-2" />
             Edit Profile
@@ -76,15 +78,20 @@ export function ProfileMenu({
           <NotificationPrefsDialog>
             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
               <Bell className="h-4 w-4 mr-2" />
-              Notification Settings
+              Notifications
             </DropdownMenuItem>
           </NotificationPrefsDialog>
           <DropdownMenuItem onClick={() => setShowSessions(true)}>
             <Monitor className="h-4 w-4 mr-2" />
             Active Sessions
           </DropdownMenuItem>
+
           <DropdownMenuSeparator />
-          <DropdownMenuLabel>Groups</DropdownMenuLabel>
+
+          {/* Groups */}
+          <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
+            Groups
+          </DropdownMenuLabel>
           <DropdownMenuItem onClick={() => setShowCreateGroup(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Create Group
@@ -95,13 +102,23 @@ export function ProfileMenu({
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setShowSearchGroups(true)}>
             <Search className="h-4 w-4 mr-2" />
-            Search Groups
+            Search Public Groups
           </DropdownMenuItem>
+
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setShowReferral(true)}>
+
+          {/* Referral upfront — revenue lever */}
+          <DropdownMenuItem onClick={() => setShowReferral(true)} className="text-primary focus:text-primary">
             <Gift className="h-4 w-4 mr-2" />
             Refer & Earn
           </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          {/* Support */}
+          <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
+            Support
+          </DropdownMenuLabel>
           <DropdownMenuItem onClick={() => setShowHelp(true)}>
             <HelpCircle className="h-4 w-4 mr-2" />
             Help & FAQ
@@ -115,14 +132,19 @@ export function ProfileMenu({
             What's New
             {hasUnseenChangelog && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary" />}
           </DropdownMenuItem>
+
           <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={() => setShowClearData(true)}
-            className="text-destructive focus:text-destructive"
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Clear All Data
-          </DropdownMenuItem>
+
+          {/* Danger zone */}
+          {import.meta.env.DEV && (
+            <DropdownMenuItem
+              onClick={() => setShowClearData(true)}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Clear All Data (dev)
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem
             onClick={() => setShowDeleteAccount(true)}
             className="text-destructive focus:text-destructive"
@@ -130,7 +152,9 @@ export function ProfileMenu({
             <UserX className="h-4 w-4 mr-2" />
             Delete Account
           </DropdownMenuItem>
+
           <DropdownMenuSeparator />
+
           <DropdownMenuItem onClick={onSignOut}>
             <LogOut className="h-4 w-4 mr-2" />
             Sign Out

@@ -39,15 +39,15 @@ import { OfflineDetector } from "@/presentation/shared/OfflineDetector";
 import { ConfirmationDialog } from "@/presentation/shared/ConfirmationDialog";
 import { PWAInstallPrompt } from "@/presentation/shared/PWAInstallPrompt";
 import { ThemeProvider } from "@/presentation/shared/ThemeProvider";
-import { ThemeToggle } from "@/presentation/shared/ThemeToggle";
-import { LanguageToggle } from "@/presentation/shared/LanguageToggle";
 import { LanguageProvider } from "@/application/context/LanguageContext";
 import { LiteModeProvider } from "@/application/context/LiteModeContext";
-import { LiteModeToggle } from "@/presentation/shared/LiteModeToggle";
+import { DisplayMenu } from "@/presentation/shared/DisplayMenu";
 import { SubscriptionProvider, useSubscription } from "@/application/context/SubscriptionContext";
 import { SubscriptionBanner } from "@/presentation/components/subscription/SubscriptionBanner";
 import { UpgradeDialog } from "@/presentation/components/subscription/UpgradeDialog";
 import { FeatureGate } from "@/presentation/components/subscription/FeatureGate";
+import { TrialBadge } from "@/presentation/components/subscription/TrialBadge";
+import { useUnreadAnnouncements } from "@/application/hooks/useUnreadAnnouncements";
 import { PushNotificationSetup } from "@/presentation/shared/PushNotificationSetup";
 import { PhonePrompt } from "@/presentation/shared/PhonePrompt";
 import { Logo } from "@/presentation/layout/Logo";
@@ -68,7 +68,6 @@ import {
   TrendingUp,
   Users,
   Settings,
-  Keyboard,
   Calendar,
   Lock,
   ClipboardList,
@@ -82,6 +81,8 @@ import {
   HeartHandshake,
   Gavel,
 } from "lucide-react";
+
+// Keep Keyboard import out — header icon was removed (still accessible via ? shortcut)
 import { Toaster } from "@/presentation/ui/sonner";
 import { useSession } from "@/application/hooks/useSession";
 import { useGroups } from "@/application/hooks/useGroups";
@@ -189,6 +190,7 @@ export default function App() {
   });
 
   const isAdmin = selectedGroup?.userRole === "admin";
+  const unreadAnnouncements = useUnreadAnnouncements(selectedGroup?.id, activeTab);
 
   // Handle Paystack billing callback (?billing=success&groupId=xxx)
   useEffect(() => {
@@ -357,22 +359,13 @@ export default function App() {
                     </TooltipTrigger>
                     <TooltipContent>Search (⌘K) — also opens command palette</TooltipContent>
                   </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" onClick={() => setShowShortcuts(true)} className="hidden lg:flex" aria-label="Keyboard shortcuts">
-                        <Keyboard className="h-5 w-5" aria-hidden="true" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Keyboard shortcuts (Press ?)</TooltipContent>
-                  </Tooltip>
+                  <TrialBadge onClick={() => setShowUpgradeDialog(true)} />
                   <NotificationBell
                     groupId={selectedGroup?.id}
                     userEmail={session?.user?.email}
                   />
-                  <ThemeToggle className="hidden lg:flex" />
-                  <LiteModeToggle className="hidden lg:flex" />
-                  <LanguageToggle />
-                  <ProfileMenu 
+                  <DisplayMenu className="hidden lg:flex" />
+                  <ProfileMenu
                     session={session}
                     onProfileUpdate={() => checkSession()}
                     onGroupsChanged={refreshGroups}
@@ -474,8 +467,14 @@ export default function App() {
                           <TabsTrigger value="meetings" className="text-sm">
                             <Calendar className="h-3.5 w-3.5 mr-1.5" />Meetings
                           </TabsTrigger>
-                          <TabsTrigger value="announcements" className="text-sm">
-                            <Megaphone className="h-3.5 w-3.5 mr-1.5" />Announcements
+                          <TabsTrigger value="announcements" className="text-sm relative">
+                            <Megaphone className="h-3.5 w-3.5 mr-1.5" />
+                            Announcements
+                            {unreadAnnouncements > 0 && (
+                              <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold leading-none">
+                                {unreadAnnouncements > 9 ? '9+' : unreadAnnouncements}
+                              </span>
+                            )}
                           </TabsTrigger>
                           <TabsTrigger value="info" className="text-sm">
                             <Settings className="h-3.5 w-3.5 mr-1.5" />Settings
