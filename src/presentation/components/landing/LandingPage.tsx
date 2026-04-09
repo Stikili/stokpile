@@ -75,8 +75,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
           <Button
             onClick={onGetStarted}
             size="sm"
-            variant="ghost"
-            className="tap-none text-primary font-semibold"
+            className="tap-none font-semibold shadow-md shadow-primary/20"
           >
             Sign In
           </Button>
