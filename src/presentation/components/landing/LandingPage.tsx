@@ -393,25 +393,28 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
             <h2 className="text-3xl font-bold tracking-tight">Honest African pricing</h2>
             <p className="text-base text-muted-foreground mt-2">All paid plans include a 90-day Pro trial.</p>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-4 items-stretch">
             {PRICING.map((p) => (
               <div
                 key={p.name}
-                className={`rounded-2xl border bg-card p-5 ${
+                className={`rounded-2xl border bg-card p-5 flex flex-col h-full ${
                   p.highlight
                     ? 'border-primary shadow-xl shadow-primary/15 ring-1 ring-primary/30'
                     : ''
                 }`}
               >
-                {p.highlight && (
-                  <Badge className="mb-3 bg-primary text-primary-foreground text-[10px]">Most Popular</Badge>
-                )}
+                {/* Reserve fixed badge slot so headers align across all cards */}
+                <div className="h-6 mb-3 flex items-start">
+                  {p.highlight && (
+                    <Badge className="bg-primary text-primary-foreground text-[10px]">Most Popular</Badge>
+                  )}
+                </div>
                 <h3 className="font-semibold text-lg">{p.name}</h3>
                 <div className="mt-2 mb-4 flex items-baseline gap-1">
                   <span className="text-3xl font-bold tracking-tight">{p.price}</span>
                   <span className="text-muted-foreground text-sm">/{p.period}</span>
                 </div>
-                <ul className="space-y-2 mb-5">
+                <ul className="space-y-2 mb-5 flex-1">
                   {p.features.map((f) => (
                     <li key={f} className="flex items-start gap-2 text-sm">
                       <Check className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
@@ -420,7 +423,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                   ))}
                 </ul>
                 <Button
-                  className="w-full h-11 tap-none font-semibold"
+                  className="w-full h-11 tap-none font-semibold mt-auto"
                   variant={p.highlight ? 'default' : 'outline'}
                   onClick={onGetStarted}
                 >
