@@ -36,6 +36,7 @@ export interface Group {
   contributionFrequency?: string;
   groupType?: GroupType;
   contributionTarget?: number | null;
+  contributionTargetAnnual?: number | null;
   archived?: boolean;
   archivedAt?: string | null;
   createdBy: string;

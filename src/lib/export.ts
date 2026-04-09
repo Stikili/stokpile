@@ -39,29 +39,27 @@ export const exportToCSV = (data: Record<string, unknown>[], filename: string) =
   document.body.removeChild(link);
 };
 
-export const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-ZA', {
-    style: 'currency',
-    currency: 'ZAR',
-  }).format(amount);
+// Module-level current country — set once on session load via setUserCountry()
+// so every formatCurrency / formatDate call across the app respects the user's locale
+// without threading country through every component prop.
+let CURRENT_COUNTRY: string | null = null;
+
+export const setUserCountry = (country: string | null | undefined) => {
+  CURRENT_COUNTRY = country || null;
 };
 
-export const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('en-ZA', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
+import { formatCurrency as localeCurrency, formatDate as localeDate, formatDateTime as localeDateTime } from './locale';
+
+export const formatCurrency = (amount: number, country?: string | null) => {
+  return localeCurrency(amount, country ?? CURRENT_COUNTRY);
 };
 
-export const formatDateTime = (dateString: string) => {
-  return new Date(dateString).toLocaleString('en-ZA', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+export const formatDate = (dateString: string, country?: string | null) => {
+  return localeDate(dateString, country ?? CURRENT_COUNTRY);
+};
+
+export const formatDateTime = (dateString: string, country?: string | null) => {
+  return localeDateTime(dateString, country ?? CURRENT_COUNTRY);
 };
 
 // Export to JSON

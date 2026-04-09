@@ -9,17 +9,19 @@ import { EditTotalContributionsDialog } from '@/presentation/components/groups/E
 import { ThisMonthStatus } from '@/presentation/components/dashboard/ThisMonthStatus';
 import { NextTurnCard } from '@/presentation/components/dashboard/NextTurnCard';
 import { LeaderboardCard } from '@/presentation/components/dashboard/LeaderboardCard';
+import { AnnualProgressCard } from '@/presentation/components/dashboard/AnnualProgressCard';
 import { api } from '@/infrastructure/api';
 import { formatCurrency, formatDate } from '@/lib/export';
 
 interface DashboardProps {
   groupId: string;
   groupType?: string;
+  annualTarget?: number | null;
   isAdmin?: boolean;
   userEmail?: string;
 }
 
-export function Dashboard({ groupId, groupType, isAdmin = false, userEmail }: DashboardProps) {
+export function Dashboard({ groupId, groupType, annualTarget, isAdmin = false, userEmail }: DashboardProps) {
   const [stats, setStats] = useState<DashboardStats>({
     totalContributions: 0,
     calculatedContributions: 0,
@@ -226,6 +228,15 @@ export function Dashboard({ groupId, groupType, isAdmin = false, userEmail }: Da
 
       {/* Whose turn? (only for rotating-style groups) */}
       <NextTurnCard groupId={groupId} groupType={groupType} />
+
+      {/* Annual goal progress */}
+      {annualTarget && annualTarget > 0 && (
+        <AnnualProgressCard
+          annualTarget={annualTarget}
+          contributions={contributions}
+          userEmail={userEmail}
+        />
+      )}
 
       {/* This Month Status — replaces chart */}
       {members.length > 0 && (

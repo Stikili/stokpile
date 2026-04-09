@@ -1,5 +1,6 @@
 import { useState, useCallback, lazy, Suspense, useEffect } from "react";
 import { AuthForm } from "@/presentation/components/auth/AuthForm";
+import { LandingPage } from "@/presentation/components/landing/LandingPage";
 import { GroupSelector } from "@/presentation/components/groups/GroupSelector";
 import { JoinRequestsView } from "@/presentation/components/members/JoinRequestsView";
 
@@ -89,7 +90,7 @@ import { useSession } from "@/application/hooks/useSession";
 import { useGroups } from "@/application/hooks/useGroups";
 import { useInviteToken } from "@/application/hooks/useInviteToken";
 import { api } from "@/infrastructure/api";
-import { exportToCSV } from "@/lib/export";
+import { exportToCSV, setUserCountry } from "@/lib/export";
 import "@/lib/offlineQueue"; // registers online listener
 
 export default function App() {
@@ -108,6 +109,11 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [showAuthFromLanding, setShowAuthFromLanding] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    return params.get('signin') === '1' || params.get('ref') !== null;
+  });
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [showGlobalSearch, setShowGlobalSearch] = useState(false);
@@ -193,6 +199,13 @@ export default function App() {
 
   const isAdmin = selectedGroup?.userRole === "admin";
   const unreadAnnouncements = useUnreadAnnouncements(selectedGroup?.id, activeTab);
+
+  // Set the user's country once on session load so all formatCurrency/formatDate
+  // calls across the app render in their local format.
+  useEffect(() => {
+    const country = (session?.user as any)?.user_metadata?.country;
+    setUserCountry(country);
+  }, [session]);
   const pendingCounts = usePendingCounts(selectedGroup?.id, isAdmin);
 
   // Handle Paystack billing callback (?billing=success&groupId=xxx)
@@ -237,6 +250,18 @@ export default function App() {
             }}
             onNeedAuth={requireAuth}
           />
+          <Toaster />
+        </LanguageProvider>
+      </ThemeProvider>
+    );
+  }
+
+  // Landing page (shown when no session and user hasn't clicked Sign In)
+  if (!session && !showAuthFromLanding) {
+    return (
+      <ThemeProvider>
+        <LanguageProvider>
+          <LandingPage onGetStarted={() => setShowAuthFromLanding(true)} />
           <Toaster />
         </LanguageProvider>
       </ThemeProvider>
@@ -572,6 +597,7 @@ export default function App() {
                         <Dashboard
                           groupId={selectedGroup.id}
                           groupType={selectedGroup.groupType}
+                          annualTarget={selectedGroup.contributionTargetAnnual}
                           isAdmin={isAdmin}
                           userEmail={session.user.email}
                         />
