@@ -17,11 +17,12 @@ import { UserAvatar } from '@/presentation/components/profile/UserAvatar';
 import { MemberStatsDialog } from '@/presentation/components/members/MemberStatsDialog';
 import { DatePicker } from '@/presentation/shared/DatePicker';
 import { ConfirmationDialog } from '@/presentation/shared/ConfirmationDialog';
-import { Plus, Download, DollarSign, Trash2, Search, Info, CreditCard, Loader2, Zap } from 'lucide-react';
+import { Plus, Download, DollarSign, Trash2, Search, Info, CreditCard, Loader2, Zap, Receipt } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
 import { exportToCSV, formatCurrency, formatDate } from '@/lib/export';
 import { PaymentProofButton } from '@/presentation/components/shared/PaymentProofButton';
+import { printReceipt } from '@/lib/receipt';
 
 interface ContributionsViewProps {
   groupId: string;
@@ -592,6 +593,31 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
                             linkedId={contribution.id}
                             isAdmin={isAdmin}
                           />
+                          {contribution.paid && (contribution.userEmail === userEmail || isAdmin) && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => {
+                                    const member = members.find(m => m.email === contribution.userEmail);
+                                    printReceipt({
+                                      receiptNumber: contribution.id.slice(0, 8).toUpperCase(),
+                                      groupName: 'Stokpile Group',
+                                      memberName: member ? `${member.fullName || ''} ${member.surname || ''}`.trim() || contribution.userEmail : contribution.userEmail,
+                                      memberEmail: contribution.userEmail,
+                                      amount: contribution.amount,
+                                      date: contribution.date,
+                                    });
+                                  }}
+                                >
+                                  <Receipt className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Print receipt</TooltipContent>
+                            </Tooltip>
+                          )}
                           {(contribution.userEmail === userEmail || isAdmin) && (
                             <Tooltip>
                               <TooltipTrigger asChild>

@@ -8,6 +8,7 @@ import { GroupHealthScore } from '@/presentation/components/dashboard/GroupHealt
 import { EditTotalContributionsDialog } from '@/presentation/components/groups/EditTotalContributionsDialog';
 import { ThisMonthStatus } from '@/presentation/components/dashboard/ThisMonthStatus';
 import { NextTurnCard } from '@/presentation/components/dashboard/NextTurnCard';
+import { LeaderboardCard } from '@/presentation/components/dashboard/LeaderboardCard';
 import { api } from '@/infrastructure/api';
 import { formatCurrency, formatDate } from '@/lib/export';
 
@@ -325,6 +326,9 @@ export function Dashboard({ groupId, groupType, isAdmin = false, userEmail }: Da
           contributionTarget={contributionTarget}
         />
       )}
+
+      {/* Top Contributors leaderboard */}
+      <LeaderboardCard groupId={groupId} />
 
       {/* Group Health Score */}
       <GroupHealthScore groupId={groupId} />

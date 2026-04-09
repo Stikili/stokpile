@@ -937,7 +937,7 @@ app.put('/make-server-34d0b231/groups/:id/frequency', async (c) => {
 
 // Delete group and all associated data (admin only)
 // Archive (soft delete) — keeps data for legal/tax retention
-app.post('/make-server-34d0b231/groups/:id/archive', async (c) => {
+app.put('/make-server-34d0b231/groups/:id/archive', async (c) => {
   try {
     const accessToken = c.req.header('Authorization')?.split(' ')[1];
     const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
@@ -965,7 +965,7 @@ app.post('/make-server-34d0b231/groups/:id/archive', async (c) => {
   }
 });
 
-app.post('/make-server-34d0b231/groups/:id/unarchive', async (c) => {
+app.put('/make-server-34d0b231/groups/:id/unarchive', async (c) => {
   try {
     const accessToken = c.req.header('Authorization')?.split(' ')[1];
     const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);

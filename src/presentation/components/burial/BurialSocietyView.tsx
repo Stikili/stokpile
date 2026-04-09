@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/presentation/ui/tabs';
 import { ConfirmationDialog } from '@/presentation/shared/ConfirmationDialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
-import { Plus, Users, FileText, Trash2, CheckCircle, XCircle, DollarSign } from 'lucide-react';
+import { Plus, Users, FileText, Trash2, CheckCircle, XCircle, DollarSign, Heart } from 'lucide-react';
+import { DependentsView } from './DependentsView';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
 import { formatDate, formatCurrency } from '@/lib/export';
@@ -247,6 +248,10 @@ export function BurialSocietyView({ groupId, isAdmin, userEmail }: BurialSociety
                   {claims.filter((c) => c.status === 'pending').length}
                 </Badge>
               )}
+            </TabsTrigger>
+            <TabsTrigger value="dependents" className="gap-1.5">
+              <Heart className="h-4 w-4" />
+              Dependents
             </TabsTrigger>
           </TabsList>
 
@@ -604,6 +609,10 @@ export function BurialSocietyView({ groupId, isAdmin, userEmail }: BurialSociety
                 })}
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="dependents" className="mt-0">
+            <DependentsView groupId={groupId} isAdmin={isAdmin} />
           </TabsContent>
         </Tabs>
       </CardContent>

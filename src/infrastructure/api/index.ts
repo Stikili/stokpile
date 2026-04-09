@@ -474,13 +474,6 @@ export const api = {
   deleteAccount: () =>
     request<{ message: string; deletedCount: Record<string, number> }>("/account", { method: "DELETE" }),
 
-  // Group archiving
-  archiveGroup: (groupId: string) =>
-    request<{ success: boolean }>(`/groups/${groupId}/archive`, { method: "POST" }),
-
-  unarchiveGroup: (groupId: string) =>
-    request<{ success: boolean }>(`/groups/${groupId}/unarchive`, { method: "POST" }),
-
   // Member data export (POPIA portability)
   exportMyData: () =>
     request<{ profile: any; groups: any[]; contributions: any[]; payouts: any[]; meetings: any[] }>("/me/export"),
