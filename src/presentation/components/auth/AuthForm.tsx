@@ -22,6 +22,8 @@ import { ThemeToggle } from "@/presentation/shared/ThemeToggle";
 import { ForgotPasswordDialog } from "@/presentation/components/auth/ForgotPasswordDialog";
 import { Logo } from "@/presentation/layout/Logo";
 import { api } from "@/infrastructure/api";
+import { PrivacyPolicy } from "@/presentation/components/legal/PrivacyPolicy";
+import { TermsOfService } from "@/presentation/components/legal/TermsOfService";
 
 const countries = [
   "Angola",
@@ -62,6 +64,8 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [rememberMe, setRememberMe] = useState(false);
   const [consentGiven, setConsentGiven] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
 
   // Load remembered email on mount (sessionStorage — scoped to browser tab)
   useEffect(() => {
@@ -348,7 +352,10 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
                     htmlFor="consent"
                     className="text-xs leading-relaxed cursor-pointer select-none text-muted-foreground"
                   >
-                    I agree that Stokpile may process my data to provide the service. <span className="text-destructive">*</span>
+                    I agree that Stokpile may process my data to provide the service, and I accept the{' '}
+                    <button type="button" onClick={(e) => { e.preventDefault(); setShowTerms(true); }} className="text-primary underline hover:no-underline">Terms of Service</button>
+                    {' '}and{' '}
+                    <button type="button" onClick={(e) => { e.preventDefault(); setShowPrivacy(true); }} className="text-primary underline hover:no-underline">Privacy Policy</button>. <span className="text-destructive">*</span>
                   </Label>
                 </div>
                 {fieldErrors.consent && <p className="text-xs text-destructive">{fieldErrors.consent}</p>}
@@ -376,6 +383,9 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
           </form>
         </CardContent>
       </Card>
+
+      <PrivacyPolicy open={showPrivacy} onOpenChange={setShowPrivacy} />
+      <TermsOfService open={showTerms} onOpenChange={setShowTerms} />
     </div>
   );
 }
