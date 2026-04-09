@@ -25,10 +25,19 @@ const FEATURES = [
   { icon: Shield, title: 'POPIA compliant', desc: 'Privacy-first with full data export and deletion.', color: 'from-slate-500 to-slate-600' },
 ];
 
-const COUNTRIES = [
-  '🇿🇦 South Africa', '🇧🇼 Botswana', '🇳🇦 Namibia', '🇿🇼 Zimbabwe',
-  '🇿🇲 Zambia', '🇲🇿 Mozambique', '🇰🇪 Kenya', '🇳🇬 Nigeria',
-  '🇬🇭 Ghana', '🇺🇬 Uganda', '🇹🇿 Tanzania', '🇲🇼 Malawi',
+const COUNTRIES: { name: string; code: string }[] = [
+  { name: 'South Africa', code: 'za' },
+  { name: 'Botswana',     code: 'bw' },
+  { name: 'Namibia',      code: 'na' },
+  { name: 'Zimbabwe',     code: 'zw' },
+  { name: 'Zambia',       code: 'zm' },
+  { name: 'Mozambique',   code: 'mz' },
+  { name: 'Kenya',        code: 'ke' },
+  { name: 'Nigeria',      code: 'ng' },
+  { name: 'Ghana',        code: 'gh' },
+  { name: 'Uganda',       code: 'ug' },
+  { name: 'Tanzania',     code: 'tz' },
+  { name: 'Malawi',       code: 'mw' },
 ];
 
 const PRICING = [
@@ -334,12 +343,26 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
 
       {/* ─── DESKTOP Country strip ─── */}
       <section className="hidden md:block border-y border-border/40 bg-muted/20 py-4">
-        <p className="text-[10px] text-center text-muted-foreground uppercase tracking-wider font-semibold mb-2 px-4">
+        <p className="text-[10px] text-center text-muted-foreground uppercase tracking-wider font-semibold mb-3 px-4">
           Built for groups across Africa
         </p>
-        <div className="flex gap-5 justify-center flex-wrap text-sm px-4">
+        <div className="flex gap-x-5 gap-y-2 justify-center flex-wrap text-sm px-4">
           {COUNTRIES.map((c) => (
-            <span key={c} className="text-muted-foreground whitespace-nowrap">{c}</span>
+            <span
+              key={c.code}
+              className="inline-flex items-center gap-1.5 text-muted-foreground whitespace-nowrap"
+            >
+              <img
+                src={`https://flagcdn.com/24x18/${c.code}.png`}
+                srcSet={`https://flagcdn.com/48x36/${c.code}.png 2x`}
+                width={20}
+                height={15}
+                alt=""
+                loading="lazy"
+                className="rounded-[2px] shadow-sm ring-1 ring-black/5"
+              />
+              {c.name}
+            </span>
           ))}
         </div>
       </section>
