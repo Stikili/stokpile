@@ -5187,6 +5187,205 @@ app.put('/make-server-34d0b231/groups/:groupId/penalties/charges/:chargeId', asy
   }
 });
 
+// === SMS SHORT CODE (incoming SMS webhook from Africa's Talking) ===
+
+// Configure Africa's Talking to POST incoming SMS to this URL.
+// Supported commands:
+//   PAY <amount>     -> mark this month's contribution as paid
+//   BALANCE          -> reply with group balance (sends an SMS back)
+//   HELP             -> reply with available commands
+app.post('/make-server-34d0b231/sms/incoming', async (c) => {
+  try {
+    // Africa's Talking sends form-encoded data
+    const body = await c.req.parseBody();
+    const fromPhone = String(body.from || '');
+    const text = String(body.text || '').trim();
+
+    if (!fromPhone || !text) return c.json({ status: 'ignored' });
+
+    // Find the user by phone number
+    const allUsers = await kv.getByPrefix('user:');
+    const user = allUsers.find((u: any) => {
+      const stored = (u.phone || '').replace(/[^\d+]/g, '');
+      const incoming = fromPhone.replace(/[^\d+]/g, '');
+      return stored && (stored === incoming || stored.endsWith(incoming.slice(-9)));
+    });
+
+    if (!user) {
+      await sendSMS(fromPhone, 'Stokpile: This phone is not registered. Sign up at stokpile.app first.');
+      return c.json({ status: 'unknown_phone' });
+    }
+
+    const command = text.toUpperCase().split(/\s+/)[0];
+    const arg = text.split(/\s+/).slice(1).join(' ');
+
+    if (command === 'HELP') {
+      await sendSMS(fromPhone, 'Stokpile commands:\nPAY <amount> — record contribution\nBALANCE — get group balance\nHELP — this message');
+      return c.json({ status: 'ok', command });
+    }
+
+    // Find user's active group (most recent membership)
+    const memberships = (await kv.getByPrefix('membership:'))
+      .filter((m: any) => m.userEmail === user.email && m.status === 'approved');
+    if (memberships.length === 0) {
+      await sendSMS(fromPhone, 'Stokpile: You are not in any group yet. Create or join a group at stokpile.app.');
+      return c.json({ status: 'no_group' });
+    }
+    const membership = memberships[0]; // simple — picks first
+    const groupId = membership.groupId;
+    const group = await kv.get(`group:${groupId}`);
+    if (!group || group.archived) {
+      await sendSMS(fromPhone, 'Stokpile: Your group is not active.');
+      return c.json({ status: 'inactive' });
+    }
+
+    if (command === 'PAY') {
+      const amount = parseFloat(arg.replace(/[^0-9.]/g, ''));
+      if (isNaN(amount) || amount <= 0) {
+        await sendSMS(fromPhone, 'Stokpile: Invalid amount. Try: PAY 500');
+        return c.json({ status: 'invalid_amount' });
+      }
+      const cId = generateId();
+      await kv.set(`contribution:${groupId}:${cId}`, {
+        id: cId,
+        groupId,
+        userEmail: user.email,
+        amount,
+        date: new Date().toISOString(),
+        paid: false, // requires admin verification
+        createdAt: new Date().toISOString(),
+        source: 'sms',
+        smsFrom: fromPhone,
+      });
+      await sendSMS(fromPhone, `Stokpile: Contribution of ${amount} recorded for ${group.name}. Awaiting treasurer verification.`);
+      return c.json({ status: 'ok', command, amount });
+    }
+
+    if (command === 'BALANCE') {
+      const allContribs = await kv.getByPrefix(`contribution:${groupId}:`);
+      const totalIn = allContribs.filter((c: any) => c.paid).reduce((sum: number, c: any) => sum + (c.amount || 0), 0);
+      const allPayouts = await kv.getByPrefix(`payout:${groupId}:`);
+      const totalOut = allPayouts.filter((p: any) => p.status === 'completed').reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+      const bal = totalIn - totalOut;
+      await sendSMS(fromPhone, `Stokpile: ${group.name} balance is R${bal}. Total in: R${totalIn}, out: R${totalOut}.`);
+      return c.json({ status: 'ok', command, balance: bal });
+    }
+
+    await sendSMS(fromPhone, 'Stokpile: Unknown command. Reply HELP for options.');
+    return c.json({ status: 'unknown_command' });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// === DEMO GROUP ===
+
+// Creates a sample group with 5 fake members and a few contributions/payouts
+// so new users can explore the app without onboarding friction.
+app.post('/make-server-34d0b231/demo-group', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    // Idempotent: if user already has a demo group, return it
+    const existing = (await kv.getByPrefix('group:')).find(
+      (g: any) => g.createdBy === user.email && g.isDemo
+    );
+    if (existing) return c.json({ group: existing, alreadyExisted: true });
+
+    const groupId = generateId();
+    const now = new Date();
+    const demoGroup = {
+      id: groupId,
+      name: 'Stokpile Demo Group',
+      description: 'Sample group with example data so you can explore Stokpile without setting anything up.',
+      groupCode: generateGroupCode(),
+      isPublic: false,
+      payoutsAllowed: true,
+      groupType: 'rotating',
+      contributionFrequency: 'monthly',
+      contributionTarget: 500,
+      isDemo: true,
+      archived: false,
+      admin1: user.email,
+      createdBy: user.email,
+      createdAt: now.toISOString(),
+    };
+    await kv.set(`group:${groupId}`, demoGroup);
+
+    // Creator membership
+    await kv.set(`membership:${groupId}:${user.email}`, {
+      groupId,
+      userEmail: user.email,
+      status: 'approved',
+      role: 'admin',
+      joinedAt: now.toISOString(),
+    });
+
+    // 4 demo members (purely for display in the group)
+    const demoMembers = [
+      { email: 'thandi@demo.stokpile.app', fullName: 'Thandi', surname: 'Mokoena' },
+      { email: 'sipho@demo.stokpile.app', fullName: 'Sipho', surname: 'Dlamini' },
+      { email: 'precious@demo.stokpile.app', fullName: 'Precious', surname: 'Khumalo' },
+      { email: 'kagiso@demo.stokpile.app', fullName: 'Kagiso', surname: 'Tladi' },
+    ];
+    for (const m of demoMembers) {
+      await kv.set(`membership:${groupId}:${m.email}`, {
+        groupId,
+        userEmail: m.email,
+        fullName: m.fullName,
+        surname: m.surname,
+        status: 'approved',
+        role: 'member',
+        joinedAt: now.toISOString(),
+      });
+      // Add a contribution for this month
+      const cId = generateId();
+      await kv.set(`contribution:${groupId}:${cId}`, {
+        id: cId,
+        groupId,
+        userEmail: m.email,
+        amount: 500,
+        date: now.toISOString(),
+        paid: m.email !== 'kagiso@demo.stokpile.app', // 1 unpaid for realism
+        createdAt: now.toISOString(),
+      });
+    }
+
+    // A scheduled meeting in 7 days
+    const meetingId = generateId();
+    const meetingDate = new Date(now.getTime() + 7 * 86400000);
+    await kv.set(`meeting:${groupId}:${meetingId}`, {
+      id: meetingId,
+      groupId,
+      title: 'Monthly check-in',
+      date: meetingDate.toISOString().slice(0, 10),
+      time: '18:00',
+      venue: 'Community hall',
+      createdAt: now.toISOString(),
+      createdBy: user.email,
+    });
+
+    // A welcome announcement
+    const annId = generateId();
+    await kv.set(`announcement:${groupId}:${annId}`, {
+      id: annId,
+      groupId,
+      title: 'Welcome to your demo group!',
+      content: 'This is a sample group with fake members so you can see how Stokpile works. Create your own group when you\'re ready!',
+      urgent: false,
+      pinned: true,
+      createdBy: user.email,
+      createdAt: now.toISOString(),
+    });
+
+    return c.json({ group: demoGroup, alreadyExisted: false });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
 // === DATA PORTABILITY (POPIA right to export) ===
 
 app.get('/make-server-34d0b231/me/export', async (c) => {
@@ -5723,6 +5922,48 @@ app.post('/billing/webhook/paystack', async (c) => {
         tier,
         updatedAt: new Date().toISOString(),
       });
+
+      // Referral reward: if the paying customer was referred and not yet rewarded,
+      // credit the referrer with one Pro month.
+      try {
+        const customerEmail = event.data?.customer?.email;
+        if (customerEmail) {
+          const claims = await kv.getByPrefix('referral-claim:');
+          const claim = claims.find((c: any) => c.newUserEmail === customerEmail && !c.rewarded);
+          if (claim) {
+            // Mark claim as rewarded
+            await kv.set(`referral-claim:${claim.code.toLowerCase()}:${customerEmail}`, {
+              ...claim,
+              rewarded: true,
+              rewardedAt: new Date().toISOString(),
+            });
+            // Increment referrer's count
+            const referrer = await kv.get(`referral:${claim.referrerId}`);
+            if (referrer) {
+              await kv.set(`referral:${claim.referrerId}`, {
+                ...referrer,
+                rewardedCount: (referrer.rewardedCount || 0) + 1,
+              });
+              // Notify the referrer
+              const profile = await supabaseAdmin.auth.admin.getUserById(claim.referrerId);
+              if (profile.data?.user?.email) {
+                sendEmail(
+                  profile.data.user.email,
+                  'You earned a free Pro month! 🎁',
+                  emailTemplate(
+                    'Your referral converted',
+                    `<p>Great news — someone you referred just upgraded to Stokpile Pro. You've earned <strong>1 month of Pro free</strong> on your next billing cycle.</p>`,
+                    'Open Stokpile',
+                    Deno.env.get('APP_URL') || 'https://stokpilev1.vercel.app'
+                  )
+                ).catch(console.warn);
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Referral reward processing failed:', e.message);
+      }
     }
 
     if (event.event === 'subscription.create' && groupId) {

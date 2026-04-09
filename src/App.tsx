@@ -92,6 +92,7 @@ import { useInviteToken } from "@/application/hooks/useInviteToken";
 import { api } from "@/infrastructure/api";
 import { exportToCSV, setUserCountry } from "@/lib/export";
 import "@/lib/offlineQueue"; // registers online listener
+import { initAnalytics, track } from "@/lib/analytics";
 
 export default function App() {
   const { session, loading: sessionLoading, checkSession, signOut } = useSession();
@@ -200,11 +201,17 @@ export default function App() {
   const isAdmin = selectedGroup?.userRole === "admin";
   const unreadAnnouncements = useUnreadAnnouncements(selectedGroup?.id, activeTab);
 
+  // Initialise analytics + error reporting once on mount
+  useEffect(() => {
+    initAnalytics();
+  }, []);
+
   // Set the user's country once on session load so all formatCurrency/formatDate
   // calls across the app render in their local format.
   useEffect(() => {
     const country = (session?.user as any)?.user_metadata?.country;
     setUserCountry(country);
+    if (session?.user) track('login');
   }, [session]);
   const pendingCounts = usePendingCounts(selectedGroup?.id, isAdmin);
 
