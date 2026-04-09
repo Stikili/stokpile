@@ -45,7 +45,7 @@ export function TermsOfService({ open, onOpenChange }: TermsOfServiceProps) {
 
             <section>
               <h3 className="font-semibold mb-2">5. Subscription and payment</h3>
-              <p>Paid plans (Community R49/mo, Pro R99/mo) are billed monthly via Paystack. New groups receive a 90-day free trial of Pro features. You may cancel at any time and will retain access until the end of the billing period. Refunds are not provided for partial months.</p>
+              <p>Paid plans (Starter R19/mo, Pro R39/mo) are billed monthly via Paystack. New groups receive a 90-day free trial of Pro features. You may cancel at any time and will retain access until the end of the billing period. Refunds are not provided for partial months.</p>
             </section>
 
             <section>

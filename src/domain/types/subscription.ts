@@ -33,8 +33,8 @@ export const TIER_FEATURES: Record<SubscriptionTier, SubscriptionFeature[]> = {
 };
 
 export const TIER_LIMITS: Record<SubscriptionTier, { groups: number | null; members: number | null }> = {
-  free:       { groups: 1,    members: 10   },
-  community:  { groups: 3,    members: 30   },
+  free:       { groups: 1,    members: 8    },
+  community:  { groups: 2,    members: 30   },
   pro:        { groups: null, members: 100  },
   enterprise: { groups: null, members: null },
   trial:      { groups: null, members: 100  },
@@ -43,15 +43,15 @@ export const TIER_LIMITS: Record<SubscriptionTier, { groups: number | null; memb
 export const TIER_PRICES: Record<SubscriptionTier, string> = {
   free:       'Free',
   trial:      'Free (3-month trial)',
-  community:  'R49 / month',
-  pro:        'R99 / month',
+  community:  'R19 / month',
+  pro:        'R39 / month',
   enterprise: 'Contact us',
 };
 
 export const TIER_LABELS: Record<SubscriptionTier, string> = {
   free:       'Free',
   trial:      'Trial',
-  community:  'Community',
+  community:  'Starter',
   pro:        'Pro',
   enterprise: 'Enterprise',
 };

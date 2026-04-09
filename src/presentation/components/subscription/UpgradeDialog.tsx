@@ -26,11 +26,11 @@ const PLANS: {
 }[] = [
   {
     tier: 'community',
-    label: 'Community',
+    label: 'Starter',
     icon: Sparkles,
     color: 'text-blue-500',
     features: [
-      '3 groups',
+      '2 groups',
       'Up to 30 members',
       'Payment proofs',
       'Rotation order manager',
@@ -48,7 +48,7 @@ const PLANS: {
     features: [
       'Unlimited groups',
       'Up to 100 members',
-      'Everything in Community',
+      'Everything in Starter',
       'Financial reports & PDF export',
       'Analytics dashboard',
       'Penalties & fines',

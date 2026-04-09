@@ -18,6 +18,18 @@ interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.6.0',
+    date: '2026-04-09',
+    type: 'major',
+    title: 'New African-friendly pricing',
+    changes: [
+      'Starter dropped to R19/month (was R49)',
+      'Pro dropped to R39/month (was R99)',
+      'Free tier now supports up to 8 members',
+      'Existing trial groups keep all Pro features for 90 days',
+    ],
+  },
+  {
     version: '1.5.0',
     date: '2026-04-09',
     type: 'major',
@@ -47,7 +59,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     type: 'feature',
     title: 'Subscription tiers with Paystack billing',
     changes: [
-      '4 tiers: Free, Community (R49/mo), Pro (R99/mo), Enterprise',
+      '4 tiers: Free, Starter (R19/mo), Pro (R39/mo), Enterprise',
       '90-day free Pro trial for new groups',
       'Paystack hosted checkout integration',
       'Webhook handling for subscription lifecycle',
