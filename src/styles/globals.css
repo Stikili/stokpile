@@ -692,6 +692,27 @@
 /* ─── Utilities ────────────────────────────────────────────────────────────── */
 @layer utilities {
   .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+  .pt-safe { padding-top: env(safe-area-inset-top); }
+  .px-safe { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+  .mb-safe { margin-bottom: env(safe-area-inset-bottom); }
+
+  /* Native-feeling horizontal snap carousel */
+  .snap-x-mandatory { scroll-snap-type: x mandatory; }
+  .snap-start { scroll-snap-align: start; }
+  .snap-center { scroll-snap-align: center; }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+  .scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
+
+  /* Disable browser pull-to-refresh and overscroll bounce that breaks the
+     "native app" illusion when the page is opened from a home-screen icon. */
+  .no-overscroll { overscroll-behavior: none; }
+
+  /* Disable text selection on tappable elements (feels less webby) */
+  .tap-none {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    user-select: none;
+  }
 
   .shimmer {
     background: linear-gradient(90deg,
