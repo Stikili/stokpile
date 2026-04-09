@@ -55,6 +55,9 @@ const STEPS: OnboardingStep[] = [
 ];
 
 export function AdminOnboarding({ groupId, onAction, onDismiss }: AdminOnboardingProps) {
+  const [dismissed, setDismissed] = useState(
+    () => localStorage.getItem(`onboarding-dismissed-${groupId}`) === 'true'
+  );
   const [completed, setCompleted] = useState<Set<string>>(() => {
     const stored = new Set<string>();
     for (const s of STEPS) {
@@ -62,6 +65,8 @@ export function AdminOnboarding({ groupId, onAction, onDismiss }: AdminOnboardin
     }
     return stored;
   });
+
+  if (dismissed) return null;
 
   const handleStepClick = (step: OnboardingStep) => {
     localStorage.setItem(`${step.storageKey}-${groupId}`, 'true');
@@ -90,7 +95,11 @@ export function AdminOnboarding({ groupId, onAction, onDismiss }: AdminOnboardin
               {completed.size}/{STEPS.length} complete
             </span>
           </div>
-          <button onClick={onDismiss} className="text-muted-foreground hover:text-foreground" aria-label="Dismiss">
+          <button
+            onClick={() => { setDismissed(true); onDismiss(); }}
+            className="text-muted-foreground hover:text-foreground"
+            aria-label="Dismiss"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>

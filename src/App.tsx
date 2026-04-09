@@ -20,6 +20,8 @@ const BurialSocietyView = lazy(() => import("@/presentation/components/burial/Bu
 const PenaltiesView = lazy(() => import("@/presentation/components/penalties/PenaltiesView").then(m => ({ default: m.PenaltiesView })));
 import { CommandPalette } from "@/presentation/shared/CommandPalette";
 import { GlobalSearchDialog } from "@/presentation/shared/GlobalSearchDialog";
+import { AdminOnboarding } from "@/presentation/components/onboarding/AdminOnboarding";
+import { BulkInviteDialog } from "@/presentation/components/members/BulkInviteDialog";
 import { GroupActionsButtons } from "@/presentation/components/groups/GroupActionsButtons";
 import { PendingInvitesView } from "@/presentation/components/members/PendingInvitesView";
 import { PublicJoinView } from "@/presentation/components/groups/PublicJoinView";
@@ -107,6 +109,7 @@ export default function App() {
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [showGlobalSearch, setShowGlobalSearch] = useState(false);
+  const [showBulkInvite, setShowBulkInvite] = useState(false);
   const [signOutLoading, setSignOutLoading] = useState(false);
   const [exportingCSV, setExportingCSV] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(
@@ -150,6 +153,10 @@ export default function App() {
     };
     if (tabMap[action]) {
       setActiveTab(tabMap[action]);
+      return;
+    }
+    if (action === "invite-members") {
+      setShowBulkInvite(true);
       return;
     }
     if (action === "lite-mode") {
@@ -290,6 +297,15 @@ export default function App() {
               groupId={selectedGroup?.id ?? null}
               onResultClick={(tab) => setActiveTab(tab)}
             />
+
+            {/* Bulk Invite from onboarding */}
+            {selectedGroup && (
+              <BulkInviteDialog
+                groupId={selectedGroup.id}
+                open={showBulkInvite}
+                onOpenChange={setShowBulkInvite}
+              />
+            )}
 
             {/* Upgrade Dialog */}
             <UpgradeDialog
@@ -517,6 +533,14 @@ export default function App() {
 
                     <Suspense fallback={<LoadingProgress message="Loading..." />}>
                       <TabsContent value="dashboard" className="space-y-4">
+                        {isAdmin && (
+                          <AdminOnboarding
+                            groupId={selectedGroup.id}
+                            groupType={selectedGroup.groupType}
+                            onAction={handleQuickAction}
+                            onDismiss={() => localStorage.setItem(`onboarding-dismissed-${selectedGroup.id}`, 'true')}
+                          />
+                        )}
                         <ContextualTips context="dashboard" isAdmin={isAdmin} hasData onAction={handleQuickAction} />
                         <Dashboard
                           groupId={selectedGroup.id}

@@ -76,6 +76,15 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
       setEmail(rememberedEmail);
       setRememberMe(true);
     }
+
+    // Capture referral code from ?ref= and persist to localStorage so it
+    // survives the email-verification round trip.
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref");
+    if (ref) {
+      localStorage.setItem("pendingReferralCode", ref);
+      setIsSignup(true);
+    }
   }, []);
 
   const validateField = (name: string, value: string) => {
@@ -132,6 +141,16 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
           country,
           phone: phone.trim() || undefined,
         });
+        // Track referral if present
+        const pendingRef = localStorage.getItem("pendingReferralCode");
+        if (pendingRef) {
+          try {
+            await api.trackReferral(pendingRef, email);
+          } catch {
+            // Non-fatal — referral tracking shouldn't block signup
+          }
+          localStorage.removeItem("pendingReferralCode");
+        }
         // Auto sign in after signup
         await api.signin({ email, password });
       } else {

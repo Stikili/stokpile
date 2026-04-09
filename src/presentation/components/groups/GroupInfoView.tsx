@@ -6,6 +6,7 @@ import { Button } from '@/presentation/ui/button';
 import { Skeleton } from '@/presentation/ui/skeleton';
 import { InviteMembersDialog } from '@/presentation/components/members/InviteMembersDialog';
 import { ShareInviteDialog } from '@/presentation/components/members/ShareInviteDialog';
+import { BulkInviteDialog } from '@/presentation/components/members/BulkInviteDialog';
 import { GroupSettingsCard } from '@/presentation/components/groups/GroupSettingsCard';
 import { EditGroupNameDialog } from '@/presentation/components/groups/EditGroupNameDialog';
 import { EditGroupDescriptionDialog } from '@/presentation/components/groups/EditGroupDescriptionDialog';
@@ -16,7 +17,7 @@ import { MemberDetailsDialog } from '@/presentation/components/members/MemberDet
 import { EmptyState } from '@/presentation/shared/EmptyState';
 import { ConfirmationDialog } from '@/presentation/shared/ConfirmationDialog';
 import { DeleteGroupDialog } from '@/presentation/components/groups/DeleteGroupDialog';
-import { Copy, ArrowUp, ArrowDown, Loader2, Users, FileText, Upload, Download, Trash2, File, UserX, UserCheck, X, Check, ExternalLink, Archive, ArchiveRestore, ShieldAlert } from 'lucide-react';
+import { Copy, ArrowUp, ArrowDown, Loader2, Users, FileText, Upload, Download, Trash2, File, UserX, UserCheck, X, Check, ExternalLink, Archive, ArchiveRestore, ShieldAlert, UploadCloud } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/presentation/ui/dropdown-menu';
 import { MoreHorizontal } from 'lucide-react';
@@ -36,6 +37,7 @@ interface GroupInfoViewProps {
 export function GroupInfoView({ group, onGroupUpdate, userEmail }: GroupInfoViewProps) {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showBulkInvite, setShowBulkInvite] = useState(false);
   const [promotingEmail, setPromotingEmail] = useState<string | null>(null);
   const [demotingEmail, setDemotingEmail] = useState<string | null>(null);
   const [removingEmail, setRemovingEmail] = useState<string | null>(null);
@@ -411,13 +413,17 @@ export function GroupInfoView({ group, onGroupUpdate, userEmail }: GroupInfoView
           </div>
 
           {group.userRole === 'admin' && (
-            <div className="pt-4 border-t">
-              <h3 className="text-sm mb-3">Share Group</h3>
-              <div className="flex gap-2">
+            <div className="pt-4 border-t space-y-3">
+              <h3 className="text-sm">Add Members</h3>
+              <div className="flex flex-wrap gap-2">
                 <ShareInviteDialog groupId={group.id} groupName={group.name} />
+                <Button variant="outline" size="sm" onClick={() => setShowBulkInvite(true)}>
+                  <UploadCloud className="h-4 w-4 mr-2" />
+                  Bulk Invite (CSV)
+                </Button>
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Share an invite link via WhatsApp, SMS, or other platforms
+              <p className="text-xs text-muted-foreground">
+                Share an invite link, or paste/upload a list of emails to invite many at once.
               </p>
             </div>
           )}
@@ -962,6 +968,13 @@ export function GroupInfoView({ group, onGroupUpdate, userEmail }: GroupInfoView
         }}
         confirmText="Remove"
         variant="destructive"
+      />
+
+      <BulkInviteDialog
+        groupId={group.id}
+        open={showBulkInvite}
+        onOpenChange={setShowBulkInvite}
+        onSuccess={loadMembers}
       />
     </div>
   );
