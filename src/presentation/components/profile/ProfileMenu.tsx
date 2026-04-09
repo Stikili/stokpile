@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/presentation/ui/dropdown-menu';
-import { User, Plus, UserPlus, Search, LogOut, Trash2, UserX, Bell, HelpCircle, Sparkles } from 'lucide-react';
+import { User, Plus, UserPlus, Search, LogOut, Trash2, UserX, Bell, HelpCircle, Sparkles, Monitor } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
 import { NotificationPrefsDialog } from '@/presentation/components/profile/NotificationPrefsDialog';
 import { ProfileDialog } from '@/presentation/components/profile/ProfileDialog';
@@ -19,6 +19,7 @@ import { ClearDataDialog } from '@/presentation/shared/ClearDataDialog';
 import { DeleteAccountDialog } from '@/presentation/components/profile/DeleteAccountDialog';
 import { HelpDialog } from '@/presentation/components/help/HelpDialog';
 import { ChangelogDialog, LATEST_VERSION } from '@/presentation/components/help/ChangelogDialog';
+import { SessionsDialog } from '@/presentation/components/profile/SessionsDialog';
 import type { Session } from '@/domain/types';
 
 interface ProfileMenuProps {
@@ -44,6 +45,7 @@ export function ProfileMenu({
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
+  const [showSessions, setShowSessions] = useState(false);
   const [hasUnseenChangelog, setHasUnseenChangelog] = useState(() => {
     const seen = localStorage.getItem('changelog-seen-version');
     return seen !== LATEST_VERSION;
@@ -75,6 +77,10 @@ export function ProfileMenu({
               Notification Settings
             </DropdownMenuItem>
           </NotificationPrefsDialog>
+          <DropdownMenuItem onClick={() => setShowSessions(true)}>
+            <Monitor className="h-4 w-4 mr-2" />
+            Active Sessions
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuLabel>Groups</DropdownMenuLabel>
           <DropdownMenuItem onClick={() => setShowCreateGroup(true)}>
@@ -182,6 +188,7 @@ export function ProfileMenu({
       )}
       <HelpDialog open={showHelp} onOpenChange={setShowHelp} />
       <ChangelogDialog open={showChangelog} onOpenChange={setShowChangelog} />
+      <SessionsDialog open={showSessions} onOpenChange={setShowSessions} />
     </>
   );
 }

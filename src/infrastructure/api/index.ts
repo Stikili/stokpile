@@ -463,6 +463,16 @@ export const api = {
   deleteAccount: () =>
     request<{ message: string; deletedCount: Record<string, number> }>("/account", { method: "DELETE" }),
 
+  // Session management
+  getSessions: () =>
+    request<{ sessions: Array<{ sessionId: string; ip: string; userAgent: string; createdAt: string; lastActiveAt: string; isCurrent: boolean }> }>("/sessions"),
+
+  revokeSession: (sessionId: string) =>
+    request<{ success: boolean }>(`/sessions/${sessionId}`, { method: "DELETE" }),
+
+  revokeAllOtherSessions: () =>
+    request<{ success: boolean; revoked: number }>("/sessions/revoke-all", { method: "POST" }),
+
   // Subscription
   getSubscription: (groupId: string) =>
     request<Subscription>(`/groups/${groupId}/subscription`),

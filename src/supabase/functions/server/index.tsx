@@ -31,16 +31,49 @@ const isGroupNameUnique = async (name: string, excludeGroupId?: string) => {
 
 // === USER AUTHENTICATION ===
 
+// In-memory rate limiter (per Edge Function instance — best-effort)
+const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(key: string, limit: number, windowMs: number): { allowed: boolean; retryAfter?: number } {
+  const now = Date.now();
+  const bucket = rateLimitBuckets.get(key);
+
+  if (!bucket || bucket.resetAt < now) {
+    rateLimitBuckets.set(key, { count: 1, resetAt: now + windowMs });
+    return { allowed: true };
+  }
+
+  if (bucket.count >= limit) {
+    return { allowed: false, retryAfter: Math.ceil((bucket.resetAt - now) / 1000) };
+  }
+
+  bucket.count++;
+  return { allowed: true };
+}
+
+function getClientIp(c: any): string {
+  return c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ||
+         c.req.header('cf-connecting-ip') ||
+         c.req.header('x-real-ip') ||
+         'unknown';
+}
+
 app.post('/make-server-34d0b231/signup', async (c) => {
   try {
+    const ip = getClientIp(c);
+    const rl = checkRateLimit(`signup:${ip}`, 3, 60 * 60 * 1000); // 3/hour per IP
+    if (!rl.allowed) {
+      return c.json({ error: `Too many signup attempts. Try again in ${rl.retryAfter} seconds.` }, 429);
+    }
+
     const { email, password, fullName, surname, country, phone } = await c.req.json();
 
-    // Create user in Supabase Auth
+    // Create user in Supabase Auth — require email verification
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       user_metadata: { fullName, surname, country, phone: phone || null },
-      email_confirm: true // Auto-confirm since email server isn't configured
+      email_confirm: false, // Require email verification
     });
 
     if (error) {
@@ -55,6 +88,7 @@ app.post('/make-server-34d0b231/signup', async (c) => {
       surname,
       country,
       phone: phone || null,
+      emailVerified: false,
       createdAt: new Date().toISOString()
     });
 
@@ -67,7 +101,18 @@ app.post('/make-server-34d0b231/signup', async (c) => {
       phone: phone || null,
     }, { onConflict: 'email' });
 
-    return c.json({ success: true, user: data.user });
+    // Send verification link via Supabase
+    try {
+      await supabaseAdmin.auth.admin.generateLink({
+        type: 'signup',
+        email,
+        password,
+      });
+    } catch (e) {
+      console.log(`Failed to send verification email: ${e.message}`);
+    }
+
+    return c.json({ success: true, user: data.user, requiresVerification: true });
   } catch (error) {
     console.log(`Signup exception: ${error.message}`);
     return c.json({ error: error.message }, 500);
@@ -76,8 +121,19 @@ app.post('/make-server-34d0b231/signup', async (c) => {
 
 app.post('/make-server-34d0b231/signin', async (c) => {
   try {
+    const ip = getClientIp(c);
+    const ipRl = checkRateLimit(`signin-ip:${ip}`, 10, 15 * 60 * 1000); // 10/15min per IP
+    if (!ipRl.allowed) {
+      return c.json({ error: `Too many login attempts from this IP. Try again in ${ipRl.retryAfter} seconds.` }, 429);
+    }
+
     const { email, password } = await c.req.json();
-    
+
+    const emailRl = checkRateLimit(`signin-email:${email}`, 5, 15 * 60 * 1000); // 5/15min per email
+    if (!emailRl.allowed) {
+      return c.json({ error: `Too many login attempts for this account. Try again in ${emailRl.retryAfter} seconds.` }, 429);
+    }
+
     const { data, error } = await supabaseAdmin.auth.signInWithPassword({
       email,
       password,
@@ -88,13 +144,84 @@ app.post('/make-server-34d0b231/signin', async (c) => {
       return c.json({ error: error.message }, 400);
     }
 
-    return c.json({ 
-      success: true, 
+    // Track session for session management
+    try {
+      const sessionId = data.session.access_token.slice(-16);
+      await kv.set(`session:${data.user.id}:${sessionId}`, {
+        sessionId,
+        userId: data.user.id,
+        ip,
+        userAgent: c.req.header('user-agent') || 'unknown',
+        createdAt: new Date().toISOString(),
+        lastActiveAt: new Date().toISOString(),
+      });
+    } catch (e) {
+      console.log(`Failed to track session: ${e.message}`);
+    }
+
+    return c.json({
+      success: true,
       accessToken: data.session.access_token,
       user: data.user
     });
   } catch (error) {
     console.log(`Signin exception: ${error.message}`);
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// === SESSION MANAGEMENT ===
+
+app.get('/make-server-34d0b231/sessions', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (error || !user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const sessions = await kv.getByPrefix(`session:${user.id}:`);
+    const currentSessionId = accessToken?.slice(-16);
+    return c.json({
+      sessions: sessions.map((s: any) => ({
+        ...s,
+        isCurrent: s.sessionId === currentSessionId,
+      })),
+    });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.delete('/make-server-34d0b231/sessions/:sessionId', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (error || !user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const sessionId = c.req.param('sessionId');
+    await kv.delete(`session:${user.id}:${sessionId}`);
+    return c.json({ success: true });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.post('/make-server-34d0b231/sessions/revoke-all', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (error || !user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const sessions = await kv.getByPrefix(`session:${user.id}:`);
+    const currentSessionId = accessToken?.slice(-16);
+    let revoked = 0;
+    for (const s of sessions) {
+      if (s.sessionId !== currentSessionId) {
+        await kv.delete(`session:${user.id}:${s.sessionId}`);
+        revoked++;
+      }
+    }
+    return c.json({ success: true, revoked });
+  } catch (error) {
     return c.json({ error: error.message }, 500);
   }
 });
@@ -3508,9 +3635,23 @@ app.get('/make-server-34d0b231/groups/:groupId/audit-log', async (c) => {
     }
 
     const entries = await kv.getByPrefix(`audit:${groupId}:`);
-    const sorted = entries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-    return c.json({ auditLog: sorted.slice(0, 200) });
+    // Audit log retention: 90 days. Delete older entries lazily on read.
+    const RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
+    const cutoff = Date.now() - RETENTION_MS;
+    const fresh = [];
+    for (const entry of entries) {
+      const ts = new Date(entry.timestamp).getTime();
+      if (ts < cutoff) {
+        // Lazy cleanup — fire and forget
+        kv.delete(`audit:${groupId}:${entry.timestamp}:${entry.id}`).catch(() => {});
+      } else {
+        fresh.push(entry);
+      }
+    }
+    const sorted = fresh.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    return c.json({ auditLog: sorted.slice(0, 200), retentionDays: 90 });
   } catch (error) {
     console.log(`Get audit log error: ${error.message}`);
     return c.json({ error: error.message }, 500);
