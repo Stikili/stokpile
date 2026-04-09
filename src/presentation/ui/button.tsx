@@ -21,10 +21,12 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
-        default: "h-9 px-4 py-2 has-[>svg]:px-3",
-        sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
-        lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
-        icon: "size-9 rounded-md",
+        // Heights auto-adjust: larger on touch screens (mobile), tighter on mouse-driven (md+).
+        // Mobile values meet Apple HIG (44pt) / Material (48dp) tap-target guidelines.
+        default: "h-11 md:h-9 px-4 py-2 has-[>svg]:px-3",
+        sm: "h-9 md:h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
+        lg: "h-12 md:h-10 rounded-md px-6 has-[>svg]:px-4 text-base md:text-sm",
+        icon: "size-11 md:size-9 rounded-md",
       },
     },
     defaultVariants: {
