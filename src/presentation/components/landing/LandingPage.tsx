@@ -2,10 +2,12 @@ import { useEffect } from 'react';
 import { Button } from '@/presentation/ui/button';
 import { Badge } from '@/presentation/ui/badge';
 import { Logo } from '@/presentation/layout/Logo';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
+import { useTheme } from '@/presentation/shared/ThemeProvider';
 import {
   Check, Sparkles, Shield, Globe, Users, TrendingUp,
   HeartHandshake, ShoppingCart, RefreshCw, MessageCircle, FileText,
-  ArrowRight, Star,
+  ArrowRight, Star, Sun, Moon,
 } from 'lucide-react';
 
 interface LandingPageProps {
@@ -55,6 +57,8 @@ const PRICING = [
 ];
 
 export function LandingPage({ onGetStarted }: LandingPageProps) {
+  const { theme, toggleTheme } = useTheme();
+
   // Disable pull-to-refresh and overscroll bounce so the page feels native.
   useEffect(() => {
     document.documentElement.classList.add('no-overscroll');
@@ -72,13 +76,29 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
       <header className="sticky top-0 z-50 bg-white/85 dark:bg-[#050e1c]/85 backdrop-blur-xl border-b border-border/40 pt-safe">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <Logo showText />
-          <Button
-            onClick={onGetStarted}
-            size="sm"
-            className="tap-none font-semibold shadow-md shadow-primary/20"
-          >
-            Sign In
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={toggleTheme}
+                  size="icon"
+                  variant="ghost"
+                  className="tap-none"
+                  aria-label={theme === 'navy' ? 'Switch to light theme' : 'Switch to navy theme'}
+                >
+                  {theme === 'navy' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{theme === 'navy' ? 'Light theme' : 'Navy theme'}</TooltipContent>
+            </Tooltip>
+            <Button
+              onClick={onGetStarted}
+              size="sm"
+              className="tap-none font-semibold shadow-md shadow-primary/20"
+            >
+              Sign In
+            </Button>
+          </div>
         </div>
       </header>
 

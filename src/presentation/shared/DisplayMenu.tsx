@@ -8,15 +8,14 @@ import {
   DropdownMenuTrigger,
 } from '@/presentation/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
-import { Settings2, Sun, Moon, Sparkles, Gauge, Languages, Check } from 'lucide-react';
+import { Settings2, Sun, Moon, Gauge, Languages, Check } from 'lucide-react';
 import { useTheme, type AppTheme } from '@/presentation/shared/ThemeProvider';
 import { useLiteMode } from '@/application/context/LiteModeContext';
 import { useLanguage } from '@/application/context/LanguageContext';
 
 const THEMES: { id: AppTheme; icon: typeof Sun; label: string }[] = [
-  { id: 'light', icon: Sun, label: 'Light' },
-  { id: 'navy', icon: Moon, label: 'Navy' },
-  { id: 'aurora', icon: Sparkles, label: 'Aurora' },
+  { id: 'light', icon: Sun,  label: 'Light' },
+  { id: 'navy',  icon: Moon, label: 'Navy'  },
 ];
 
 const LANGUAGES = [

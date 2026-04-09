@@ -1,12 +1,11 @@
-import { Moon, Sparkles, Sun, type LucideIcon } from 'lucide-react';
+import { Moon, Sun, type LucideIcon } from 'lucide-react';
 import { cn } from '@/presentation/ui/utils';
 import { useTheme, type AppTheme } from '@/presentation/shared/ThemeProvider';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
 
 const THEMES: { id: AppTheme; icon: LucideIcon; label: string }[] = [
-  { id: 'light',  icon: Sun,       label: 'Light'  },
-  { id: 'navy',   icon: Moon,      label: 'Navy'   },
-  { id: 'aurora', icon: Sparkles,  label: 'Aurora' },
+  { id: 'light', icon: Sun,  label: 'Light' },
+  { id: 'navy',  icon: Moon, label: 'Navy'  },
 ];
 
 interface ThemeToggleProps {

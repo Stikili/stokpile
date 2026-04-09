@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 
-export type AppTheme = 'navy' | 'aurora' | 'light';
+export type AppTheme = 'navy' | 'light';
 
 type ThemeProviderProps = {
   children: React.ReactNode;
@@ -15,17 +15,16 @@ type ThemeProviderState = {
 
 const ThemeProviderContext = createContext<ThemeProviderState | undefined>(undefined);
 
-const CYCLE: AppTheme[] = ['navy', 'aurora', 'light'];
+const CYCLE: AppTheme[] = ['navy', 'light'];
 
 function applyTheme(theme: AppTheme) {
   const root = window.document.documentElement;
-  // Remove all theme-related classes
+  // Remove all theme-related classes (legacy 'theme-aurora' is also stripped
+  // in case a user has an older value persisted in localStorage).
   root.classList.remove('dark', 'light', 'theme-aurora');
 
   if (theme === 'navy') {
     root.classList.add('dark');
-  } else if (theme === 'aurora') {
-    root.classList.add('dark', 'theme-aurora');
   }
   // 'light' — no dark class, clean :root styles apply
 }
@@ -36,8 +35,9 @@ export function ThemeProvider({
 }: ThemeProviderProps) {
   const [theme, setThemeState] = useState<AppTheme>(() => {
     if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('stokpile-theme') as AppTheme;
-      if (stored && CYCLE.includes(stored)) return stored;
+      const stored = localStorage.getItem('stokpile-theme') as AppTheme | 'aurora';
+      if (stored === 'aurora') return 'navy'; // migrate stale aurora users
+      if (stored && CYCLE.includes(stored as AppTheme)) return stored as AppTheme;
     }
     return defaultTheme;
   });
@@ -51,10 +51,9 @@ export function ThemeProvider({
     setThemeState(newTheme);
   };
 
-  // Cycles navy → aurora → light → navy
+  // Cycles navy ↔ light
   const toggleTheme = () => {
-    const next = CYCLE[(CYCLE.indexOf(theme) + 1) % CYCLE.length];
-    setTheme(next);
+    setTheme(theme === 'navy' ? 'light' : 'navy');
   };
 
   return (

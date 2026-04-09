@@ -268,8 +268,10 @@ export default function App() {
     return (
       <ThemeProvider>
         <LanguageProvider>
-          <LandingPage onGetStarted={() => setShowAuthFromLanding(true)} />
-          <Toaster />
+          <TooltipProvider>
+            <LandingPage onGetStarted={() => setShowAuthFromLanding(true)} />
+            <Toaster />
+          </TooltipProvider>
         </LanguageProvider>
       </ThemeProvider>
     );
