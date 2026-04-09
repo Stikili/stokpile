@@ -459,6 +459,17 @@ export const api = {
   updatePenaltyCharge: (groupId: string, chargeId: string, data: { status: string }) =>
     request<{ message: string }>(`/groups/${groupId}/penalties/charges/${chargeId}`, { method: "PUT", body: data }),
 
+  // Referral
+  getReferral: () =>
+    request<{ code: string; invitedCount: number; rewardedCount: number }>("/referral"),
+
+  trackReferral: (code: string, newUserEmail: string) =>
+    request<{ success: boolean }>("/referral/track", { method: "POST", body: { code, newUserEmail } }),
+
+  // Email digest
+  sendGroupDigest: (groupId: string) =>
+    request<{ message: string; sent: number }>(`/groups/${groupId}/digest`, { method: "POST" }),
+
   // Account deletion
   deleteAccount: () =>
     request<{ message: string; deletedCount: Record<string, number> }>("/account", { method: "DELETE" }),

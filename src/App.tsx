@@ -86,6 +86,7 @@ import { useGroups } from "@/application/hooks/useGroups";
 import { useInviteToken } from "@/application/hooks/useInviteToken";
 import { api } from "@/infrastructure/api";
 import { exportToCSV } from "@/lib/export";
+import "@/lib/offlineQueue"; // registers online listener
 
 export default function App() {
   const { session, loading: sessionLoading, checkSession, signOut } = useSession();

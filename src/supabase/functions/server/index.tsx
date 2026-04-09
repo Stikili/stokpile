@@ -5003,6 +5003,143 @@ app.put('/make-server-34d0b231/groups/:groupId/penalties/charges/:chargeId', asy
   }
 });
 
+// === EMAIL DIGEST ===
+
+// Generates a weekly digest for one group and emails all members.
+// Can be triggered manually by admin or via scheduled cron (e.g. Supabase pg_cron)
+app.post('/make-server-34d0b231/groups/:groupId/digest', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.role !== 'admin') return c.json({ error: 'Admin only' }, 403);
+
+    const group = await kv.get(`group:${groupId}`);
+    if (!group) return c.json({ error: 'Group not found' }, 404);
+
+    // Gather last-7-day stats
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const allContribs = await kv.getByPrefix(`contribution:${groupId}:`);
+    const allPayouts = await kv.getByPrefix(`payout:${groupId}:`);
+    const allMeetings = await kv.getByPrefix(`meeting:${groupId}:`);
+    const allAnnouncements = await kv.getByPrefix(`announcement:${groupId}:`);
+
+    const recentContribs = allContribs.filter((c: any) => new Date(c.createdAt).getTime() > sevenDaysAgo);
+    const recentPayouts = allPayouts.filter((p: any) => new Date(p.createdAt).getTime() > sevenDaysAgo);
+    const upcomingMeetings = allMeetings.filter((m: any) => new Date(m.date).getTime() > Date.now());
+    const recentAnnouncements = allAnnouncements.filter((a: any) => new Date(a.createdAt).getTime() > sevenDaysAgo);
+
+    const totalContributed = recentContribs.reduce((sum: number, c: any) => sum + (c.amount || 0), 0);
+    const totalPaidOut = recentPayouts.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+
+    // Get all approved members
+    const allMemberships = (await kv.getByPrefix(`membership:${groupId}:`)).filter((m: any) => m.status === 'approved');
+
+    const summaryHtml = `
+      <ul style="margin:0;padding:0;list-style:none;">
+        <li style="padding:8px 0;border-bottom:1px solid #e2e8f0;"><strong>R${totalContributed}</strong> contributed by ${recentContribs.length} member${recentContribs.length === 1 ? '' : 's'}</li>
+        <li style="padding:8px 0;border-bottom:1px solid #e2e8f0;"><strong>R${totalPaidOut}</strong> paid out across ${recentPayouts.length} payout${recentPayouts.length === 1 ? '' : 's'}</li>
+        <li style="padding:8px 0;border-bottom:1px solid #e2e8f0;"><strong>${upcomingMeetings.length}</strong> upcoming meeting${upcomingMeetings.length === 1 ? '' : 's'}</li>
+        <li style="padding:8px 0;"><strong>${recentAnnouncements.length}</strong> new announcement${recentAnnouncements.length === 1 ? '' : 's'}</li>
+      </ul>
+    `;
+
+    const appUrl = Deno.env.get('APP_URL') || 'https://stokpilev1.vercel.app';
+    let sent = 0;
+
+    for (const m of allMemberships) {
+      const userProfile = await kv.get(`user:${m.email}`);
+      // Respect notification preferences
+      const prefs = await kv.get(`notification-prefs:${userProfile?.id || ''}`);
+      if (prefs && prefs.emailEnabled === false) continue;
+
+      await sendEmail(
+        m.email,
+        `Weekly digest — ${group.name}`,
+        emailTemplate(
+          `Weekly summary for ${group.name}`,
+          `<p>Here's what happened in your group this week:</p>${summaryHtml}`,
+          'Open Stokpile',
+          appUrl
+        )
+      );
+      sent++;
+    }
+
+    return c.json({ message: 'Digest sent', sent });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// === REFERRAL SYSTEM ===
+
+// Each user has a referral code (their lowercased email base + 4-digit suffix from user id)
+function generateReferralCode(userId: string, email: string): string {
+  const base = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8);
+  const suffix = userId.replace(/[^0-9]/g, '').slice(-4) || '0000';
+  return `${base}${suffix}`;
+}
+
+app.get('/make-server-34d0b231/referral', requireAuth, async (c) => {
+  try {
+    const userId = c.get('userId');
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    let record = await kv.get(`referral:${userId}`);
+    if (!record) {
+      record = {
+        userId,
+        email: user.email,
+        code: generateReferralCode(userId, user.email!),
+        invitedCount: 0,
+        rewardedCount: 0,
+        createdAt: new Date().toISOString(),
+      };
+      await kv.set(`referral:${userId}`, record);
+      await kv.set(`referral-code:${record.code}`, { userId, email: user.email });
+    }
+
+    return c.json(record);
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.post('/make-server-34d0b231/referral/track', async (c) => {
+  try {
+    const { code, newUserEmail } = await c.req.json();
+    if (!code || !newUserEmail) return c.json({ error: 'Missing fields' }, 400);
+
+    const owner = await kv.get(`referral-code:${code.toLowerCase()}`);
+    if (!owner) return c.json({ error: 'Invalid referral code' }, 404);
+
+    const record = await kv.get(`referral:${owner.userId}`);
+    if (!record) return c.json({ error: 'Referral record not found' }, 404);
+
+    // Track this referral
+    await kv.set(`referral-claim:${code.toLowerCase()}:${newUserEmail}`, {
+      code,
+      referrerId: owner.userId,
+      newUserEmail,
+      claimedAt: new Date().toISOString(),
+      rewarded: false,
+    });
+
+    record.invitedCount = (record.invitedCount || 0) + 1;
+    await kv.set(`referral:${owner.userId}`, record);
+
+    return c.json({ success: true });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
 // === ACCOUNT DELETION (Right to Deletion) ===
 
 app.delete('/account', requireAuth, async (c) => {

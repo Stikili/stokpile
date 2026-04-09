@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/presentation/ui/dropdown-menu';
-import { User, Plus, UserPlus, Search, LogOut, Trash2, UserX, Bell, HelpCircle, Sparkles, Monitor } from 'lucide-react';
+import { User, Plus, UserPlus, Search, LogOut, Trash2, UserX, Bell, HelpCircle, Sparkles, Monitor, Gift } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
 import { NotificationPrefsDialog } from '@/presentation/components/profile/NotificationPrefsDialog';
 import { ProfileDialog } from '@/presentation/components/profile/ProfileDialog';
@@ -20,6 +20,7 @@ import { DeleteAccountDialog } from '@/presentation/components/profile/DeleteAcc
 import { HelpDialog } from '@/presentation/components/help/HelpDialog';
 import { ChangelogDialog, LATEST_VERSION } from '@/presentation/components/help/ChangelogDialog';
 import { SessionsDialog } from '@/presentation/components/profile/SessionsDialog';
+import { ReferralDialog } from '@/presentation/components/profile/ReferralDialog';
 import type { Session } from '@/domain/types';
 
 interface ProfileMenuProps {
@@ -46,6 +47,7 @@ export function ProfileMenu({
   const [showHelp, setShowHelp] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
   const [showSessions, setShowSessions] = useState(false);
+  const [showReferral, setShowReferral] = useState(false);
   const [hasUnseenChangelog, setHasUnseenChangelog] = useState(() => {
     const seen = localStorage.getItem('changelog-seen-version');
     return seen !== LATEST_VERSION;
@@ -96,6 +98,10 @@ export function ProfileMenu({
             Search Groups
           </DropdownMenuItem>
           <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setShowReferral(true)}>
+            <Gift className="h-4 w-4 mr-2" />
+            Refer & Earn
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setShowHelp(true)}>
             <HelpCircle className="h-4 w-4 mr-2" />
             Help & FAQ
@@ -189,6 +195,7 @@ export function ProfileMenu({
       <HelpDialog open={showHelp} onOpenChange={setShowHelp} />
       <ChangelogDialog open={showChangelog} onOpenChange={setShowChangelog} />
       <SessionsDialog open={showSessions} onOpenChange={setShowSessions} />
+      <ReferralDialog open={showReferral} onOpenChange={setShowReferral} />
     </>
   );
 }

@@ -2,6 +2,8 @@
  * Production-grade fetch wrapper with timeout, retry, and error normalization.
  */
 
+import { enqueueRequest } from '@/lib/offlineQueue';
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -91,6 +93,21 @@ export async function fetchClient<T = unknown>(
     headers = {},
     body,
   } = options;
+
+  // Offline write queue: if we're offline and this is a mutating request, queue it
+  if (
+    typeof navigator !== 'undefined' &&
+    !navigator.onLine &&
+    method !== 'GET' &&
+    typeof body === 'string'
+  ) {
+    enqueueRequest({ url, method, headers, body });
+    throw new ApiError(
+      'You\'re offline. Your change has been queued and will sync when you reconnect.',
+      0,
+      'OFFLINE_QUEUED'
+    );
+  }
 
   let lastError: Error | null = null;
 
