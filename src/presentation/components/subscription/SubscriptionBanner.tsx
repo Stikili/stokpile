@@ -13,8 +13,8 @@ export function SubscriptionBanner({ onUpgradeClick }: SubscriptionBannerProps) 
 
   if (dismissed) return null;
 
-  // Trial with > 14 days left — no banner
-  if (isTrialActive && (daysLeftInTrial === null || daysLeftInTrial > 14)) return null;
+  // Trial with > 7 days left — no banner (TrialBadge in header handles visibility)
+  if (isTrialActive && (daysLeftInTrial === null || daysLeftInTrial > 7)) return null;
 
   // Trial expiring soon
   if (isTrialActive && daysLeftInTrial !== null && daysLeftInTrial >= 0) {

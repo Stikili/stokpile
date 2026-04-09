@@ -148,8 +148,9 @@ export default function App() {
       burial: "burial",
       announcements: "announcements",
       penalties: "penalties",
-      reports: "reports",
-      analytics: "analytics",
+      reports: "insights",
+      analytics: "insights",
+      insights: "insights",
       audit: "audit",
     };
     if (tabMap[action]) {
@@ -351,13 +352,13 @@ export default function App() {
                 <div className="flex items-center gap-1.5">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="sm" onClick={() => selectedGroup ? setShowGlobalSearch(true) : setShowCommandPalette(true)} className="hidden lg:flex items-center gap-1.5 text-muted-foreground border border-border/60 h-8 px-3 rounded-lg hover:bg-muted/60" aria-label="Search">
+                      <Button variant="ghost" size="sm" onClick={() => selectedGroup ? setShowGlobalSearch(true) : setShowCommandPalette(true)} className="hidden lg:flex items-center gap-1.5 text-muted-foreground border border-border/60 h-8 px-2 xl:px-3 rounded-lg hover:bg-muted/60" aria-label="Search">
                         <Search className="h-3.5 w-3.5" />
-                        <span className="text-xs">Search</span>
-                        <kbd className="ml-1 text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded">⌘K</kbd>
+                        <span className="text-xs hidden xl:inline">Search</span>
+                        <kbd className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded hidden xl:inline">⌘K</kbd>
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Search (⌘K) — also opens command palette</TooltipContent>
+                    <TooltipContent>Search (⌘K)</TooltipContent>
                   </Tooltip>
                   <TrialBadge onClick={() => setShowUpgradeDialog(true)} />
                   <NotificationBell
@@ -431,14 +432,19 @@ export default function App() {
                         ...(groupType === 'grocery' ? [{ id: 'grocery', icon: ShoppingCart, label: 'Grocery List', feature: 'grocery' as const }] : []),
                         ...(groupType === 'burial'  ? [{ id: 'burial',  icon: HeartHandshake, label: 'Burial', feature: 'burial' as const }] : []),
                       ];
+                      // Admin overflow: Insights merges old Reports+Analytics, Audit moves here from top-level
                       const adminItems = isAdmin ? [
-                        { id: 'penalties', icon: Gavel,        label: 'Penalties', feature: 'penalties' as const },
-                        { id: 'reports',   icon: FileBarChart,  label: 'Reports',   feature: 'reports' as const },
-                        { id: 'analytics', icon: Activity,     label: 'Analytics', feature: 'analytics' as const },
+                        { id: 'insights',  icon: FileBarChart,  label: 'Insights',  feature: 'reports' as const },
+                        { id: 'penalties', icon: Gavel,         label: 'Penalties', feature: 'penalties' as const },
                         { id: 'audit',     icon: ClipboardList, label: 'Audit Log', feature: 'audit' as const },
                       ] : [];
 
-                      const allOverflow = [...overflowItems, ...adminItems];
+                      // Settings always in More
+                      const manageItems = [
+                        { id: 'info', icon: Settings, label: 'Group Settings', feature: 'announcements' as const },
+                      ];
+
+                      const allOverflow = [...overflowItems, ...manageItems, ...adminItems];
                       const activeInOverflow = allOverflow.some(i => i.id === activeTab);
 
                       return (
@@ -476,9 +482,6 @@ export default function App() {
                               </span>
                             )}
                           </TabsTrigger>
-                          <TabsTrigger value="info" className="text-sm">
-                            <Settings className="h-3.5 w-3.5 mr-1.5" />Settings
-                          </TabsTrigger>
 
                           {/* Overflow "More ▾" dropdown */}
                           {allOverflow.length > 0 && (
@@ -492,7 +495,7 @@ export default function App() {
                                   {activeInOverflow && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-primary inline-block" />}
                                 </button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuContent align="end" className="w-52">
                                 {overflowItems.length > 0 && (
                                   <>
                                     {overflowItems.map(item => (
@@ -505,12 +508,24 @@ export default function App() {
                                         <FeatureGate feature={item.feature} mode="badge">{item.label}</FeatureGate>
                                       </DropdownMenuItem>
                                     ))}
+                                    <DropdownMenuSeparator />
                                   </>
                                 )}
-                                {overflowItems.length > 0 && adminItems.length > 0 && <DropdownMenuSeparator />}
+                                <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Manage</DropdownMenuLabel>
+                                {manageItems.map(item => (
+                                  <DropdownMenuItem
+                                    key={item.id}
+                                    onClick={() => setActiveTab(item.id)}
+                                    className={activeTab === item.id ? 'text-primary font-medium bg-primary/5' : ''}
+                                  >
+                                    <item.icon className="h-4 w-4 mr-2" />
+                                    {item.label}
+                                  </DropdownMenuItem>
+                                ))}
                                 {adminItems.length > 0 && (
                                   <>
-                                    <DropdownMenuLabel className="text-xs text-muted-foreground">Admin</DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Admin</DropdownMenuLabel>
                                     {adminItems.map(item => (
                                       <DropdownMenuItem
                                         key={item.id}
@@ -531,11 +546,12 @@ export default function App() {
                     })()}
 
                     <Suspense fallback={<LoadingProgress message="Loading..." />}>
-                      <TabsContent value="dashboard" className="space-y-4">
+                      <TabsContent value="dashboard" className="space-y-3">
                         {isAdmin && (
                           <AdminOnboarding
                             groupId={selectedGroup.id}
                             groupType={selectedGroup.groupType}
+                            memberCount={selectedGroup.memberCount}
                             onAction={handleQuickAction}
                             onDismiss={() => localStorage.setItem(`onboarding-dismissed-${selectedGroup.id}`, 'true')}
                           />
@@ -547,7 +563,18 @@ export default function App() {
                           userEmail={session.user.email}
                         />
                         {isAdmin && <JoinRequestsView groupId={selectedGroup.id} />}
-                        <ActivityFeed groupId={selectedGroup.id} />
+                        <details className="rounded-xl border bg-card group">
+                          <summary className="px-4 py-3 cursor-pointer text-sm font-medium flex items-center justify-between hover:bg-muted/50 rounded-xl list-none [&::-webkit-details-marker]:hidden">
+                            <span className="flex items-center gap-2">
+                              <Activity className="h-4 w-4 text-muted-foreground" />
+                              Recent Activity
+                            </span>
+                            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
+                          </summary>
+                          <div className="px-4 pb-4 -mt-1">
+                            <ActivityFeed groupId={selectedGroup.id} />
+                          </div>
+                        </details>
                       </TabsContent>
 
                       <TabsContent value="contributions" className="space-y-3">
@@ -617,17 +644,10 @@ export default function App() {
                       )}
 
                       {isAdmin && (
-                        <TabsContent value="reports" className="space-y-3">
+                        <TabsContent value="insights" className="space-y-3">
                           <FeatureGate feature="reports" onUpgradeClick={() => setShowUpgradeDialog(true)}>
-                            <FinancialReportsView groupId={selectedGroup.id} groupName={selectedGroup.name} isAdmin={isAdmin} />
-                          </FeatureGate>
-                        </TabsContent>
-                      )}
-
-                      {isAdmin && (
-                        <TabsContent value="analytics" className="space-y-3">
-                          <FeatureGate feature="analytics" onUpgradeClick={() => setShowUpgradeDialog(true)}>
                             <AnalyticsView groupId={selectedGroup.id} />
+                            <FinancialReportsView groupId={selectedGroup.id} groupName={selectedGroup.name} isAdmin={isAdmin} />
                           </FeatureGate>
                         </TabsContent>
                       )}

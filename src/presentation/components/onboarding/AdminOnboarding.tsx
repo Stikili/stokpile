@@ -6,6 +6,7 @@ import { CheckCircle2, Circle, Users, DollarSign, Calendar, Megaphone, Sparkles,
 interface AdminOnboardingProps {
   groupId: string;
   groupType?: string;
+  memberCount?: number;
   onAction: (action: string) => void;
   onDismiss: () => void;
 }
@@ -54,7 +55,7 @@ const STEPS: OnboardingStep[] = [
   },
 ];
 
-export function AdminOnboarding({ groupId, onAction, onDismiss }: AdminOnboardingProps) {
+export function AdminOnboarding({ groupId, memberCount = 0, onAction, onDismiss }: AdminOnboardingProps) {
   const [dismissed, setDismissed] = useState(
     () => localStorage.getItem(`onboarding-dismissed-${groupId}`) === 'true'
   );
@@ -66,6 +67,8 @@ export function AdminOnboarding({ groupId, onAction, onDismiss }: AdminOnboardin
     return stored;
   });
 
+  // Auto-hide once group is established (5+ members means it's working)
+  if (memberCount >= 5) return null;
   if (dismissed) return null;
 
   const handleStepClick = (step: OnboardingStep) => {

@@ -10,9 +10,11 @@ export function TrialBadge({ onClick }: TrialBadgeProps) {
   const { isTrialActive, daysLeftInTrial } = useSubscription();
 
   if (!isTrialActive || daysLeftInTrial === null) return null;
+  // Banner takes over when trial is in critical window — avoid double signal
+  if (daysLeftInTrial <= 7) return null;
 
   // Color shifts as trial nears expiry
-  const urgent = daysLeftInTrial <= 7;
+  const urgent = false;
   const warning = daysLeftInTrial <= 14;
 
   const colorClass = urgent

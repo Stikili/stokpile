@@ -72,7 +72,7 @@ export function QuickActions({ onAction, isAdmin, payoutsAllowed, groupType }: Q
     );
 
   return (
-    <div className="fixed bottom-16 lg:bottom-4 right-4 z-40">
+    <div className="hidden lg:block fixed bottom-4 right-4 z-40">
       <Popover open={open} onOpenChange={setOpen}>
         <Tooltip>
           <TooltipTrigger asChild>

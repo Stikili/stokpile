@@ -2,11 +2,11 @@ import { useEffect, useState, useMemo } from 'react';
 import type { Contribution, Payout, DashboardStats, Meeting, Member, OverdueMember } from '@/domain/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/ui/card';
 import { Button } from '@/presentation/ui/button';
-import { Calendar, ArrowUpRight, ArrowDownLeft, Wallet, Users, AlertTriangle, TrendingUp, User, RefreshCw } from 'lucide-react';
+import { Calendar, Wallet, Users, AlertTriangle, TrendingUp, User, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { Badge } from '@/presentation/ui/badge';
-import { ContributionChart } from '@/presentation/components/contributions/ContributionChart';
 import { GroupHealthScore } from '@/presentation/components/dashboard/GroupHealthScore';
 import { EditTotalContributionsDialog } from '@/presentation/components/groups/EditTotalContributionsDialog';
+import { ThisMonthStatus } from '@/presentation/components/dashboard/ThisMonthStatus';
 import { api } from '@/infrastructure/api';
 import { formatCurrency, formatDate } from '@/lib/export';
 
@@ -183,269 +183,204 @@ export function Dashboard({ groupId, isAdmin = false, userEmail }: DashboardProp
     );
   }
 
-  const chartData = generateChartData(contributions, payouts);
-  const hasAnyData = contributions.length > 0 || payouts.length > 0;
-
   return (
-    <div className="space-y-4">
-      {/* Summary Cards */}
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="dark:bg-card/50 dark:backdrop-blur">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4 px-4">
-            <CardTitle className="text-xs">Total Contributions</CardTitle>
-            <div className="flex items-center gap-1">
-              {isAdmin && (
-                <EditTotalContributionsDialog
-                  groupId={groupId}
-                  currentTotal={stats.totalContributions}
-                  calculatedTotal={stats.calculatedContributions}
-                  currentAdjustment={stats.contributionAdjustment}
-                  onSuccess={loadStats}
-                />
-              )}
-              <ArrowUpRight className="h-3.5 w-3.5 text-success" />
-            </div>
-          </CardHeader>
-          <CardContent className="px-4 pb-4 pt-1">
-            <div className="flex items-baseline gap-2">
-              <div className="text-xl text-success">{formatCurrency(stats.totalContributions)}</div>
-              {stats.contributionAdjustment !== 0 && (
-                <Badge variant="secondary" className="text-xs">
-                  {stats.contributionAdjustment > 0 ? '+' : ''}{formatCurrency(stats.contributionAdjustment)}
-                </Badge>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              All time paid{stats.contributionAdjustment !== 0 && ' (adjusted)'}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="dark:bg-card/50 dark:backdrop-blur">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4 px-4">
-            <CardTitle className="text-xs">Total Payouts</CardTitle>
-            <ArrowDownLeft className="h-3.5 w-3.5 text-destructive" />
-          </CardHeader>
-          <CardContent className="px-4 pb-4 pt-1">
-            <div className="text-xl text-destructive">{formatCurrency(stats.totalPayouts)}</div>
-            <p className="text-xs text-muted-foreground mt-0.5">{stats.completedPayoutsCount} completed</p>
-          </CardContent>
-        </Card>
-
-        <Card className="dark:bg-card/50 dark:backdrop-blur border-primary/20">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4 px-4">
-            <CardTitle className="text-xs">Net Balance</CardTitle>
-            <Wallet className="h-3.5 w-3.5 text-primary" />
-          </CardHeader>
-          <CardContent className="px-4 pb-4 pt-1">
-            <div className="text-xl text-primary">{formatCurrency(stats.netBalance)}</div>
-            <p className="text-xs text-muted-foreground mt-0.5">Available funds</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Actionable Insights Row */}
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {/* Members not paid this month */}
-        {members.length > 0 && (
-          <Card className={insights.notPaidThisMonth.length > 0
-            ? 'dark:bg-card/50 border-orange-300 dark:border-orange-800'
-            : 'dark:bg-card/50'}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4 px-4">
-              <CardTitle className="text-xs">This Month</CardTitle>
-              <Users className="h-3.5 w-3.5 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="px-4 pb-4 pt-1">
-              {insights.notPaidThisMonth.length === 0 ? (
-                <>
-                  <div className="text-xl text-green-600 dark:text-green-400">All paid</div>
-                  <p className="text-xs text-muted-foreground mt-0.5">Every member has contributed</p>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-baseline gap-2">
-                    <div className="text-xl text-orange-600 dark:text-orange-400">{insights.notPaidThisMonth.length}</div>
-                    <AlertTriangle className="h-4 w-4 text-orange-500" />
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    member{insights.notPaidThisMonth.length !== 1 ? 's' : ''} haven't paid yet
-                  </p>
-                  {isAdmin && insights.notPaidThisMonth.length <= 3 && (
-                    <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
-                      {insights.notPaidThisMonth.map(m => m.fullName).join(', ')}
-                    </p>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Next meeting */}
-        {insights.nextMeeting && (
-          <Card className="dark:bg-card/50 dark:backdrop-blur">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4 px-4">
-              <CardTitle className="text-xs">Next Meeting</CardTitle>
-              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="px-4 pb-4 pt-1">
-              <div className="text-xl">
-                {insights.daysUntilMeeting === 0
-                  ? 'Today'
-                  : insights.daysUntilMeeting === 1
-                  ? 'Tomorrow'
-                  : `${insights.daysUntilMeeting}d away`}
+    <div className="space-y-3">
+      {/* HERO: Group Balance — the most important number */}
+      <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-primary/[0.02]">
+        <CardContent className="p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <Wallet className="h-4 w-4 text-primary" />
+                <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Group Balance</span>
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {formatDate(insights.nextMeeting.date)} · {insights.nextMeeting.venue}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Next payout */}
-        {stats.nextPayout && (
-          <Card className="dark:bg-card/50 dark:backdrop-blur">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4 px-4">
-              <CardTitle className="text-xs">Next Scheduled Payout</CardTitle>
-              <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="px-4 pb-4 pt-1">
-              <div className="text-xl">{formatCurrency(stats.nextPayout.amount)}</div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                To: {stats.nextPayout.recipient && stats.nextPayout.recipient.fullName !== 'Unknown'
-                  ? `${stats.nextPayout.recipient.fullName} ${stats.nextPayout.recipient.surname}`
-                  : stats.nextPayout.recipientEmail}
-                {stats.scheduledPayoutsCount > 1 && ` (+${stats.scheduledPayoutsCount - 1} more)`}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* Personal Summary Card */}
-      {userEmail && (
-        <Card className="dark:bg-card/50 border-primary/20">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4">
-            <CardTitle className="text-xs flex items-center gap-2">
-              <User className="h-3.5 w-3.5" />
-              My Summary
-            </CardTitle>
-            {insights.myPaidThisMonth ? (
-              <Badge className="bg-green-600 text-white text-xs">Paid this month</Badge>
-            ) : (
-              <Badge variant="secondary" className="bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-400 border border-orange-300 dark:border-orange-800 text-xs">
-                Not paid this month
-              </Badge>
+              <div className="text-3xl md:text-4xl font-bold text-primary tracking-tight">
+                {formatCurrency(stats.netBalance)}
+              </div>
+              <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />
+                  In: {formatCurrency(stats.totalContributions)}
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-orange-500" />
+                  Out: {formatCurrency(stats.totalPayouts)}
+                </span>
+              </div>
+            </div>
+            {isAdmin && (
+              <EditTotalContributionsDialog
+                groupId={groupId}
+                currentTotal={stats.totalContributions}
+                calculatedTotal={stats.calculatedContributions}
+                currentAdjustment={stats.contributionAdjustment}
+                onSuccess={loadStats}
+              />
             )}
-          </CardHeader>
-          <CardContent className="px-4 pb-4 pt-1">
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <div className="text-lg text-green-600 dark:text-green-400">{formatCurrency(insights.myPaid)}</div>
-                <p className="text-xs text-muted-foreground">Total paid in</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* This Month Status — replaces chart */}
+      {members.length > 0 && (
+        <ThisMonthStatus
+          members={members}
+          contributions={contributions}
+          contributionTarget={contributionTarget}
+        />
+      )}
+
+      {/* Insights row: Next Meeting + Next Payout (when relevant) */}
+      {(insights.nextMeeting || stats.nextPayout) && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {insights.nextMeeting && (
+            <Card>
+              <CardContent className="p-3 flex items-center gap-3">
+                <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <Calendar className="h-4 w-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground">Next Meeting</p>
+                  <p className="text-sm font-medium">
+                    {insights.daysUntilMeeting === 0
+                      ? 'Today'
+                      : insights.daysUntilMeeting === 1
+                      ? 'Tomorrow'
+                      : `${insights.daysUntilMeeting} days away`}
+                    <span className="text-muted-foreground font-normal"> · {insights.nextMeeting.venue}</span>
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {stats.nextPayout && (
+            <Card>
+              <CardContent className="p-3 flex items-center gap-3">
+                <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground">Next Payout</p>
+                  <p className="text-sm font-medium truncate">
+                    {formatCurrency(stats.nextPayout.amount)}
+                    <span className="text-muted-foreground font-normal"> → {stats.nextPayout.recipient?.fullName !== 'Unknown' && stats.nextPayout.recipient
+                      ? `${stats.nextPayout.recipient.fullName} ${stats.nextPayout.recipient.surname}`
+                      : stats.nextPayout.recipientEmail}
+                    {stats.scheduledPayoutsCount > 1 && ` (+${stats.scheduledPayoutsCount - 1})`}
+                    </span>
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* Personal Summary — compact */}
+      {userEmail && (
+        <Card>
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">My Summary</span>
               </div>
-              {insights.myUnpaid > 0 && (
-                <div>
-                  <div className="text-lg text-orange-600 dark:text-orange-400">{formatCurrency(insights.myUnpaid)}</div>
-                  <p className="text-xs text-muted-foreground">Outstanding</p>
-                </div>
+              {insights.myPaidThisMonth ? (
+                <Badge className="bg-green-600 text-white text-[10px] h-5">Paid this month</Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] h-5 text-orange-600 border-orange-400">Not paid yet</Badge>
               )}
-              {insights.myPayoutsReceived > 0 && (
-                <div>
-                  <div className="text-lg text-primary">{formatCurrency(insights.myPayoutsReceived)}</div>
-                  <p className="text-xs text-muted-foreground">Received in payouts</p>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <div className="text-base font-semibold text-green-600 dark:text-green-400">{formatCurrency(insights.myPaid)}</div>
+                <p className="text-[10px] text-muted-foreground">Paid in</p>
+              </div>
+              <div>
+                <div className={`text-base font-semibold ${insights.myUnpaid > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-muted-foreground'}`}>
+                  {formatCurrency(insights.myUnpaid)}
                 </div>
-              )}
+                <p className="text-[10px] text-muted-foreground">Outstanding</p>
+              </div>
+              <div>
+                <div className={`text-base font-semibold ${insights.myPayoutsReceived > 0 ? 'text-primary' : 'text-muted-foreground'}`}>
+                  {formatCurrency(insights.myPayoutsReceived)}
+                </div>
+                <p className="text-[10px] text-muted-foreground">Received</p>
+              </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Overdue Members Widget (admin only) */}
+      {/* Overdue Members — expandable to show full list with names */}
       {isAdmin && contributionTarget > 0 && overdueMembers.length > 0 && (
-        <Card className="border-orange-300 dark:border-orange-800">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-orange-500" />
-              Overdue Members
-            </CardTitle>
-            <Badge variant="outline" className="text-xs text-orange-600 border-orange-400">
-              Target: {formatCurrency(contributionTarget)}
-            </Badge>
-          </CardHeader>
-          <CardContent className="px-4 pb-4 pt-1">
-            <p className="text-xs text-muted-foreground mb-3">
-              {overdueMembers.length} member{overdueMembers.length !== 1 ? 's have' : ' has'} not yet reached the contribution target.
-            </p>
-            <div className="space-y-2">
-              {overdueMembers.slice(0, 5).map((m) => (
-                <div key={m.email} className="flex items-center justify-between text-sm">
-                  <span className="truncate max-w-[60%]">
-                    {m.fullName !== 'Unknown' ? `${m.fullName} ${m.surname}` : m.email}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-green-600 dark:text-green-400">{formatCurrency(m.totalPaid)}</span>
-                    <span className="text-muted-foreground text-xs">/ {formatCurrency(contributionTarget)}</span>
-                  </div>
-                </div>
-              ))}
-              {overdueMembers.length > 5 && (
-                <p className="text-xs text-muted-foreground pt-1">+{overdueMembers.length - 5} more</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <OverdueMembersCard
+          overdueMembers={overdueMembers}
+          contributionTarget={contributionTarget}
+        />
       )}
 
       {/* Group Health Score */}
       <GroupHealthScore groupId={groupId} />
-
-      {/* Financial Flow Chart — only shown when there's actual data */}
-      {hasAnyData && (
-        <ContributionChart
-          data={chartData}
-          totalPaidContributions={stats.totalContributions}
-          totalPayouts={stats.totalPayouts}
-          netBalance={stats.netBalance}
-        />
-      )}
     </div>
   );
 }
 
-function generateChartData(contributions: Contribution[], payouts: Payout[]) {
-  const months: { month: string; year: number; monthNum: number; total: number; paid: number; unpaid: number; payouts: number; netFlow: number; count: number }[] = [];
-  const now = new Date();
+// Expandable overdue members card
+function OverdueMembersCard({
+  overdueMembers,
+  contributionTarget,
+}: {
+  overdueMembers: OverdueMember[];
+  contributionTarget: number;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const visible = expanded ? overdueMembers : overdueMembers.slice(0, 3);
 
-  for (let i = 11; i >= 0; i--) {
-    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    months.push({
-      month: date.toLocaleDateString('en-US', { month: 'short' }),
-      year: date.getFullYear(),
-      monthNum: date.getMonth(),
-      total: 0, paid: 0, unpaid: 0, payouts: 0, netFlow: 0, count: 0
-    });
-  }
-
-  contributions.forEach((c: Contribution) => {
-    const d = new Date(c.date);
-    const bucket = months.find(m => m.year === d.getFullYear() && m.monthNum === d.getMonth());
-    if (bucket) {
-      bucket.total += c.amount;
-      bucket.count += 1;
-      if (c.paid) bucket.paid += c.amount;
-      else bucket.unpaid += c.amount;
-    }
-  });
-
-  payouts.filter((p: Payout) => p.status === 'completed').forEach((p: Payout) => {
-    const d = new Date(p.completedAt || p.scheduledDate);
-    const bucket = months.find(m => m.year === d.getFullYear() && m.monthNum === d.getMonth());
-    if (bucket) bucket.payouts += p.amount;
-  });
-
-  months.forEach(m => { m.netFlow = m.paid - m.payouts; });
-
-  return months.map(({ year, monthNum, ...rest }) => rest);
+  return (
+    <Card className="border-orange-300 dark:border-orange-800">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-orange-500" />
+            {overdueMembers.length} Overdue Member{overdueMembers.length !== 1 ? 's' : ''}
+          </CardTitle>
+          <Badge variant="outline" className="text-[10px] text-orange-600 border-orange-400">
+            Target: {formatCurrency(contributionTarget)}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="space-y-1">
+          {visible.map((m) => (
+            <div key={m.email} className="flex items-center justify-between text-sm py-1">
+              <span className="truncate max-w-[60%]">
+                {m.fullName !== 'Unknown' ? `${m.fullName} ${m.surname}` : m.email}
+              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-green-600 dark:text-green-400 text-xs">{formatCurrency(m.totalPaid)}</span>
+                <span className="text-muted-foreground text-[10px]">/ {formatCurrency(contributionTarget)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        {overdueMembers.length > 3 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setExpanded((e) => !e)}
+            className="w-full mt-2 h-7 text-xs"
+          >
+            {expanded ? (
+              <><ChevronUp className="h-3 w-3 mr-1" />Show less</>
+            ) : (
+              <><ChevronDown className="h-3 w-3 mr-1" />Show all {overdueMembers.length}</>
+            )}
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
+

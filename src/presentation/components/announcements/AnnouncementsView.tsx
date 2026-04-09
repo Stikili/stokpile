@@ -14,6 +14,7 @@ import { Plus, Megaphone, Pin, AlertTriangle, Pencil, Trash2 } from 'lucide-reac
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
 import { formatDateTime } from '@/lib/export';
+import { EmptyState } from '@/presentation/shared/EmptyState';
 
 interface AnnouncementsViewProps {
   groupId: string;
@@ -177,9 +178,22 @@ export function AnnouncementsView({ groupId, isAdmin }: AnnouncementsViewProps) 
         {loading ? (
           <div className="text-center py-8 text-muted-foreground text-sm">Loading announcements...</div>
         ) : announcements.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground text-sm">
-            No announcements yet.{isAdmin ? ' Post one to notify all members.' : ''}
-          </div>
+          <EmptyState
+            icon={Megaphone}
+            title={isAdmin ? 'Welcome your group' : 'No announcements yet'}
+            description={isAdmin
+              ? "Post your first announcement to share group rules, payout dates, or important updates with everyone."
+              : "Your admin hasn't posted any announcements yet. Check back later."}
+            action={isAdmin ? {
+              label: 'Post Announcement',
+              icon: Plus,
+              onClick: () => {
+                setTitle('Welcome to our group!');
+                setContent('Hi everyone — welcome to our group. We meet monthly. Please pay your contribution by the agreed date so we can keep things running smoothly.');
+                setCreateOpen(true);
+              }
+            } : undefined}
+          />
         ) : (
           <div className="space-y-3">
             {announcements.map((ann) => (
