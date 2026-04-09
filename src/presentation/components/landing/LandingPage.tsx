@@ -240,7 +240,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
 
       {/* MOBILE compact footer */}
       <footer className="md:hidden py-4 px-5 text-center text-[10px] text-muted-foreground">
-        © {new Date().getFullYear()} Stokpile · <a href="mailto:hello@stokpile.app" className="hover:text-foreground">Contact</a> · <a href="mailto:privacy@stokpile.app" className="hover:text-foreground">Privacy</a>
+        © {new Date().getFullYear()} Stokpile
       </footer>
 
       {/* ═══════════════════════════════════════════════════════════════
@@ -348,19 +348,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
         </p>
         <div className="flex gap-x-5 gap-y-2 justify-center flex-wrap text-sm px-4">
           {COUNTRIES.map((c) => (
-            <span
-              key={c.code}
-              className="inline-flex items-center gap-1.5 text-muted-foreground whitespace-nowrap"
-            >
-              <img
-                src={`https://flagcdn.com/24x18/${c.code}.png`}
-                srcSet={`https://flagcdn.com/48x36/${c.code}.png 2x`}
-                width={20}
-                height={15}
-                alt=""
-                loading="lazy"
-                className="rounded-[2px] shadow-sm ring-1 ring-black/5"
-              />
+            <span key={c.code} className="text-muted-foreground whitespace-nowrap">
               {c.name}
             </span>
           ))}
@@ -476,16 +464,9 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
 
       {/* ─── DESKTOP Footer ─── */}
       <footer className="hidden md:block border-t border-border/40 py-6 px-5">
-        <div className="max-w-6xl mx-auto flex flex-col items-center gap-3 text-xs text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <Logo showText={false} />
-            <span>© {new Date().getFullYear()} Stokpile</span>
-          </div>
-          <div className="flex gap-5">
-            <a href="mailto:hello@stokpile.app" className="hover:text-foreground tap-none">Contact</a>
-            <a href="mailto:privacy@stokpile.app" className="hover:text-foreground tap-none">Privacy</a>
-            <a href="mailto:hello@stokpile.app" className="hover:text-foreground tap-none">Terms</a>
-          </div>
+        <div className="max-w-6xl mx-auto flex items-center justify-center gap-2 text-xs text-muted-foreground">
+          <Logo showText={false} />
+          <span>© {new Date().getFullYear()} Stokpile</span>
         </div>
       </footer>
 
