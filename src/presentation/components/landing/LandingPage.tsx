@@ -346,9 +346,10 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
         <p className="text-[10px] text-center text-muted-foreground uppercase tracking-wider font-semibold mb-3 px-4">
           Built for groups across Africa
         </p>
-        <div className="flex gap-x-5 gap-y-2 justify-center flex-wrap text-sm px-4">
-          {COUNTRIES.map((c) => (
-            <span key={c.code} className="text-muted-foreground whitespace-nowrap">
+        <div className="flex justify-center flex-wrap text-sm px-4 text-muted-foreground">
+          {COUNTRIES.map((c, i) => (
+            <span key={c.code} className="whitespace-nowrap">
+              {i > 0 && <span className="mx-3 text-border">|</span>}
               {c.name}
             </span>
           ))}
