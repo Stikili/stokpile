@@ -474,6 +474,35 @@ export const api = {
   deleteAccount: () =>
     request<{ message: string; deletedCount: Record<string, number> }>("/account", { method: "DELETE" }),
 
+  // Group archiving
+  archiveGroup: (groupId: string) =>
+    request<{ success: boolean }>(`/groups/${groupId}/archive`, { method: "POST" }),
+
+  unarchiveGroup: (groupId: string) =>
+    request<{ success: boolean }>(`/groups/${groupId}/unarchive`, { method: "POST" }),
+
+  // Member data export (POPIA portability)
+  exportMyData: () =>
+    request<{ profile: any; groups: any[]; contributions: any[]; payouts: any[]; meetings: any[] }>("/me/export"),
+
+  // Burial dependents
+  getDependents: (groupId: string) =>
+    request<{ dependents: any[] }>(`/groups/${groupId}/dependents`),
+
+  addDependent: (groupId: string, data: { fullName: string; relationship: string; dateOfBirth?: string; idNumber?: string }) =>
+    request<{ dependent: any }>(`/groups/${groupId}/dependents`, { method: "POST", body: data }),
+
+  deleteDependent: (groupId: string, dependentId: string) =>
+    request<{ success: boolean }>(`/groups/${groupId}/dependents/${dependentId}`, { method: "DELETE" }),
+
+  // Voice notes
+  uploadVoiceNote: (meetingId: string, base64Audio: string) =>
+    request<{ url: string }>(`/meetings/${meetingId}/voice-note`, { method: "POST", body: { audio: base64Audio } }),
+
+  // Leaderboard
+  getLeaderboard: (groupId: string) =>
+    request<{ leaderboard: Array<{ email: string; fullName?: string; surname?: string; totalPaid: number; streak: number; rank: number }> }>(`/groups/${groupId}/leaderboard`),
+
   // Session management
   getSessions: () =>
     request<{ sessions: Array<{ sessionId: string; ip: string; userAgent: string; createdAt: string; lastActiveAt: string; isCurrent: boolean }> }>("/sessions"),

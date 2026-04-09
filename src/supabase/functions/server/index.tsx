@@ -23,11 +23,95 @@ const generateGroupCode = () => Math.random().toString(36).substring(2, 10).toUp
 // Helper to check if group name is unique
 const isGroupNameUnique = async (name: string, excludeGroupId?: string) => {
   const allGroups = await kv.getByPrefix('group:');
-  return !allGroups.some(g => 
-    g.name.toLowerCase() === name.toLowerCase() && 
+  return !allGroups.some(g =>
+    g.name.toLowerCase() === name.toLowerCase() &&
     g.id !== excludeGroupId
   );
 };
+
+// === Auth + tier middleware ===
+
+// Auth middleware: validates the bearer token and stores user on context.
+const requireAuth = async (c: any, next: any) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    if (!accessToken) return c.json({ error: 'Unauthorized' }, 401);
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
+    if (error || !user) return c.json({ error: 'Unauthorized' }, 401);
+    c.set('userId', user.id);
+    c.set('userEmail', user.email);
+    c.set('user', user);
+    await next();
+  } catch (err) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+};
+
+// Feature access matrix mirrors src/domain/types/subscription.ts
+const TIER_FEATURES_SERVER: Record<string, string[]> = {
+  free:       ['announcements'],
+  community:  ['announcements', 'payment-proofs', 'rotation', 'grocery', 'burial', 'sms', 'flutterwave'],
+  pro:        ['announcements', 'payment-proofs', 'rotation', 'grocery', 'burial', 'sms', 'flutterwave', 'reports', 'analytics', 'penalties', 'audit'],
+  enterprise: ['announcements', 'payment-proofs', 'rotation', 'grocery', 'burial', 'sms', 'flutterwave', 'reports', 'analytics', 'penalties', 'audit'],
+  trial:      ['announcements', 'payment-proofs', 'rotation', 'grocery', 'burial', 'sms', 'flutterwave', 'reports', 'analytics', 'penalties', 'audit'],
+};
+
+const TIER_LIMITS_SERVER: Record<string, { groups: number | null; members: number | null }> = {
+  free:       { groups: 1,    members: 8    },
+  community:  { groups: 2,    members: 30   },
+  pro:        { groups: null, members: 100  },
+  enterprise: { groups: null, members: null },
+  trial:      { groups: null, members: 100  },
+};
+
+// Resolve a group's effective tier (auto-downgrades expired trials).
+async function getGroupTier(groupId: string): Promise<string> {
+  const sub = await kv.get(`subscription:${groupId}`);
+  if (!sub) return 'trial'; // not yet provisioned — generous default until first GET
+  if (sub.tier === 'trial' && sub.trialEndsAt && new Date(sub.trialEndsAt) < new Date()) {
+    return 'free';
+  }
+  return sub.tier || 'free';
+}
+
+// Returns true if a group's tier includes a feature.
+async function groupHasFeature(groupId: string, feature: string): Promise<boolean> {
+  const tier = await getGroupTier(groupId);
+  return (TIER_FEATURES_SERVER[tier] || []).includes(feature);
+}
+
+// Throws if the group can't add another member.
+async function assertMemberLimit(groupId: string): Promise<void> {
+  const tier = await getGroupTier(groupId);
+  const limit = TIER_LIMITS_SERVER[tier]?.members;
+  if (limit === null || limit === undefined) return;
+  const memberships = await kv.getByPrefix(`membership:${groupId}:`);
+  const approvedCount = memberships.filter((m: any) => m.status === 'approved').length;
+  if (approvedCount >= limit) {
+    throw new Error(`Member limit reached (${limit}). Upgrade your plan to add more members.`);
+  }
+}
+
+// Throws if the user can't create another group.
+async function assertGroupLimit(userEmail: string): Promise<void> {
+  // Check the most generous tier the user is on across their groups (effective free for new users)
+  const ownedGroups = (await kv.getByPrefix('group:')).filter(
+    (g: any) => g.createdBy === userEmail && !g.archived
+  );
+  // Each user gets the limit from their most generous owned-group tier (or trial as default for new users)
+  let bestTier = 'trial';
+  for (const g of ownedGroups) {
+    const t = await getGroupTier(g.id);
+    if (t === 'pro' || t === 'enterprise') { bestTier = t; break; }
+    if (t === 'community' && bestTier !== 'pro') bestTier = 'community';
+    if (t === 'trial' && bestTier === 'free') bestTier = 'trial';
+  }
+  const limit = TIER_LIMITS_SERVER[bestTier]?.groups;
+  if (limit === null || limit === undefined) return;
+  if (ownedGroups.length >= limit) {
+    throw new Error(`Group limit reached (${limit}). Upgrade your plan to create more groups.`);
+  }
+}
 
 // === USER AUTHENTICATION ===
 
@@ -567,7 +651,14 @@ app.post('/make-server-34d0b231/groups', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    const { name, description, contributionFrequency, isPublic, groupType, contributionTarget } = await c.req.json();
+    const { name, description, contributionFrequency, isPublic, groupType, contributionTarget, contributionTargetAnnual } = await c.req.json();
+
+    // Server-side group limit enforcement
+    try {
+      await assertGroupLimit(user.email);
+    } catch (err) {
+      return c.json({ error: err.message }, 403);
+    }
 
     // Check if group name is unique
     const nameIsUnique = await isGroupNameUnique(name);
@@ -588,6 +679,8 @@ app.post('/make-server-34d0b231/groups', async (c) => {
       groupCode,
       payoutsAllowed: true,
       contributionTarget: contributionTarget || null,
+      contributionTargetAnnual: contributionTargetAnnual || null,
+      archived: false,
       admin1: user.email,
       admin2: null,
       admin3: null,
@@ -843,17 +936,81 @@ app.put('/make-server-34d0b231/groups/:id/frequency', async (c) => {
 });
 
 // Delete group and all associated data (admin only)
+// Archive (soft delete) — keeps data for legal/tax retention
+app.post('/make-server-34d0b231/groups/:id/archive', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('id');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.role !== 'admin') {
+      return c.json({ error: 'Admin only' }, 403);
+    }
+
+    const group = await kv.get(`group:${groupId}`);
+    if (!group) return c.json({ error: 'Group not found' }, 404);
+
+    await kv.set(`group:${groupId}`, {
+      ...group,
+      archived: true,
+      archivedAt: new Date().toISOString(),
+      archivedBy: user.email,
+    });
+
+    return c.json({ success: true });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.post('/make-server-34d0b231/groups/:id/unarchive', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('id');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.role !== 'admin') {
+      return c.json({ error: 'Admin only' }, 403);
+    }
+
+    const group = await kv.get(`group:${groupId}`);
+    if (!group) return c.json({ error: 'Group not found' }, 404);
+
+    await kv.set(`group:${groupId}`, {
+      ...group,
+      archived: false,
+      archivedAt: null,
+      archivedBy: null,
+    });
+
+    return c.json({ success: true });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// Block writes to archived groups via tiny middleware applied to mutating routes.
+async function ensureNotArchived(groupId: string): Promise<{ ok: boolean; reason?: string }> {
+  const group = await kv.get(`group:${groupId}`);
+  if (group?.archived) return { ok: false, reason: 'This group is archived. Unarchive it to make changes.' };
+  return { ok: true };
+}
+
 app.delete('/make-server-34d0b231/groups/:id', async (c) => {
   try {
     const accessToken = c.req.header('Authorization')?.split(' ')[1];
     const { data: { user }, error } = await supabaseAdmin.auth.getUser(accessToken);
-    
+
     if (!user) {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
     const groupId = c.req.param('id');
-    
+
     // Check if user is admin
     const membership = await kv.get(`membership:${groupId}:${user.email}`);
     if (!membership || membership.role !== 'admin') {
@@ -1193,6 +1350,13 @@ app.post('/make-server-34d0b231/groups/:id/requests/:email/approve', async (c) =
       return c.json({ error: 'Request not found' }, 404);
     }
 
+    // Server-side member limit enforcement
+    try {
+      await assertMemberLimit(groupId);
+    } catch (err) {
+      return c.json({ error: err.message }, 403);
+    }
+
     membership.status = 'approved';
     membership.approvedAt = new Date().toISOString();
     membership.approvedBy = user.email;
@@ -1500,7 +1664,11 @@ app.post('/make-server-34d0b231/contributions', async (c) => {
     }
 
     const { groupId, amount, date, paid, userEmail } = await c.req.json();
-    
+
+    // Block writes to archived groups
+    const archiveCheck = await ensureNotArchived(groupId);
+    if (!archiveCheck.ok) return c.json({ error: archiveCheck.reason }, 403);
+
     // Verify membership of the person creating the contribution
     const membership = await kv.get(`membership:${groupId}:${user.email}`);
     if (!membership || membership.status !== 'approved') {
@@ -2491,6 +2659,13 @@ app.post('/make-server-34d0b231/invite/:token/join', async (c) => {
       } else {
         return c.json({ error: 'Already requested to join this group' }, 400);
       }
+    }
+
+    // Server-side member limit enforcement
+    try {
+      await assertMemberLimit(groupId);
+    } catch (err) {
+      return c.json({ error: err.message }, 403);
     }
 
     // Auto-approve via invite link
@@ -3632,6 +3807,11 @@ app.get('/make-server-34d0b231/groups/:groupId/audit-log', async (c) => {
     const membership = await kv.get(`membership:${groupId}:${user.email}`);
     if (!membership || membership.role !== 'admin') {
       return c.json({ error: 'Not authorized - admin only' }, 403);
+    }
+
+    // Server-side feature gate
+    if (!(await groupHasFeature(groupId, 'audit'))) {
+      return c.json({ error: 'Audit log requires Pro plan or higher' }, 403);
     }
 
     const entries = await kv.getByPrefix(`audit:${groupId}:`);
@@ -4901,6 +5081,10 @@ app.get('/make-server-34d0b231/groups/:groupId/penalties', async (c) => {
     const membership = await kv.get(`membership:${groupId}:${user.email}`);
     if (!membership || membership.status !== 'approved') return c.json({ error: 'Not a member' }, 403);
 
+    if (!(await groupHasFeature(groupId, 'penalties'))) {
+      return c.json({ error: 'Penalties require Pro plan or higher' }, 403);
+    }
+
     const rules = await kv.getByPrefix(`penalty-rule:${groupId}:`);
     const charges = await kv.getByPrefix(`penalty-charge:${groupId}:`);
     return c.json({ rules, charges });
@@ -4998,6 +5182,249 @@ app.put('/make-server-34d0b231/groups/:groupId/penalties/charges/:chargeId', asy
     const { status } = await c.req.json();
     await kv.set(`penalty-charge:${groupId}:${chargeId}`, { ...existing, status, updatedAt: new Date().toISOString() });
     return c.json({ message: 'Charge updated' });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// === DATA PORTABILITY (POPIA right to export) ===
+
+app.get('/make-server-34d0b231/me/export', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const profile = await kv.get(`user:${user.email}`);
+
+    // Find every group the user belongs to
+    const allMemberships = await kv.getByPrefix('membership:');
+    const myMemberships = allMemberships.filter((m: any) => m.userEmail === user.email);
+    const groupIds = myMemberships.map((m: any) => m.groupId);
+
+    const groups: any[] = [];
+    const contributions: any[] = [];
+    const payouts: any[] = [];
+    const meetings: any[] = [];
+
+    for (const gid of groupIds) {
+      const group = await kv.get(`group:${gid}`);
+      if (group) groups.push(group);
+      const groupContribs = (await kv.getByPrefix(`contribution:${gid}:`)).filter((c: any) => c.userEmail === user.email);
+      contributions.push(...groupContribs);
+      const groupPayouts = (await kv.getByPrefix(`payout:${gid}:`)).filter((p: any) => p.recipientEmail === user.email);
+      payouts.push(...groupPayouts);
+      meetings.push(...await kv.getByPrefix(`meeting:${gid}:`));
+    }
+
+    return c.json({
+      profile,
+      groups,
+      contributions,
+      payouts,
+      meetings,
+      exportedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// === BURIAL DEPENDENTS ===
+
+app.get('/make-server-34d0b231/groups/:groupId/dependents', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.status !== 'approved') return c.json({ error: 'Not a member' }, 403);
+
+    // Members see their own dependents; admins see all
+    const allDeps = await kv.getByPrefix(`dependent:${groupId}:`);
+    const dependents = membership.role === 'admin'
+      ? allDeps
+      : allDeps.filter((d: any) => d.memberEmail === user.email);
+
+    return c.json({ dependents });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.post('/make-server-34d0b231/groups/:groupId/dependents', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.status !== 'approved') return c.json({ error: 'Not a member' }, 403);
+
+    const archiveCheck = await ensureNotArchived(groupId);
+    if (!archiveCheck.ok) return c.json({ error: archiveCheck.reason }, 403);
+
+    const { fullName, relationship, dateOfBirth, idNumber } = await c.req.json();
+    if (!fullName || !relationship) return c.json({ error: 'Name and relationship are required' }, 400);
+
+    const id = generateId();
+    const dependent = {
+      id,
+      groupId,
+      memberEmail: user.email,
+      fullName,
+      relationship,
+      dateOfBirth: dateOfBirth || null,
+      idNumber: idNumber || null,
+      createdAt: new Date().toISOString(),
+    };
+    await kv.set(`dependent:${groupId}:${id}`, dependent);
+    return c.json({ dependent });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.delete('/make-server-34d0b231/groups/:groupId/dependents/:id', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const id = c.req.param('id');
+    const dep = await kv.get(`dependent:${groupId}:${id}`);
+    if (!dep) return c.json({ error: 'Not found' }, 404);
+
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership) return c.json({ error: 'Not a member' }, 403);
+    // Owners or admins can delete
+    if (dep.memberEmail !== user.email && membership.role !== 'admin') {
+      return c.json({ error: 'Not authorized' }, 403);
+    }
+
+    await kv.delete(`dependent:${groupId}:${id}`);
+    return c.json({ success: true });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// === VOICE NOTES (meetings) ===
+
+app.post('/make-server-34d0b231/meetings/:meetingId/voice-note', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const meetingId = c.req.param('meetingId');
+    // Find the meeting via prefix scan
+    const allMeetings = await kv.getByPrefix('meeting:');
+    const meeting = allMeetings.find((m: any) => m.id === meetingId);
+    if (!meeting) return c.json({ error: 'Meeting not found' }, 404);
+
+    const membership = await kv.get(`membership:${meeting.groupId}:${user.email}`);
+    if (!membership || membership.role !== 'admin') return c.json({ error: 'Admin only' }, 403);
+
+    const { audio } = await c.req.json(); // base64 data URL
+    if (!audio || typeof audio !== 'string') return c.json({ error: 'Missing audio' }, 400);
+    if (audio.length > 5_000_000) return c.json({ error: 'Voice note too large (max 3 MB)' }, 413);
+
+    // Store inline (KV) — fine for short clips. Larger should use Supabase Storage.
+    await kv.set(`voice-note:${meetingId}`, {
+      meetingId,
+      groupId: meeting.groupId,
+      uploadedBy: user.email,
+      audio,
+      uploadedAt: new Date().toISOString(),
+    });
+
+    return c.json({ url: `voice-note://${meetingId}` });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.get('/make-server-34d0b231/meetings/:meetingId/voice-note', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const meetingId = c.req.param('meetingId');
+    const note = await kv.get(`voice-note:${meetingId}`);
+    if (!note) return c.json({ error: 'Not found' }, 404);
+
+    const membership = await kv.get(`membership:${note.groupId}:${user.email}`);
+    if (!membership || membership.status !== 'approved') return c.json({ error: 'Not authorized' }, 403);
+
+    return c.json({ note });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// === LEADERBOARD ===
+
+app.get('/make-server-34d0b231/groups/:groupId/leaderboard', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('groupId');
+    const membership = await kv.get(`membership:${groupId}:${user.email}`);
+    if (!membership || membership.status !== 'approved') return c.json({ error: 'Not a member' }, 403);
+
+    const allMembers = (await kv.getByPrefix(`membership:${groupId}:`))
+      .filter((m: any) => m.status === 'approved');
+    const allContribs = (await kv.getByPrefix(`contribution:${groupId}:`))
+      .filter((c: any) => c.paid);
+
+    // Build per-member totals + payment streak (consecutive months)
+    const byEmail = new Map<string, { totalPaid: number; months: Set<string> }>();
+    for (const c of allContribs) {
+      const key = c.userEmail;
+      const date = new Date(c.date);
+      const month = `${date.getFullYear()}-${date.getMonth()}`;
+      if (!byEmail.has(key)) byEmail.set(key, { totalPaid: 0, months: new Set() });
+      const entry = byEmail.get(key)!;
+      entry.totalPaid += c.amount;
+      entry.months.add(month);
+    }
+
+    const computeStreak = (months: Set<string>): number => {
+      // Walk backwards from current month while present
+      const now = new Date();
+      let streak = 0;
+      for (let i = 0; i < 24; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const key = `${d.getFullYear()}-${d.getMonth()}`;
+        if (months.has(key)) streak++;
+        else break;
+      }
+      return streak;
+    };
+
+    const rows = allMembers.map((m: any) => {
+      const profile = byEmail.get(m.userEmail) || { totalPaid: 0, months: new Set() };
+      return {
+        email: m.userEmail,
+        fullName: m.fullName,
+        surname: m.surname,
+        totalPaid: profile.totalPaid,
+        streak: computeStreak(profile.months as Set<string>),
+      };
+    });
+
+    rows.sort((a, b) => b.totalPaid - a.totalPaid);
+    const leaderboard = rows.map((r, i) => ({ ...r, rank: i + 1 }));
+
+    return c.json({ leaderboard });
   } catch (error) {
     return c.json({ error: error.message }, 500);
   }
