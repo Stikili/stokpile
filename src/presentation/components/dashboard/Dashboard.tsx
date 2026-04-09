@@ -7,16 +7,18 @@ import { Badge } from '@/presentation/ui/badge';
 import { GroupHealthScore } from '@/presentation/components/dashboard/GroupHealthScore';
 import { EditTotalContributionsDialog } from '@/presentation/components/groups/EditTotalContributionsDialog';
 import { ThisMonthStatus } from '@/presentation/components/dashboard/ThisMonthStatus';
+import { NextTurnCard } from '@/presentation/components/dashboard/NextTurnCard';
 import { api } from '@/infrastructure/api';
 import { formatCurrency, formatDate } from '@/lib/export';
 
 interface DashboardProps {
   groupId: string;
+  groupType?: string;
   isAdmin?: boolean;
   userEmail?: string;
 }
 
-export function Dashboard({ groupId, isAdmin = false, userEmail }: DashboardProps) {
+export function Dashboard({ groupId, groupType, isAdmin = false, userEmail }: DashboardProps) {
   const [stats, setStats] = useState<DashboardStats>({
     totalContributions: 0,
     calculatedContributions: 0,
@@ -220,6 +222,9 @@ export function Dashboard({ groupId, isAdmin = false, userEmail }: DashboardProp
           </div>
         </CardContent>
       </Card>
+
+      {/* Whose turn? (only for rotating-style groups) */}
+      <NextTurnCard groupId={groupId} groupType={groupType} />
 
       {/* This Month Status — replaces chart */}
       {members.length > 0 && (

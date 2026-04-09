@@ -606,7 +606,12 @@ export function GroupInfoView({ group, onGroupUpdate, userEmail }: GroupInfoView
             <EmptyState
               icon={Users}
               title="No members yet"
-              description="Invite members to join your group and start collaborating"
+              description="Invite members to join your group. You can share an invite link or upload a CSV with multiple emails at once."
+              action={group.userRole === 'admin' ? {
+                label: 'Bulk Invite (CSV)',
+                icon: UploadCloud,
+                onClick: () => setShowBulkInvite(true),
+              } : undefined}
             />
           ) : (
             <div className="overflow-x-auto">

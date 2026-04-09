@@ -48,6 +48,7 @@ import { UpgradeDialog } from "@/presentation/components/subscription/UpgradeDia
 import { FeatureGate } from "@/presentation/components/subscription/FeatureGate";
 import { TrialBadge } from "@/presentation/components/subscription/TrialBadge";
 import { useUnreadAnnouncements } from "@/application/hooks/useUnreadAnnouncements";
+import { usePendingCounts } from "@/application/hooks/usePendingCounts";
 import { PushNotificationSetup } from "@/presentation/shared/PushNotificationSetup";
 import { PhonePrompt } from "@/presentation/shared/PhonePrompt";
 import { Logo } from "@/presentation/layout/Logo";
@@ -192,6 +193,7 @@ export default function App() {
 
   const isAdmin = selectedGroup?.userRole === "admin";
   const unreadAnnouncements = useUnreadAnnouncements(selectedGroup?.id, activeTab);
+  const pendingCounts = usePendingCounts(selectedGroup?.id, isAdmin);
 
   // Handle Paystack billing callback (?billing=success&groupId=xxx)
   useEffect(() => {
@@ -487,12 +489,17 @@ export default function App() {
                           {allOverflow.length > 0 && (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <button className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-sm transition-colors ml-auto
+                                <button className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-sm transition-colors ml-auto relative
                                   ${activeInOverflow
                                     ? 'text-primary font-medium bg-primary/10'
                                     : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}>
                                   More <ChevronDown className="h-3.5 w-3.5" />
                                   {activeInOverflow && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-primary inline-block" />}
+                                  {pendingCounts.joinRequests > 0 && !activeInOverflow && (
+                                    <span className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-semibold leading-none">
+                                      {pendingCounts.joinRequests > 9 ? '9+' : pendingCounts.joinRequests}
+                                    </span>
+                                  )}
                                 </button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-52">
@@ -520,6 +527,11 @@ export default function App() {
                                   >
                                     <item.icon className="h-4 w-4 mr-2" />
                                     {item.label}
+                                    {item.id === 'info' && pendingCounts.joinRequests > 0 && (
+                                      <span className="ml-auto inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-semibold leading-none">
+                                        {pendingCounts.joinRequests}
+                                      </span>
+                                    )}
                                   </DropdownMenuItem>
                                 ))}
                                 {adminItems.length > 0 && (
@@ -559,6 +571,7 @@ export default function App() {
                         <ContextualTips context="dashboard" isAdmin={isAdmin} hasData onAction={handleQuickAction} />
                         <Dashboard
                           groupId={selectedGroup.id}
+                          groupType={selectedGroup.groupType}
                           isAdmin={isAdmin}
                           userEmail={session.user.email}
                         />
