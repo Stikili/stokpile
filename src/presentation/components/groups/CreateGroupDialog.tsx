@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Plus } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
+import { GROUP_TEMPLATES, type GroupTemplate } from './groupTemplates';
 
 interface CreateGroupDialogProps {
   onSuccess: () => void;
@@ -26,6 +27,14 @@ export function CreateGroupDialog({ onSuccess, open: controlledOpen, onOpenChang
   const [isPublic, setIsPublic] = useState(false);
   const [groupType, setGroupType] = useState('rotating');
   const [submitting, setSubmitting] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+
+  const applyTemplate = (template: GroupTemplate) => {
+    setSelectedTemplateId(template.id);
+    setGroupType(template.groupType);
+    setContributionFrequency(template.contributionFrequency);
+    if (!description) setDescription(template.description);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,7 +79,32 @@ export function CreateGroupDialog({ onSuccess, open: controlledOpen, onOpenChang
               Set up a new group and invite members to join
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+          <form onSubmit={handleSubmit} className="space-y-4 pt-4 max-h-[70vh] overflow-y-auto pr-1">
+          <div className="space-y-2">
+            <Label>Quick Start Templates</Label>
+            <p className="text-xs text-muted-foreground">Pick a preset to skip configuration, or scroll down to customise.</p>
+            <div className="grid grid-cols-2 gap-2">
+              {GROUP_TEMPLATES.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => applyTemplate(t)}
+                  disabled={submitting}
+                  className={`text-left p-2.5 rounded-lg border transition-all
+                    ${selectedTemplateId === t.id
+                      ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                      : 'border-border hover:border-primary/50 hover:bg-muted/50'}`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-base">{t.emoji}</span>
+                    <span className="font-medium text-xs leading-tight">{t.label}</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1 leading-snug">{t.hint}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="name">Group Name</Label>
             <Input

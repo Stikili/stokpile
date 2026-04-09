@@ -4450,6 +4450,49 @@ async function sendSMS(phone: string, message: string): Promise<void> {
   }
 }
 
+// ─── Email Helper (Resend) ────────────────────────────────────────────────────
+
+async function sendEmail(to: string, subject: string, html: string): Promise<void> {
+  const resendApiKey = Deno.env.get('RESEND_API_KEY');
+  if (!resendApiKey || !to) return;
+  try {
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: Deno.env.get('EMAIL_FROM') || 'Stokpile <onboarding@resend.dev>',
+        to: [to],
+        subject,
+        html,
+      }),
+    });
+  } catch (e) {
+    console.warn('Email send failed:', e.message);
+  }
+}
+
+function emailTemplate(title: string, body: string, ctaText?: string, ctaUrl?: string): string {
+  const cta = ctaText && ctaUrl
+    ? `<div style="text-align:center;margin:24px 0;"><a href="${ctaUrl}" style="background:#007a38;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;display:inline-block;font-weight:600;">${ctaText}</a></div>`
+    : '';
+  return `
+    <div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#f8fafc;">
+      <div style="background:#fff;border-radius:12px;padding:32px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+        <h2 style="color:#0f172a;margin:0 0 16px;font-size:22px;">${title}</h2>
+        <div style="color:#475569;font-size:14px;line-height:1.6;">${body}</div>
+        ${cta}
+        <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0;">
+        <p style="color:#94a3b8;font-size:12px;margin:0;text-align:center;">
+          You're receiving this from Stokpile. Manage your notification preferences in the app.
+        </p>
+      </div>
+    </div>
+  `;
+}
+
 // ─── Flutterwave Payment Link ─────────────────────────────────────────────────
 
 app.post('/make-server-34d0b231/contributions/:contributionId/flutterwave-link', async (c) => {

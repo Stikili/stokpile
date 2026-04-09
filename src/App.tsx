@@ -19,6 +19,7 @@ const GroceryCoordinationView = lazy(() => import("@/presentation/components/gro
 const BurialSocietyView = lazy(() => import("@/presentation/components/burial/BurialSocietyView").then(m => ({ default: m.BurialSocietyView })));
 const PenaltiesView = lazy(() => import("@/presentation/components/penalties/PenaltiesView").then(m => ({ default: m.PenaltiesView })));
 import { CommandPalette } from "@/presentation/shared/CommandPalette";
+import { GlobalSearchDialog } from "@/presentation/shared/GlobalSearchDialog";
 import { GroupActionsButtons } from "@/presentation/components/groups/GroupActionsButtons";
 import { PendingInvitesView } from "@/presentation/components/members/PendingInvitesView";
 import { PublicJoinView } from "@/presentation/components/groups/PublicJoinView";
@@ -104,6 +105,7 @@ export default function App() {
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [showGlobalSearch, setShowGlobalSearch] = useState(false);
   const [signOutLoading, setSignOutLoading] = useState(false);
   const [exportingCSV, setExportingCSV] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(
@@ -280,6 +282,14 @@ export default function App() {
               isAdmin={isAdmin}
             />
             
+            {/* Global Search */}
+            <GlobalSearchDialog
+              open={showGlobalSearch}
+              onOpenChange={setShowGlobalSearch}
+              groupId={selectedGroup?.id ?? null}
+              onResultClick={(tab) => setActiveTab(tab)}
+            />
+
             {/* Upgrade Dialog */}
             <UpgradeDialog
               open={showUpgradeDialog}
@@ -322,13 +332,13 @@ export default function App() {
                 <div className="flex items-center gap-1.5">
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="sm" onClick={() => setShowCommandPalette(true)} className="hidden lg:flex items-center gap-1.5 text-muted-foreground border border-border/60 h-8 px-3 rounded-lg hover:bg-muted/60" aria-label="Command palette">
+                      <Button variant="ghost" size="sm" onClick={() => selectedGroup ? setShowGlobalSearch(true) : setShowCommandPalette(true)} className="hidden lg:flex items-center gap-1.5 text-muted-foreground border border-border/60 h-8 px-3 rounded-lg hover:bg-muted/60" aria-label="Search">
                         <Search className="h-3.5 w-3.5" />
                         <span className="text-xs">Search</span>
                         <kbd className="ml-1 text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded">⌘K</kbd>
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Command palette (⌘K)</TooltipContent>
+                    <TooltipContent>Search (⌘K) — also opens command palette</TooltipContent>
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
