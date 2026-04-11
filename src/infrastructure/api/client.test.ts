@@ -25,12 +25,11 @@ describe('fetchClient', () => {
   });
 
   it('should throw ApiError on 4xx responses', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response(JSON.stringify({ error: 'Not found' }), {
-        status: 404,
-        headers: { 'content-type': 'application/json' },
-      })
-    );
+    const make404 = () => new Response(JSON.stringify({ error: 'Not found' }), {
+      status: 404,
+      headers: { 'content-type': 'application/json' },
+    });
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() => Promise.resolve(make404()));
 
     await expect(
       fetchClient('https://api.test.com/missing', { retries: 0 })
@@ -83,7 +82,15 @@ describe('fetchClient', () => {
 
   it('should throw timeout error when request exceeds timeout', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(
-      () => new Promise(() => {}) // never resolves
+      (_url, opts) => new Promise((_resolve, reject) => {
+        // Simulate abort via the signal
+        const signal = (opts as any)?.signal;
+        if (signal) {
+          signal.addEventListener('abort', () => {
+            reject(new DOMException('The operation was aborted.', 'AbortError'));
+          });
+        }
+      })
     );
 
     const promise = fetchClient('https://api.test.com/slow', {

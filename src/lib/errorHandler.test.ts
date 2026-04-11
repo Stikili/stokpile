@@ -76,7 +76,7 @@ describe('getUserFriendlyMessage', () => {
   });
 
   it('should handle abort errors', () => {
-    const error = new DOMException('The operation was aborted.', 'AbortError');
+    const error = Object.assign(new Error('The operation was aborted.'), { name: 'AbortError' });
     expect(getUserFriendlyMessage(error)).toContain('timed out');
   });
 
