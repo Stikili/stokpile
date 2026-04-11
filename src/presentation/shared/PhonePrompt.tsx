@@ -7,8 +7,7 @@ import { Smartphone } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
 
-const DISMISSED_KEY = 'phone-prompt-dismissed-until';
-const SNOOZE_DAYS = 7;
+const DISMISSED_KEY = 'phone-prompt-dismissed';
 
 interface PhonePromptProps {
   userId: string; // used to re-check per user
@@ -22,13 +21,17 @@ export function PhonePrompt({ userId }: PhonePromptProps) {
   useEffect(() => {
     if (!userId) return;
 
-    // Check snooze
-    const dismissedUntil = localStorage.getItem(DISMISSED_KEY);
-    if (dismissedUntil && Date.now() < Number(dismissedUntil)) return;
+    // Permanently dismissed — never ask again
+    if (localStorage.getItem(DISMISSED_KEY) === 'true') return;
 
-    // Load profile and check for phone
+    // Load profile and check for phone — if they already have one, done forever
     api.getProfile().then((profile) => {
-      if (!profile.phone) setOpen(true);
+      if (profile.phone) {
+        // They already have a phone saved — mark as permanently done
+        localStorage.setItem(DISMISSED_KEY, 'true');
+      } else {
+        setOpen(true);
+      }
     }).catch(() => {});
   }, [userId]);
 
@@ -44,6 +47,7 @@ export function PhonePrompt({ userId }: PhonePromptProps) {
         profilePictureUrl: profile.profilePictureUrl,
         phone: trimmed,
       });
+      localStorage.setItem(DISMISSED_KEY, 'true');
       toast.success('WhatsApp number saved');
       setOpen(false);
     } catch {
@@ -53,16 +57,15 @@ export function PhonePrompt({ userId }: PhonePromptProps) {
     }
   };
 
-  const handleRemindLater = () => {
-    const until = Date.now() + SNOOZE_DAYS * 24 * 60 * 60 * 1000;
-    localStorage.setItem(DISMISSED_KEY, String(until));
+  const handleDismiss = () => {
+    localStorage.setItem(DISMISSED_KEY, 'true');
     setOpen(false);
   };
 
   if (!open) return null;
 
   return (
-    <Dialog open={open} onOpenChange={() => handleRemindLater()}>
+    <Dialog open={open} onOpenChange={() => handleDismiss()}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <div className="flex items-center gap-2 mb-1">
@@ -89,8 +92,8 @@ export function PhonePrompt({ userId }: PhonePromptProps) {
         </div>
 
         <DialogFooter className="flex-col sm:flex-row gap-2">
-          <Button variant="ghost" size="sm" onClick={handleRemindLater} disabled={saving} className="text-muted-foreground">
-            Remind me later
+          <Button variant="ghost" size="sm" onClick={handleDismiss} disabled={saving} className="text-muted-foreground">
+            No thanks
           </Button>
           <Button onClick={handleSave} disabled={saving || !phone.trim()} className="flex-1">
             {saving ? 'Saving...' : 'Save Number'}
