@@ -2,6 +2,7 @@ import { Hono } from "npm:hono@4.6.14";
 import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
 import { createClient } from "jsr:@supabase/supabase-js@2.49.8";
+import * as kv from "./kv_store.tsx";
 
 const app = new Hono();
 
@@ -2319,6 +2320,149 @@ app.delete('/make-server-34d0b231/admin/clear-all-data', async (c) => {
     return c.json({ error: err.message }, 500);
   }
 });
+
+// ═══ BACKFILL COMPLETED — endpoint removed ═══
+// 3 groups + 2 contributions migrated on 2026-04-11
+// KV data preserved as fallback
+// ═══════════════════════════════════════════════
+
+/* REMOVED — backfill endpoint was here
+app.post('/make-server-34d0b231/admin/backfill', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    if (user.email !== 'sbutikili@gmail.com') return c.json({ error: 'Forbidden' }, 403);
+
+    const toSnake = (s: string) => s.replace(/[A-Z]/g, (ch: string) => `_${ch.toLowerCase()}`);
+    const objToSnake = (obj: Record<string, any>) => {
+      const out: Record<string, any> = {};
+      for (const [k, v] of Object.entries(obj)) {
+        if (k === '_key') continue;
+        out[toSnake(k)] = v;
+      }
+      return out;
+    };
+    const upsertBatch = async (table: string, rows: Record<string, any>[], onConflict?: string) => {
+      if (rows.length === 0) return 0;
+      const snakeRows = rows.map(objToSnake);
+      let inserted = 0;
+      for (let i = 0; i < snakeRows.length; i += 100) {
+        const batch = snakeRows.slice(i, i + 100);
+        const { error } = await supabaseAdmin.from(table).upsert(batch, onConflict ? { onConflict } : {});
+        if (error) console.error(`[${table}] error:`, error.message);
+        else inserted += batch.length;
+      }
+      return inserted;
+    };
+
+    const log: Record<string, number> = {};
+
+    const users = await kv.getByPrefix('user:');
+    log.users = await upsertBatch('app_users', users.map((u: any) => ({
+      email: u.email, fullName: u.fullName, surname: u.surname,
+      country: u.country, phone: u.phone, emailVerified: u.emailVerified ?? false,
+      createdAt: u.createdAt,
+    })), 'email');
+
+    const groups = await kv.getByPrefix('group:');
+    log.groups = await upsertBatch('groups', groups.map((g: any) => ({
+      id: g.id, name: g.name, description: g.description || '',
+      groupCode: g.groupCode, isPublic: g.isPublic || false,
+      payoutsAllowed: g.payoutsAllowed ?? true, groupType: g.groupType || 'rotating',
+      contributionFrequency: g.contributionFrequency || 'monthly',
+      contributionTarget: g.contributionTarget || null,
+      contributionTargetAnnual: g.contributionTargetAnnual || null,
+      archived: g.archived || false, isDemo: g.isDemo || false,
+      admin1: g.admin1 || null, createdBy: g.createdBy, createdAt: g.createdAt,
+    })), 'id');
+
+    const memberships = await kv.getByPrefix('membership:');
+    log.memberships = await upsertBatch('memberships', memberships.map((m: any) => ({
+      groupId: m.groupId, userEmail: m.userEmail || m.email,
+      fullName: m.fullName || null, surname: m.surname || null,
+      role: m.role || 'member', status: m.status || 'pending',
+      joinedAt: m.joinedAt,
+    })), 'group_id,user_email');
+
+    const contributions = await kv.getByPrefix('contribution:');
+    log.contributions = await upsertBatch('contributions', contributions.map((ct: any) => ({
+      id: ct.id, groupId: ct.groupId, userEmail: ct.userEmail,
+      amount: ct.amount, date: ct.date, paid: ct.paid || false,
+      createdAt: ct.createdAt,
+    })), 'id');
+
+    const payouts = await kv.getByPrefix('payout:');
+    log.payouts = await upsertBatch('payouts', payouts.map((p: any) => ({
+      id: p.id, groupId: p.groupId, recipientEmail: p.recipientEmail,
+      amount: p.amount, status: p.status || 'scheduled',
+      scheduledDate: p.scheduledDate, completedAt: p.completedAt || null,
+      referenceNumber: p.referenceNumber || null, createdAt: p.createdAt,
+    })), 'id');
+
+    const meetings = await kv.getByPrefix('meeting:');
+    log.meetings = await upsertBatch('meetings', meetings.map((mt: any) => ({
+      id: mt.id, groupId: mt.groupId, title: mt.title || null,
+      date: mt.date, time: mt.time || null, venue: mt.venue || null,
+      agenda: mt.agenda || null, attendance: mt.attendance || {},
+      createdBy: mt.createdBy || null, createdAt: mt.createdAt,
+    })), 'id');
+
+    const announcements = await kv.getByPrefix('announcement:');
+    log.announcements = await upsertBatch('announcements', announcements.map((a: any) => ({
+      id: a.id, groupId: a.groupId, title: a.title, content: a.content,
+      urgent: a.urgent || false, pinned: a.pinned || false,
+      createdBy: a.createdBy, createdAt: a.createdAt,
+    })), 'id');
+
+    const subs = await kv.getByPrefix('subscription:');
+    log.subscriptions = await upsertBatch('subscriptions', subs.map((s: any) => ({
+      groupId: s.groupId, tier: s.tier || 'trial',
+      trialStartedAt: s.trialStartedAt || null, trialEndsAt: s.trialEndsAt || null,
+      updatedAt: s.updatedAt,
+    })), 'group_id');
+
+    const audits = await kv.getByPrefix('audit:');
+    log.audit = await upsertBatch('audit_log', audits.map((a: any) => ({
+      id: a.id, groupId: a.groupId, userEmail: a.userEmail,
+      action: a.action, details: a.details || null, timestamp: a.timestamp,
+    })), 'id');
+
+    const notifs = await kv.getByPrefix('notification:');
+    log.notifications = await upsertBatch('notifications', notifs.map((n: any) => ({
+      id: n.id, userEmail: n.userEmail, groupId: n.groupId || null,
+      title: n.title, message: n.message || null, type: n.type || 'info',
+      read: n.read || false, createdAt: n.createdAt,
+    })), 'id');
+
+    const votes = await kv.getByPrefix('vote:');
+    log.votes = await upsertBatch('votes', votes.map((v: any) => ({
+      id: v.id, groupId: v.groupId, meetingId: v.meetingId || null,
+      question: v.question, options: v.options || [], results: v.results || {},
+      status: v.status || 'open', createdBy: v.createdBy || null, createdAt: v.createdAt,
+    })), 'id');
+
+    const notes = await kv.getByPrefix('note:');
+    log.notes = await upsertBatch('notes', notes.map((n: any) => ({
+      id: n.id, groupId: n.groupId, meetingId: n.meetingId || null,
+      content: n.content, createdBy: n.createdBy, createdAt: n.createdAt,
+    })), 'id');
+
+    const chats = await kv.getByPrefix('chat:');
+    log.chats = await upsertBatch('chat_messages', chats.map((ch: any) => ({
+      id: ch.id, groupId: ch.groupId, meetingId: ch.meetingId || null,
+      message: ch.message || ch.content, sender: ch.sender || ch.userEmail,
+      createdAt: ch.createdAt,
+    })), 'id');
+
+    const sessions = await kv.getByPrefix('session:');
+    log.sessions = await upsertBatch('sessions', sessions.map((s: any) => ({
+      sessionId: s.sessionId, userId: s.userId,
+      ip: s.ip || null, userAgent: s.userAgent || null,
+      createdAt: s.createdAt, lastActiveAt: s.lastActiveAt || s.createdAt,
+    })), 'user_id,session_id');
+
+REMOVED — end of backfill endpoint */
 
 // ============================================================
 Deno.serve(app.fetch);
