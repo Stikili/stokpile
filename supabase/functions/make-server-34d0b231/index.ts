@@ -4,6 +4,7 @@ import { logger } from "npm:hono/logger";
 import { createClient } from "jsr:@supabase/supabase-js@2.49.8";
 import * as kv from "./kv_store.tsx";
 import { registerExtraRoutes } from "./extra_routes.ts";
+import { registerMoreRoutes } from "./more_routes.ts";
 
 const app = new Hono();
 
@@ -2470,5 +2471,6 @@ REMOVED — end of backfill endpoint */
 // billing, subscriptions, referrals, sessions, RSVP, etc.)
 // ============================================================
 registerExtraRoutes(app, supabaseAdmin, getAuthUser, getMembership);
+registerMoreRoutes(app, supabaseAdmin, getAuthUser, getMembership);
 
 Deno.serve(app.fetch);
