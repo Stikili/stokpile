@@ -43,7 +43,7 @@ import { ThemeProvider } from "@/presentation/shared/ThemeProvider";
 import { LanguageProvider } from "@/application/context/LanguageContext";
 import { LiteModeProvider } from "@/application/context/LiteModeContext";
 import { DisplayMenu } from "@/presentation/shared/DisplayMenu";
-import { SubscriptionProvider, useSubscription } from "@/application/context/SubscriptionContext";
+import { SubscriptionProvider } from "@/application/context/SubscriptionContext";
 import { SubscriptionBanner } from "@/presentation/components/subscription/SubscriptionBanner";
 import { UpgradeDialog } from "@/presentation/components/subscription/UpgradeDialog";
 import { FeatureGate } from "@/presentation/components/subscription/FeatureGate";
