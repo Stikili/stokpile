@@ -75,7 +75,7 @@ export function TermsOfService({ open, onOpenChange }: TermsOfServiceProps) {
 
             <section>
               <h3 className="font-semibold mb-2">11. Contact</h3>
-              <p>Questions? Email <a href="mailto:hello@stokpile.app" className="text-primary underline">hello@stokpile.app</a></p>
+              <p>Questions? Email <a href="mailto:admin@siti-group-ltd.com" className="text-primary underline">admin@siti-group-ltd.com</a></p>
             </section>
           </div>
         </ScrollArea>

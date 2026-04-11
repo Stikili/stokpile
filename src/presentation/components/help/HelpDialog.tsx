@@ -87,7 +87,7 @@ export function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
 
         <div className="flex gap-2 pt-2 border-t">
           <Button variant="outline" size="sm" className="flex-1" asChild>
-            <a href="mailto:support@stokpile.app">
+            <a href="mailto:admin@siti-group-ltd.com">
               <Mail className="h-4 w-4 mr-2" />Email Support
             </a>
           </Button>

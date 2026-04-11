@@ -79,7 +79,7 @@ export function PrivacyPolicy({ open, onOpenChange }: PrivacyPolicyProps) {
 
             <section>
               <h3 className="font-semibold mb-2">8. Contact</h3>
-              <p>For privacy questions or to exercise your rights, email us at <a href="mailto:privacy@stokpile.app" className="text-primary underline">privacy@stokpile.app</a></p>
+              <p>For privacy questions or to exercise your rights, email us at <a href="mailto:admin@siti-group-ltd.com" className="text-primary underline">admin@siti-group-ltd.com</a></p>
             </section>
           </div>
         </ScrollArea>

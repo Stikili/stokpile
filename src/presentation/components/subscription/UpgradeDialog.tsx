@@ -169,7 +169,7 @@ export function UpgradeDialog({ open, onOpenChange, groupId }: UpgradeDialogProp
 
               {plan.tier === 'enterprise' ? (
                 <Button variant="outline" className="w-full mt-2" asChild>
-                  <a href="mailto:hello@stokpile.app">Contact Us</a>
+                  <a href="mailto:admin@siti-group-ltd.com">Contact Us</a>
                 </Button>
               ) : isCurrent(plan.tier) ? (
                 <Button variant="outline" className="w-full mt-2" disabled>
