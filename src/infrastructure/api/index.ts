@@ -474,6 +474,13 @@ export const api = {
   deleteAccount: () =>
     request<{ message: string; deletedCount: Record<string, number> }>("/account", { method: "DELETE" }),
 
+  // Bank details
+  getBankDetails: () =>
+    request<{ bankDetails: import("@/domain/types").BankDetails | null }>("/me/bank-details"),
+
+  updateBankDetails: (data: { bankName: string; accountNumber: string; branchCode: string; accountType?: string; accountHolder?: string }) =>
+    request<{ bankDetails: any }>("/me/bank-details", { method: "PUT", body: data }),
+
   // Demo group
   createDemoGroup: () =>
     request<{ group: any; alreadyExisted: boolean }>("/demo-group", { method: "POST" }),

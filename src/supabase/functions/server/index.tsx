@@ -1979,8 +1979,11 @@ app.get('/make-server-34d0b231/payouts', async (c) => {
       return c.json({ error: 'Not a member of this group' }, 403);
     }
 
-    const payouts = await kv.getByPrefix(`payout:${groupId}:`);
-    
+    const rawPayouts = await kv.getByPrefix(`payout:${groupId}:`);
+
+    // Auto-confirm payouts awaiting_confirmation for >48h
+    const payouts = await autoConfirmStalePayouts(rawPayouts);
+
     // Enrich payouts with recipient user profiles from KV store
     const payoutsWithUsers = await Promise.all(payouts.map(async (payout) => {
       const userProfile = await kv.get(`user:${payout.recipientEmail}`);
@@ -2007,6 +2010,70 @@ app.get('/make-server-34d0b231/payouts', async (c) => {
   }
 });
 
+// === BANK DETAILS ===
+
+app.get('/make-server-34d0b231/me/bank-details', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const details = await kv.get(`bank-details:${user.id}`);
+    return c.json({ bankDetails: details || null });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.put('/make-server-34d0b231/me/bank-details', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const { bankName, accountNumber, branchCode, accountType, accountHolder } = await c.req.json();
+    if (!bankName || !accountNumber || !branchCode) {
+      return c.json({ error: 'Bank name, account number, and branch code are required' }, 400);
+    }
+
+    const details = {
+      userId: user.id,
+      email: user.email,
+      bankName,
+      accountNumber,
+      branchCode,
+      accountType: accountType || 'savings',
+      accountHolder: accountHolder || null,
+      updatedAt: new Date().toISOString(),
+    };
+    await kv.set(`bank-details:${user.id}`, details);
+    return c.json({ bankDetails: details });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// === PAYOUT AUTO-CONFIRM (check on read) ===
+// Payouts in "awaiting_confirmation" for >48h are auto-confirmed.
+async function autoConfirmStalePayouts(payouts: any[]): Promise<any[]> {
+  const now = Date.now();
+  const FORTY_EIGHT_H = 48 * 60 * 60 * 1000;
+  for (const p of payouts) {
+    if (
+      p.status === 'awaiting_confirmation' &&
+      p.proofUploadedAt &&
+      now - new Date(p.proofUploadedAt).getTime() > FORTY_EIGHT_H
+    ) {
+      p.status = 'completed';
+      p.completedAt = new Date().toISOString();
+      p.confirmedByRecipient = false; // auto-confirmed
+      p.confirmedAt = new Date().toISOString();
+      kv.set(`payout:${p.groupId}:${p.id}`, p).catch(() => {});
+    }
+  }
+  return payouts;
+}
+
 app.put('/make-server-34d0b231/payouts/:id', async (c) => {
   try {
     const accessToken = c.req.header('Authorization')?.split(' ')[1];
@@ -2017,7 +2084,7 @@ app.put('/make-server-34d0b231/payouts/:id', async (c) => {
     }
 
     const payoutId = c.req.param('id');
-    const { status, referenceNumber } = await c.req.json();
+    const { status, referenceNumber, proofUrl, paymentMethod, disputeReason } = await c.req.json();
 
     // Find payout
     const allPayouts = await kv.getByPrefix('payout:');
@@ -2027,31 +2094,100 @@ app.put('/make-server-34d0b231/payouts/:id', async (c) => {
       return c.json({ error: 'Payout not found' }, 404);
     }
 
-    // Check if user is admin
+    // Check if user is admin (except for confirm/dispute which the recipient can do)
     const membership = await kv.get(`membership:${payout.groupId}:${user.email}`);
-    if (!membership || membership.role !== 'admin') {
+    if (!membership) {
+      return c.json({ error: 'Not a member' }, 403);
+    }
+    // Only admin can set processing/awaiting_confirmation/completed/cancelled
+    // Recipient can set confirmed (completed) or disputed
+    const isRecipient = user.email === payout.recipientEmail;
+    const isAdmin = membership.role === 'admin';
+    if (!isAdmin && !isRecipient) {
       return c.json({ error: 'Not authorized' }, 403);
+    }
+    if (!isAdmin && status !== 'completed' && status !== 'disputed') {
+      return c.json({ error: 'You can only confirm or dispute' }, 403);
     }
 
     payout.status = status;
     payout.updatedAt = new Date().toISOString();
     if (referenceNumber !== undefined) payout.referenceNumber = referenceNumber;
+    if (proofUrl !== undefined) payout.proofUrl = proofUrl;
+    if (proofUrl) payout.proofUploadedAt = new Date().toISOString();
+    if (paymentMethod) payout.paymentMethod = paymentMethod;
+
+    const completedGroup = await kv.get(`group:${payout.groupId}`);
+    const groupNameForEmail = completedGroup?.name || 'your group';
+    const payoutAmountStr = `R ${payout.amount.toFixed(2)}`;
+
+    if (status === 'processing') {
+      // Admin has initiated the EFT — notify recipient
+      sendEmail(
+        payout.recipientEmail,
+        `Payout being processed – ${groupNameForEmail}`,
+        emailTemplate(
+          'Your payout is being processed',
+          `<p>A payout of <strong>${payoutAmountStr}</strong> from <strong>${groupNameForEmail}</strong> is being sent to you.</p>
+           <p>You'll be asked to confirm receipt once the admin uploads proof of payment.</p>`,
+          'Open Stokpile',
+          Deno.env.get('APP_URL') || 'https://stokpilev1.vercel.app'
+        )
+      ).catch(console.warn);
+    }
+
+    if (status === 'awaiting_confirmation') {
+      // Admin uploaded proof — notify recipient to confirm
+      sendEmail(
+        payout.recipientEmail,
+        `Please confirm receipt – ${groupNameForEmail}`,
+        emailTemplate(
+          'Confirm you received your payout',
+          `<p>The treasurer of <strong>${groupNameForEmail}</strong> has sent you <strong>${payoutAmountStr}</strong> and uploaded proof of payment.</p>
+           <p>Please log in and confirm you received the money. If you haven't received it, you can raise a dispute.</p>
+           <p>This will auto-confirm in 48 hours if no action is taken.</p>`,
+          'Confirm Now',
+          Deno.env.get('APP_URL') || 'https://stokpilev1.vercel.app'
+        )
+      ).catch(console.warn);
+    }
+
     if (status === 'completed') {
       payout.completedAt = new Date().toISOString();
-      // Email recipient on completion
-      const completedGroup = await kv.get(`group:${payout.groupId}`);
-      const groupNameForEmail = completedGroup?.name || 'your group';
-      const payoutAmountStr = `R ${payout.amount.toFixed(2)}`;
+      payout.confirmedByRecipient = true;
+      payout.confirmedAt = new Date().toISOString();
       sendEmail(
         payout.recipientEmail,
         `Payout completed – ${groupNameForEmail}`,
-        `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;">
-          <h2 style="color:#1e293b;margin-bottom:8px;">Your payout has been paid! ✅</h2>
-          <p style="color:#475569;">Your payout of <strong>${payoutAmountStr}</strong> from <strong>${groupNameForEmail}</strong> has been marked as completed.</p>
-          ${referenceNumber ? `<p style="color:#475569;">Reference number: <strong>${referenceNumber}</strong></p>` : ''}
-          <p style="color:#94a3b8;font-size:13px;margin-top:24px;">Log in to Stokpile to view your payout history.</p>
-        </div>`
+        emailTemplate(
+          'Your payout is complete',
+          `<p>Your payout of <strong>${payoutAmountStr}</strong> from <strong>${groupNameForEmail}</strong> has been confirmed.</p>
+           ${referenceNumber ? `<p>Reference: <strong>${referenceNumber}</strong></p>` : ''}`,
+          'View in Stokpile',
+          Deno.env.get('APP_URL') || 'https://stokpilev1.vercel.app'
+        )
       ).catch(console.warn);
+    }
+
+    if (status === 'disputed') {
+      payout.disputeReason = disputeReason || 'Not received';
+      // Notify admin
+      const admins = (await kv.getByPrefix(`membership:${payout.groupId}:`))
+        .filter((m: any) => m.role === 'admin');
+      for (const admin of admins) {
+        sendEmail(
+          admin.userEmail || admin.email,
+          `Payout disputed – ${groupNameForEmail}`,
+          emailTemplate(
+            'A payout has been disputed',
+            `<p><strong>${payout.recipientEmail}</strong> disputes receiving <strong>${payoutAmountStr}</strong>.</p>
+             <p>Reason: ${payout.disputeReason}</p>
+             <p>Please investigate and resolve this in the app.</p>`,
+            'View Payout',
+            Deno.env.get('APP_URL') || 'https://stokpilev1.vercel.app'
+          )
+        ).catch(console.warn);
+      }
     }
 
     await kv.set(`payout:${payout.groupId}:${payoutId}`, payout);

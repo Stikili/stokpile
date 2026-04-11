@@ -15,7 +15,7 @@ import { UserAvatar } from '@/presentation/components/profile/UserAvatar';
 import { Alert, AlertDescription } from '@/presentation/ui/alert';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
 import { ConfirmationDialog } from '@/presentation/shared/ConfirmationDialog';
-import { Plus, Download, TrendingUp, Info, Search, CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { Plus, Download, TrendingUp, Info, Search, CheckCircle2, Clock, XCircle, AlertTriangle, Loader2, Upload } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
 import { exportToCSV, formatCurrency, formatDate } from '@/lib/export';
@@ -25,9 +25,10 @@ import { PaymentProofButton } from '@/presentation/components/shared/PaymentProo
 interface PayoutsViewProps {
   groupId: string;
   isAdmin: boolean;
+  userEmail?: string;
 }
 
-export function PayoutsView({ groupId, isAdmin }: PayoutsViewProps) {
+export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +38,7 @@ export function PayoutsView({ groupId, isAdmin }: PayoutsViewProps) {
   const [scheduledDate, setScheduledDate] = useState<Date>(new Date());
   const [submitting, setSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'scheduled' | 'completed' | 'cancelled'>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [updateConfirm, setUpdateConfirm] = useState<{ open: boolean; payoutId: string; status: string; label: string } | null>(null);
   const [referenceNumber, setReferenceNumber] = useState('');
 
@@ -93,10 +94,17 @@ export function PayoutsView({ groupId, isAdmin }: PayoutsViewProps) {
     }
   };
 
-  const handleUpdateStatus = async (payoutId: string, status: string) => {
+  const handleUpdateStatus = async (payoutId: string, status: string, extra?: Record<string, any>) => {
     try {
-      await api.updatePayout(payoutId, { status, ...(status === 'completed' && referenceNumber ? { referenceNumber } : {}) });
-      toast.success(`Payout marked as ${status}`);
+      await api.updatePayout(payoutId, { status, ...extra });
+      const labels: Record<string, string> = {
+        processing: 'marked as processing',
+        awaiting_confirmation: 'proof uploaded — awaiting member confirmation',
+        completed: 'confirmed as received',
+        disputed: 'marked as disputed',
+        cancelled: 'cancelled',
+      };
+      toast.success(`Payout ${labels[status] || status}`);
       setReferenceNumber('');
       loadData();
     } catch (error) {
@@ -143,13 +151,14 @@ export function PayoutsView({ groupId, isAdmin }: PayoutsViewProps) {
   }, [payouts]);
 
   const getStatusBadge = (status: string) => {
-    if (status === 'completed') {
-      return <Badge className="bg-green-600 dark:bg-green-700 text-white"><CheckCircle2 className="h-3 w-3 mr-1" />Completed</Badge>;
-    }
-    if (status === 'cancelled') {
-      return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Cancelled</Badge>;
-    }
-    return <Badge className="bg-blue-600 dark:bg-blue-700 text-white"><Clock className="h-3 w-3 mr-1" />Scheduled</Badge>;
+    const badges: Record<string, JSX.Element> = {
+      completed: <Badge className="bg-green-600 dark:bg-green-700 text-white"><CheckCircle2 className="h-3 w-3 mr-1" />Completed</Badge>,
+      cancelled: <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Cancelled</Badge>,
+      processing: <Badge className="bg-amber-500 text-white"><Loader2 className="h-3 w-3 mr-1 animate-spin" />Processing</Badge>,
+      awaiting_confirmation: <Badge className="bg-purple-600 text-white"><Clock className="h-3 w-3 mr-1" />Awaiting Confirmation</Badge>,
+      disputed: <Badge variant="destructive"><AlertTriangle className="h-3 w-3 mr-1" />Disputed</Badge>,
+    };
+    return badges[status] || <Badge className="bg-blue-600 dark:bg-blue-700 text-white"><Clock className="h-3 w-3 mr-1" />Scheduled</Badge>;
   };
 
   return (
@@ -413,27 +422,53 @@ export function PayoutsView({ groupId, isAdmin }: PayoutsViewProps) {
                           isAdmin={isAdmin}
                         />
                       </TableCell>
-                      {isAdmin && (
-                        <TableCell>
-                          {payout.status === 'scheduled' && (
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                onClick={() => { setReferenceNumber(''); setUpdateConfirm({ open: true, payoutId: payout.id, status: 'completed', label: 'complete' }); }}
-                              >
-                                Complete
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1.5">
+                          {/* Admin flow: scheduled → processing → awaiting_confirmation */}
+                          {isAdmin && payout.status === 'scheduled' && (
+                            <>
+                              <Button size="sm" onClick={() => handleUpdateStatus(payout.id, 'processing')}>
+                                Mark Processing
                               </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setUpdateConfirm({ open: true, payoutId: payout.id, status: 'cancelled', label: 'cancel' })}
-                              >
+                              <Button size="sm" variant="outline" onClick={() => setUpdateConfirm({ open: true, payoutId: payout.id, status: 'cancelled', label: 'cancel' })}>
                                 Cancel
                               </Button>
-                            </div>
+                            </>
                           )}
-                        </TableCell>
-                      )}
+                          {isAdmin && payout.status === 'processing' && (
+                            <Button size="sm" onClick={() => { setReferenceNumber(''); setUpdateConfirm({ open: true, payoutId: payout.id, status: 'awaiting_confirmation', label: 'upload proof' }); }}>
+                              <Upload className="h-3 w-3 mr-1.5" />Upload Proof
+                            </Button>
+                          )}
+                          {isAdmin && payout.status === 'disputed' && (
+                            <>
+                              <Button size="sm" onClick={() => handleUpdateStatus(payout.id, 'processing')}>
+                                Retry
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => setUpdateConfirm({ open: true, payoutId: payout.id, status: 'cancelled', label: 'cancel' })}>
+                                Cancel
+                              </Button>
+                            </>
+                          )}
+                          {/* Recipient flow: awaiting_confirmation → completed or disputed */}
+                          {payout.status === 'awaiting_confirmation' && userEmail === payout.recipientEmail && (
+                            <>
+                              <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleUpdateStatus(payout.id, 'completed')}>
+                                <CheckCircle2 className="h-3 w-3 mr-1.5" />Confirm Received
+                              </Button>
+                              <Button size="sm" variant="outline" className="text-destructive" onClick={() => {
+                                const reason = prompt('Why are you disputing this payout?');
+                                if (reason) handleUpdateStatus(payout.id, 'disputed', { disputeReason: reason });
+                              }}>
+                                Dispute
+                              </Button>
+                            </>
+                          )}
+                          {payout.status === 'awaiting_confirmation' && userEmail !== payout.recipientEmail && !isAdmin && (
+                            <span className="text-xs text-muted-foreground">Waiting for {payout.recipient?.fullName || payout.recipientEmail}</span>
+                          )}
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -447,28 +482,44 @@ export function PayoutsView({ groupId, isAdmin }: PayoutsViewProps) {
         <ConfirmationDialog
           open={updateConfirm.open}
           onOpenChange={(open) => { setUpdateConfirm(open ? updateConfirm : null); if (!open) setReferenceNumber(''); }}
-          title={updateConfirm.status === 'completed' ? 'Complete Payout' : 'Cancel Payout'}
+          title={
+            updateConfirm.status === 'awaiting_confirmation' ? 'Upload Proof of Payment'
+            : updateConfirm.status === 'cancelled' ? 'Cancel Payout'
+            : 'Update Payout'
+          }
           description={
-            updateConfirm.status === 'completed'
-              ? 'Confirm that this payout has been made. This will mark it as completed and deduct it from the group balance.'
+            updateConfirm.status === 'awaiting_confirmation'
+              ? 'Add the EFT reference number. The recipient will be notified and asked to confirm they received the money. Auto-confirms after 48 hours.'
               : 'Are you sure you want to cancel this payout? The recipient will not receive the funds.'
           }
-          confirmText={updateConfirm.status === 'completed' ? 'Mark Complete' : 'Cancel Payout'}
-          variant={updateConfirm.status === 'completed' ? 'default' : 'warning'}
+          confirmText={
+            updateConfirm.status === 'awaiting_confirmation' ? 'Send for Confirmation'
+            : updateConfirm.status === 'cancelled' ? 'Cancel Payout'
+            : 'Confirm'
+          }
+          variant={updateConfirm.status === 'cancelled' ? 'warning' : 'default'}
           onConfirm={() => {
-            handleUpdateStatus(updateConfirm!.payoutId, updateConfirm!.status);
+            handleUpdateStatus(updateConfirm!.payoutId, updateConfirm!.status, {
+              ...(referenceNumber ? { referenceNumber } : {}),
+              paymentMethod: 'eft',
+            });
             setUpdateConfirm(null);
           }}
         >
-          {updateConfirm.status === 'completed' && (
-            <div className="space-y-2 py-2">
-              <Label htmlFor="ref-number">Reference Number <span className="text-muted-foreground text-xs">(optional)</span></Label>
-              <Input
-                id="ref-number"
-                value={referenceNumber}
-                onChange={(e) => setReferenceNumber(e.target.value)}
-                placeholder="e.g. EFT12345 or bank ref"
-              />
+          {updateConfirm.status === 'awaiting_confirmation' && (
+            <div className="space-y-3 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="ref-number">EFT Reference Number</Label>
+                <Input
+                  id="ref-number"
+                  value={referenceNumber}
+                  onChange={(e) => setReferenceNumber(e.target.value)}
+                  placeholder="e.g. EFT12345 or bank ref"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                The recipient will get an email asking them to confirm. If they don't respond within 48 hours, it auto-confirms.
+              </p>
             </div>
           )}
         </ConfirmationDialog>

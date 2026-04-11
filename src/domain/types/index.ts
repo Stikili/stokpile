@@ -85,16 +85,30 @@ export interface Payout {
   groupId: string;
   recipientEmail: string;
   amount: number;
-  status: 'scheduled' | 'completed' | 'cancelled';
+  status: 'scheduled' | 'processing' | 'awaiting_confirmation' | 'completed' | 'disputed' | 'cancelled';
   scheduledDate: string;
   completedAt?: string;
   referenceNumber?: string;
+  proofUrl?: string | null;
+  proofUploadedAt?: string;
+  confirmedByRecipient?: boolean;
+  confirmedAt?: string;
+  disputeReason?: string;
+  paymentMethod?: 'eft' | 'cash' | 'paystack' | 'other';
   createdAt: string;
   recipient?: {
     fullName: string;
     surname: string;
     profilePictureUrl?: string | null;
   };
+}
+
+export interface BankDetails {
+  bankName: string;
+  accountNumber: string;
+  branchCode: string;
+  accountType: 'savings' | 'current' | 'transmission';
+  accountHolder?: string;
 }
 
 // === Meetings ===

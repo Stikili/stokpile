@@ -652,7 +652,7 @@ export default function App() {
                       {selectedGroup.payoutsAllowed && (
                         <TabsContent value="payouts" className="space-y-3">
                           <ContextualTips context="payouts" isAdmin={isAdmin} hasData onAction={handleQuickAction} />
-                          <PayoutsView groupId={selectedGroup.id} isAdmin={isAdmin} />
+                          <PayoutsView groupId={selectedGroup.id} isAdmin={isAdmin} userEmail={session.user.email} />
                         </TabsContent>
                       )}
 
