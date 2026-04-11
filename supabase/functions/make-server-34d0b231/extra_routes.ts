@@ -1008,7 +1008,7 @@ export function registerExtraRoutes(
   // SUBSCRIPTION
   // ────────────────────────────────────────────────────────────
 
-  app.get(`/groups/:groupId/subscription`, async (c: any) => {
+  app.get(`${PREFIX}/groups/:groupId/subscription`, async (c: any) => {
     try {
       const user = await requireUser(c);
       const groupId = c.req.param('groupId');
@@ -1066,7 +1066,7 @@ export function registerExtraRoutes(
     } catch (err: any) { return handleError(c, err); }
   });
 
-  app.post(`/groups/:groupId/subscription`, async (c: any) => {
+  app.post(`${PREFIX}/groups/:groupId/subscription`, async (c: any) => {
     try {
       const user = await requireUser(c);
       const groupId = c.req.param('groupId');
@@ -1109,7 +1109,7 @@ export function registerExtraRoutes(
   // BILLING (Paystack)
   // ────────────────────────────────────────────────────────────
 
-  app.post(`/billing/initialize`, async (c: any) => {
+  app.post(`${PREFIX}/billing/initialize`, async (c: any) => {
     try {
       const user = await requireUser(c);
       const { groupId, tier, email } = await c.req.json();
@@ -1155,7 +1155,7 @@ export function registerExtraRoutes(
     } catch (err: any) { return handleError(c, err); }
   });
 
-  app.post(`/billing/webhook/paystack`, async (c: any) => {
+  app.post(`${PREFIX}/billing/webhook/paystack`, async (c: any) => {
     try {
       const paystackSecretKey = Deno.env.get('PAYSTACK_SECRET_KEY');
       if (!paystackSecretKey) return c.json({ error: 'Not configured' }, 503);
@@ -1264,7 +1264,7 @@ export function registerExtraRoutes(
     } catch (err: any) { return handleError(c, err); }
   });
 
-  app.post(`/billing/cancel`, async (c: any) => {
+  app.post(`${PREFIX}/billing/cancel`, async (c: any) => {
     try {
       const user = await requireUser(c);
       const { groupId } = await c.req.json();
@@ -1312,7 +1312,7 @@ export function registerExtraRoutes(
   // ACCOUNT DELETION
   // ────────────────────────────────────────────────────────────
 
-  app.delete(`/account`, async (c: any) => {
+  app.delete(`${PREFIX}/account`, async (c: any) => {
     try {
       const user = await requireUser(c);
       const deletedCount: Record<string, number> = {};
