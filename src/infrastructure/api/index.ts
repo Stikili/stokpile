@@ -474,6 +474,10 @@ export const api = {
   deleteAccount: () =>
     request<{ message: string; deletedCount: Record<string, number> }>("/account", { method: "DELETE" }),
 
+  // Demo group
+  createDemoGroup: () =>
+    request<{ group: any; alreadyExisted: boolean }>("/demo-group", { method: "POST" }),
+
   // Member data export (POPIA portability)
   exportMyData: () =>
     request<{ profile: any; groups: any[]; contributions: any[]; payouts: any[]; meetings: any[] }>("/me/export"),

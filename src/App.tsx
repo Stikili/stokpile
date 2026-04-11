@@ -453,6 +453,21 @@ export default function App() {
                       Create your first group or join an existing one to get started.
                     </p>
                     <GroupActionsButtons onSuccess={refreshGroups} />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-3 text-xs text-muted-foreground"
+                      onClick={async () => {
+                        try {
+                          await api.createDemoGroup();
+                          refreshGroups();
+                        } catch {
+                          // silently fail
+                        }
+                      }}
+                    >
+                      or try the demo group
+                    </Button>
                   </div>
                 </div>
               ) : (

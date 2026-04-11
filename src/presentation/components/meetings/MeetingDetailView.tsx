@@ -28,6 +28,7 @@ import { UserAvatar } from '@/presentation/components/profile/UserAvatar';
 import { VotingView } from '@/presentation/components/voting/VotingView';
 import { NotesView } from '@/presentation/components/notes/NotesView';
 import { ChatView } from '@/presentation/components/chat/ChatView';
+import { VoiceNoteRecorder } from '@/presentation/components/meetings/VoiceNoteRecorder';
 import { AttendanceRegister } from '@/presentation/components/meetings/AttendanceRegister';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
@@ -202,6 +203,7 @@ export function MeetingDetailView({ meeting, groupId, isAdmin, userEmail, onBack
             groupId={groupId}
             members={members}
             userEmail={userEmail}
+            isAdmin={isAdmin}
           />
         </TabsContent>
 
@@ -344,9 +346,10 @@ interface MeetingDetailsTabProps {
   groupId: string;
   members: Member[];
   userEmail: string;
+  isAdmin: boolean;
 }
 
-function MeetingDetailsTab({ meeting, groupId, members, userEmail }: MeetingDetailsTabProps) {
+function MeetingDetailsTab({ meeting, groupId, members, userEmail, isAdmin }: MeetingDetailsTabProps) {
   const [votes, setVotes] = useState<Vote[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -445,6 +448,14 @@ function MeetingDetailsTab({ meeting, groupId, members, userEmail }: MeetingDeta
               <div className="p-4 bg-muted rounded-lg">
                 <p className="whitespace-pre-wrap">{meeting.agenda}</p>
               </div>
+            </div>
+          )}
+
+          {/* Voice Note — admin can record, all members can play */}
+          {isAdmin && (
+            <div>
+              <div className="text-sm text-muted-foreground mb-2">Voice Note</div>
+              <VoiceNoteRecorder meetingId={meeting.id} />
             </div>
           )}
         </CardContent>

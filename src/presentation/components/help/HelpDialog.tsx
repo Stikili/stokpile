@@ -92,7 +92,8 @@ export function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
             </a>
           </Button>
           <Button variant="outline" size="sm" className="flex-1" asChild>
-            <a href="https://wa.me/27000000000" target="_blank" rel="noopener noreferrer">
+            {/* TODO: Replace with your real WhatsApp Business number */}
+            <a href="https://wa.me/27XXXXXXXXX" target="_blank" rel="noopener noreferrer">
               <MessageCircle className="h-4 w-4 mr-2" />WhatsApp
             </a>
           </Button>
