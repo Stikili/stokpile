@@ -3,6 +3,7 @@ import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
 import { createClient } from "jsr:@supabase/supabase-js@2.49.8";
 import * as kv from "./kv_store.tsx";
+import { backfillAll } from "./003_backfill_from_kv.ts";
 
 const app = new Hono();
 
@@ -6244,6 +6245,22 @@ app.post('/groups/:groupId/subscription', requireAuth, async (c) => {
     };
     await kv.set(`subscription:${groupId}`, updated);
     return c.json(updated);
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// ═══ TEMPORARY: KV → Postgres backfill endpoint ═══
+// Remove this after running once successfully.
+app.post('/make-server-34d0b231/admin/backfill', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user } } = await supabaseAdmin.auth.getUser(accessToken);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+    if (user.email !== 'sbutikili@gmail.com') return c.json({ error: 'Forbidden' }, 403);
+
+    const result = await backfillAll(kv);
+    return c.json({ success: true, ...result });
   } catch (error) {
     return c.json({ error: error.message }, 500);
   }
