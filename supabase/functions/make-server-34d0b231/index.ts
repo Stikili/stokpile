@@ -3,6 +3,7 @@ import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
 import { createClient } from "jsr:@supabase/supabase-js@2.49.8";
 import * as kv from "./kv_store.tsx";
+import { registerExtraRoutes } from "./extra_routes.ts";
 
 const app = new Hono();
 
@@ -2465,4 +2466,9 @@ app.post('/make-server-34d0b231/admin/backfill', async (c) => {
 REMOVED — end of backfill endpoint */
 
 // ============================================================
+// Register extra routes (announcements, notifications, proofs,
+// billing, subscriptions, referrals, sessions, RSVP, etc.)
+// ============================================================
+registerExtraRoutes(app, supabaseAdmin, getAuthUser, getMembership);
+
 Deno.serve(app.fetch);
