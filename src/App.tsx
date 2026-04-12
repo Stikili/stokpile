@@ -3,6 +3,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/application/queryClient";
 import { AuthForm } from "@/presentation/components/auth/AuthForm";
 const LandingPage = lazy(() => import("@/presentation/components/landing/LandingPage").then(m => ({ default: m.LandingPage })));
+import { PullToRefresh } from "@/presentation/shared/PullToRefresh";
 import { GroupSelector } from "@/presentation/components/groups/GroupSelector";
 import { JoinRequestsView } from "@/presentation/components/members/JoinRequestsView";
 
@@ -301,6 +302,7 @@ export default function App() {
         <LiteModeProvider>
         <SubscriptionProvider groupId={selectedGroup?.id ?? null}>
         <TooltipProvider>
+          <PullToRefresh>
           <div className="min-h-screen bg-gradient-to-br from-slate-50/80 to-blue-50/30 dark:bg-transparent dark:bg-none dark:from-transparent dark:to-transparent">
             {/* Skip to main content for accessibility */}
             <a
@@ -756,6 +758,7 @@ export default function App() {
               />
             </div>
           </div>
+          </PullToRefresh>
         </TooltipProvider>
         </SubscriptionProvider>
         </LiteModeProvider>

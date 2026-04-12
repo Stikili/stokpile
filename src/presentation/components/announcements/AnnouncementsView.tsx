@@ -176,7 +176,18 @@ export function AnnouncementsView({ groupId, isAdmin }: AnnouncementsViewProps) 
       </CardHeader>
       <CardContent>
         {loading ? (
-          <div className="text-center py-8 text-muted-foreground text-sm">Loading announcements...</div>
+          <div className="space-y-3">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="rounded-lg border p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-24 bg-muted animate-pulse rounded" />
+                  <div className="h-4 w-16 bg-muted animate-pulse rounded" />
+                </div>
+                <div className="h-3 w-3/4 bg-muted animate-pulse rounded" />
+                <div className="h-3 w-1/2 bg-muted animate-pulse rounded" />
+              </div>
+            ))}
+          </div>
         ) : announcements.length === 0 ? (
           <EmptyState
             icon={Megaphone}
