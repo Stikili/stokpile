@@ -61,3 +61,24 @@ jobs:
         with:
           name: playwright-results
           path: test-results/
+
+  deploy-edge-function:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install Supabase CLI
+        run: npm install -g supabase
+
+      - name: Deploy Edge Function
+        run: supabase functions deploy make-server-34d0b231 --no-verify-jwt --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

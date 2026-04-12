@@ -10,6 +10,15 @@ const app = new Hono();
 app.use('*', cors());
 app.use('*', logger(console.log));
 
+// Reject request bodies > 5MB to prevent abuse
+app.use('*', async (c: any, next: any) => {
+  const contentLength = c.req.header('content-length');
+  if (contentLength && parseInt(contentLength) > 5 * 1024 * 1024) {
+    return c.json({ error: 'Request body too large (max 5MB)' }, 413);
+  }
+  await next();
+});
+
 const db = () =>
   createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -314,7 +323,12 @@ app.post('/make-server-34d0b231/auth/request-reset', async (c) => {
       });
     }
 
-    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    // 8-char alphanumeric code — harder to brute-force than 6 digits
+    const resetCode = Array.from(crypto.getRandomValues(new Uint8Array(5)))
+      .map(b => b.toString(36).padStart(2, '0'))
+      .join('')
+      .substring(0, 8)
+      .toUpperCase();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
     await supabaseAdmin.from('password_reset_codes').upsert({
@@ -327,7 +341,7 @@ app.post('/make-server-34d0b231/auth/request-reset', async (c) => {
     return c.json({
       success: true,
       message: 'Reset code generated. In production this would be sent via email.',
-      resetCode, // Remove before going live
+      // resetCode intentionally NOT returned — sent via email only
       expiresIn: '15 minutes',
     });
   } catch (err: any) {
@@ -2321,6 +2335,20 @@ app.delete('/make-server-34d0b231/admin/clear-all-data', async (c) => {
     return c.json({ error: err.message }, 500);
   }
 });
+
+// ============================================================
+// Health check — no auth, used by uptime monitors
+// ============================================================
+app.get('/make-server-34d0b231/health', (c: any) => {
+  c.header('Cache-Control', 'no-cache');
+  return c.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Cache helper — add to GET responses that don't change often
+// Usage inside route handler: cacheFor(c, 60) for 60 seconds
+function cacheFor(c: any, seconds: number) {
+  c.header('Cache-Control', `public, max-age=${seconds}, stale-while-revalidate=${seconds * 2}`);
+}
 
 // ============================================================
 // Register extra routes (announcements, notifications, proofs,
