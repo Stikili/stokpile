@@ -1173,6 +1173,25 @@ export function registerExtraRoutes(
       if (hex !== signature) return c.json({ error: 'Invalid signature' }, 401);
 
       const event = JSON.parse(rawBody);
+
+      // Idempotency: skip already-processed webhook events
+      const eventId = event.data?.id?.toString() || event.data?.reference || '';
+      if (eventId) {
+        const { data: existing } = await supabaseAdmin
+          .from('processed_webhooks')
+          .select('id')
+          .eq('provider', 'paystack')
+          .eq('event_id', eventId)
+          .maybeSingle();
+        if (existing) return c.json({ received: true, duplicate: true });
+
+        await supabaseAdmin.from('processed_webhooks').insert({
+          provider: 'paystack',
+          event_id: eventId,
+          event_type: event.event,
+        }).catch(() => {}); // ignore duplicate insert race
+      }
+
       const { groupId, tier } = event.data?.metadata || {};
 
       // charge.success — upgrade subscription
@@ -1701,6 +1720,76 @@ export function registerExtraRoutes(
       }, { onConflict: 'user_email' });
 
       return c.json({ success: true });
+    } catch (err: any) { return handleError(c, err); }
+  });
+
+  // ────────────────────────────────────────────────────────────
+  // Reconciliation — compare Paystack transactions with contributions
+  // ────────────────────────────────────────────────────────────
+
+  app.post(`${PREFIX}/admin/reconcile`, async (c: any) => {
+    try {
+      const user = await requireUser(c);
+      // Admin-only
+      if (user.email !== (Deno.env.get('ADMIN_EMAIL') || '')) {
+        return c.json({ error: 'Forbidden' }, 403);
+      }
+
+      const paystackSecretKey = Deno.env.get('PAYSTACK_SECRET_KEY');
+      if (!paystackSecretKey) return c.json({ error: 'Paystack not configured' }, 503);
+
+      // Fetch last 100 Paystack transactions
+      const res = await fetch('https://api.paystack.co/transaction?perPage=100&status=success', {
+        headers: { Authorization: `Bearer ${paystackSecretKey}` },
+      });
+      const { data: transactions } = await res.json();
+
+      // Get all paid contributions with Paystack references
+      const { data: contributions } = await supabaseAdmin
+        .from('contributions')
+        .select('id, amount, paystack_ref, user_email, date')
+        .eq('paid', true)
+        .not('paystack_ref', 'is', null);
+
+      const contribRefs = new Set((contributions || []).map((c: any) => c.paystack_ref));
+      const discrepancies: any[] = [];
+      let matched = 0;
+      let unmatched = 0;
+
+      for (const tx of (transactions || [])) {
+        if (contribRefs.has(tx.reference)) {
+          matched++;
+        } else {
+          unmatched++;
+          discrepancies.push({
+            reference: tx.reference,
+            amount: tx.amount / 100,
+            email: tx.customer?.email,
+            date: tx.paid_at,
+            issue: 'In Paystack but not matched to a contribution',
+          });
+        }
+      }
+
+      // Log the reconciliation
+      const today = new Date().toISOString().slice(0, 10);
+      await supabaseAdmin.from('reconciliation_log').insert({
+        run_date: today,
+        provider: 'paystack',
+        total_provider: (transactions || []).length,
+        total_matched: matched,
+        total_unmatched: unmatched,
+        discrepancies: discrepancies.slice(0, 50),
+        status: 'completed',
+      });
+
+      return c.json({
+        runDate: today,
+        totalProvider: (transactions || []).length,
+        matched,
+        unmatched,
+        discrepancies: discrepancies.slice(0, 20),
+      });
     } catch (err: any) { return handleError(c, err); }
   });
 }

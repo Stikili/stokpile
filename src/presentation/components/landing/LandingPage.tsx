@@ -143,7 +143,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
               <Shield className="h-3 w-3 text-primary" />POPIA
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border text-xs text-muted-foreground">
-              <Globe className="h-3 w-3 text-primary" />9 languages
+              <Globe className="h-3 w-3 text-primary" />19 countries
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border text-xs text-muted-foreground">
               <Sparkles className="h-3 w-3 text-primary" />Offline
@@ -438,7 +438,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
           </div>
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border">
             <Globe className="h-3.5 w-3.5" />
-            9 languages
+            19 countries
           </div>
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border">
             <Sparkles className="h-3.5 w-3.5" />

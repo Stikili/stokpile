@@ -253,12 +253,14 @@ app.post('/make-server-34d0b231/signup', async (c) => {
 
     if (error) return c.json({ error: error.message }, 400);
 
-    // Upsert profile row
+    // Upsert profile row with terms acceptance
     await supabaseAdmin.from('profiles').upsert({
       email,
       full_name: fullName,
       surname,
       country,
+      terms_version: '2026-04-01',
+      terms_accepted_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
     }, { onConflict: 'email' });
 
