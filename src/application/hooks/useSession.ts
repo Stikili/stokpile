@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { api, getAccessToken, setAccessToken } from "@/infrastructure/api";
+import { setSupabaseSession } from "@/infrastructure/supabase/client";
 import { toast } from "sonner";
 import type { Session } from "@/domain/types";
 
@@ -62,6 +63,7 @@ export function useSession() {
         const data = await api.getSession();
         if (data?.session) {
           setSession(data.session as Session);
+          setSupabaseSession(token).catch(() => {}); // Enable direct Supabase reads
           resetSessionTimer();
         } else {
           setAccessToken(null);

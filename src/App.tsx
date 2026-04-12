@@ -1,6 +1,8 @@
 import { useState, useCallback, lazy, Suspense, useEffect } from "react";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "@/application/queryClient";
 import { AuthForm } from "@/presentation/components/auth/AuthForm";
-import { LandingPage } from "@/presentation/components/landing/LandingPage";
+const LandingPage = lazy(() => import("@/presentation/components/landing/LandingPage").then(m => ({ default: m.LandingPage })));
 import { GroupSelector } from "@/presentation/components/groups/GroupSelector";
 import { JoinRequestsView } from "@/presentation/components/members/JoinRequestsView";
 
@@ -269,7 +271,9 @@ export default function App() {
       <ThemeProvider>
         <LanguageProvider>
           <TooltipProvider>
-            <LandingPage onGetStarted={() => setShowAuthFromLanding(true)} />
+            <Suspense fallback={<div className="min-h-screen" />}>
+              <LandingPage onGetStarted={() => setShowAuthFromLanding(true)} />
+            </Suspense>
             <Toaster />
           </TooltipProvider>
         </LanguageProvider>
@@ -291,6 +295,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <LanguageProvider>
         <LiteModeProvider>
@@ -756,6 +761,7 @@ export default function App() {
         </LiteModeProvider>
         </LanguageProvider>
       </ThemeProvider>
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 }
