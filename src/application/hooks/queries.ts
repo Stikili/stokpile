@@ -43,10 +43,15 @@ export const queryKeys = {
 
 // ─── Read hooks ──────────────────────────────────────────────────────────
 
+// ─── Static / rarely-changing data (long cache) ─────────────────────────
+// These change at most a few times per month. Cache aggressively.
+
 export function useGroups() {
   return useQuery({
     queryKey: queryKeys.groups(),
     queryFn: () => api.getGroups(),
+    staleTime: 5 * 60_000,       // 5 min — group list rarely changes
+    gcTime: 30 * 60_000,         // keep 30 min
   });
 }
 
@@ -55,38 +60,8 @@ export function useMembers(groupId: string | undefined) {
     queryKey: queryKeys.members(groupId!),
     queryFn: () => api.getMembers(groupId!),
     enabled: !!groupId,
-  });
-}
-
-export function useContributions(groupId: string | undefined) {
-  return useQuery({
-    queryKey: queryKeys.contributions(groupId!),
-    queryFn: () => api.getContributions(groupId!),
-    enabled: !!groupId,
-  });
-}
-
-export function usePayouts(groupId: string | undefined) {
-  return useQuery({
-    queryKey: queryKeys.payouts(groupId!),
-    queryFn: () => api.getPayouts(groupId!),
-    enabled: !!groupId,
-  });
-}
-
-export function useMeetings(groupId: string | undefined) {
-  return useQuery({
-    queryKey: queryKeys.meetings(groupId!),
-    queryFn: () => api.getMeetings(groupId!),
-    enabled: !!groupId,
-  });
-}
-
-export function useAnnouncements(groupId: string | undefined) {
-  return useQuery({
-    queryKey: queryKeys.announcements(groupId!),
-    queryFn: () => api.getAnnouncements(groupId!),
-    enabled: !!groupId,
+    staleTime: 5 * 60_000,       // members change rarely
+    gcTime: 30 * 60_000,
   });
 }
 
@@ -95,25 +70,35 @@ export function useSubscription(groupId: string | undefined) {
     queryKey: queryKeys.subscription(groupId!),
     queryFn: () => api.getSubscription(groupId!),
     enabled: !!groupId,
-    staleTime: 5 * 60_000, // Subscription changes rarely — cache for 5 min
+    staleTime: 10 * 60_000,      // 10 min — almost never changes
+    gcTime: 60 * 60_000,
   });
 }
 
-export function useNotifications(groupId: string | undefined, userEmail: string | undefined) {
+export function useProfile() {
   return useQuery({
-    queryKey: queryKeys.notifications(),
-    queryFn: () => api.getNotifications(groupId!, userEmail!),
-    enabled: !!groupId && !!userEmail,
-    refetchInterval: 60_000, // Poll every 60s
+    queryKey: queryKeys.profile(),
+    queryFn: () => api.getProfile(),
+    staleTime: 10 * 60_000,      // profile changes very rarely
+    gcTime: 60 * 60_000,
   });
 }
 
-export function useLeaderboard(groupId: string | undefined) {
+export function useReferral() {
   return useQuery({
-    queryKey: queryKeys.leaderboard(groupId!),
-    queryFn: () => api.getLeaderboard(groupId!),
-    enabled: !!groupId,
-    staleTime: 5 * 60_000, // Changes slowly
+    queryKey: queryKeys.referral(),
+    queryFn: () => api.getReferral(),
+    staleTime: 10 * 60_000,
+    gcTime: 60 * 60_000,
+  });
+}
+
+export function useBankDetails() {
+  return useQuery({
+    queryKey: queryKeys.bankDetails(),
+    queryFn: () => api.getBankDetails(),
+    staleTime: 10 * 60_000,
+    gcTime: 60 * 60_000,
   });
 }
 
@@ -122,6 +107,18 @@ export function useRotation(groupId: string | undefined) {
     queryKey: queryKeys.rotation(groupId!),
     queryFn: () => api.getRotationOrder(groupId!),
     enabled: !!groupId,
+    staleTime: 5 * 60_000,       // rotation order changes monthly
+    gcTime: 30 * 60_000,
+  });
+}
+
+export function useLeaderboard(groupId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.leaderboard(groupId!),
+    queryFn: () => api.getLeaderboard(groupId!),
+    enabled: !!groupId,
+    staleTime: 10 * 60_000,      // daily-refresh materialized view
+    gcTime: 30 * 60_000,
   });
 }
 
@@ -129,27 +126,57 @@ export function useSessions() {
   return useQuery({
     queryKey: queryKeys.sessions(),
     queryFn: () => api.getSessions(),
+    staleTime: 5 * 60_000,       // sessions don't change often
+    gcTime: 30 * 60_000,
   });
 }
 
-export function useProfile() {
+// ─── Dynamic data (short cache, refetch often) ──────────────────────────
+// These change when users interact. Keep staleTime short.
+
+export function useContributions(groupId: string | undefined) {
   return useQuery({
-    queryKey: queryKeys.profile(),
-    queryFn: () => api.getProfile(),
+    queryKey: queryKeys.contributions(groupId!),
+    queryFn: () => api.getContributions(groupId!),
+    enabled: !!groupId,
+    staleTime: 30_000,           // 30s — changes when members pay
   });
 }
 
-export function useReferral() {
+export function usePayouts(groupId: string | undefined) {
   return useQuery({
-    queryKey: queryKeys.referral(),
-    queryFn: () => api.getReferral(),
+    queryKey: queryKeys.payouts(groupId!),
+    queryFn: () => api.getPayouts(groupId!),
+    enabled: !!groupId,
+    staleTime: 30_000,           // 30s — status transitions
   });
 }
 
-export function useBankDetails() {
+export function useMeetings(groupId: string | undefined) {
   return useQuery({
-    queryKey: queryKeys.bankDetails(),
-    queryFn: () => api.getBankDetails(),
+    queryKey: queryKeys.meetings(groupId!),
+    queryFn: () => api.getMeetings(groupId!),
+    enabled: !!groupId,
+    staleTime: 60_000,           // 1 min — meetings scheduled occasionally
+  });
+}
+
+export function useAnnouncements(groupId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.announcements(groupId!),
+    queryFn: () => api.getAnnouncements(groupId!),
+    enabled: !!groupId,
+    staleTime: 60_000,           // 1 min
+  });
+}
+
+export function useNotifications(groupId: string | undefined, userEmail: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.notifications(),
+    queryFn: () => api.getNotifications(groupId!, userEmail!),
+    enabled: !!groupId && !!userEmail,
+    staleTime: 30_000,           // 30s — want to see new ones quickly
+    refetchInterval: 60_000,     // poll every 60s
   });
 }
 
