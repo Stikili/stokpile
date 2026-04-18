@@ -4,6 +4,8 @@ import { queryClient } from "@/application/queryClient";
 import { AuthForm } from "@/presentation/components/auth/AuthForm";
 const LandingPage = lazy(() => import("@/presentation/components/landing/LandingPage").then(m => ({ default: m.LandingPage })));
 import { PullToRefresh } from "@/presentation/shared/PullToRefresh";
+import { DemoGroupAutoCreate } from "@/presentation/components/groups/DemoGroupAutoCreate";
+import { DemoBanner } from "@/presentation/components/groups/DemoBanner";
 import { GroupSelector } from "@/presentation/components/groups/GroupSelector";
 import { JoinRequestsView } from "@/presentation/components/members/JoinRequestsView";
 
@@ -439,6 +441,9 @@ export default function App() {
 
             {/* Main Content */}
             <main id="main-content" role="main" className="max-w-7xl mx-auto px-4 py-3 pb-20 lg:pb-3">
+              {selectedGroup && (selectedGroup as any).isDemo && (
+                <DemoBanner groupId={selectedGroup.id} onDeleted={refreshGroups} />
+              )}
               {selectedGroup && (
                 <SubscriptionBanner onUpgradeClick={() => setShowUpgradeDialog(true)} />
               )}
@@ -452,31 +457,11 @@ export default function App() {
                   <LoadingProgress message="Loading group..." />
                 </div>
               ) : !selectedGroup ? (
-                <div className="text-center py-8 animate-fade-in">
-                  <div className="bg-white dark:bg-card rounded-lg p-6 max-w-md mx-auto shadow-lg border border-border">
-                    <Users className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
-                    <h2 className="text-lg mb-1.5">No Groups Yet</h2>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Create your first group or join an existing one to get started.
-                    </p>
-                    <GroupActionsButtons onSuccess={refreshGroups} />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="mt-3 text-xs text-muted-foreground"
-                      onClick={async () => {
-                        try {
-                          await api.createDemoGroup();
-                          refreshGroups();
-                        } catch {
-                          // silently fail
-                        }
-                      }}
-                    >
-                      or try the demo group
-                    </Button>
-                  </div>
-                </div>
+                <DemoGroupAutoCreate
+                  groups={groups}
+                  groupsLoading={groupsLoading}
+                  onCreated={refreshGroups}
+                />
               ) : (
                 <div className="animate-slide-up">
                   <Tabs value={activeTab} onValueChange={setActiveTab}>

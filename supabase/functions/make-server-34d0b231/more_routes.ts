@@ -1146,99 +1146,311 @@ export function registerMoreRoutes(
     try {
       const user = await requireUser(c);
 
-      const groupId = crypto.randomUUID();
-      const now = new Date().toISOString();
+      // Idempotent — if user already has a demo group, return it
+      const { data: existingDemo } = await supabaseAdmin
+        .from('groups')
+        .select('id, name')
+        .eq('created_by', user.email)
+        .eq('is_demo', true)
+        .maybeSingle();
+      if (existingDemo) {
+        return c.json({ groupId: existingDemo.id, groupName: existingDemo.name, alreadyExisted: true });
+      }
 
-      // Create demo group
+      const groupId = crypto.randomUUID();
+      const groupCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+      const now = new Date();
+
+      // Helper: date N months ago
+      const monthsAgo = (n: number) => {
+        const d = new Date(now);
+        d.setMonth(d.getMonth() - n);
+        return d;
+      };
+      const daysFromNow = (n: number) => {
+        const d = new Date(now);
+        d.setDate(d.getDate() + n);
+        return d;
+      };
+
+      // ─── 1. Create the group ─────────────────────────────────────
       await supabaseAdmin.from('groups').insert({
         id: groupId,
-        name: 'Demo Stokvel Group',
-        description: 'A sample group to explore Stokpile features',
-        contribution_target: 500,
-        currency: 'ZAR',
+        name: 'Stokpile Demo Group',
+        description: 'A sample rotating stokvel with 6 months of realistic data. Explore every feature — contributions, payouts, meetings, rotation, and more.',
+        group_code: groupCode,
+        is_public: false,
+        payouts_allowed: true,
+        group_type: 'rotating',
         contribution_frequency: 'monthly',
+        contribution_target: 500,
+        contribution_target_annual: 6000,
+        archived: false,
+        is_demo: true,
+        admin1: user.email,
         created_by: user.email,
-        created_at: now,
+        created_at: monthsAgo(6).toISOString(),
       });
 
-      // Add the user as admin
+      // ─── 2. Members ──────────────────────────────────────────────
+      const fakeMembers = [
+        { email: 'thandi.demo@stokpile.app', fullName: 'Thandi', surname: 'Mokoena' },
+        { email: 'sipho.demo@stokpile.app', fullName: 'Sipho', surname: 'Dlamini' },
+        { email: 'precious.demo@stokpile.app', fullName: 'Precious', surname: 'Khumalo' },
+        { email: 'kagiso.demo@stokpile.app', fullName: 'Kagiso', surname: 'Tladi' },
+      ];
+
+      // Admin membership
       await supabaseAdmin.from('group_memberships').insert({
         id: crypto.randomUUID(),
         group_id: groupId,
         user_email: user.email,
         role: 'admin',
         status: 'approved',
-        joined_at: now,
+        joined_at: monthsAgo(6).toISOString(),
       });
-
-      // Fake members
-      const fakeMembers = [
-        { email: 'thabo.demo@example.com', fullName: 'Thabo', surname: 'Molefe' },
-        { email: 'naledi.demo@example.com', fullName: 'Naledi', surname: 'Dlamini' },
-        { email: 'sipho.demo@example.com', fullName: 'Sipho', surname: 'Nkosi' },
-        { email: 'zanele.demo@example.com', fullName: 'Zanele', surname: 'Khumalo' },
-      ];
 
       for (const fm of fakeMembers) {
         await supabaseAdmin.from('group_memberships').insert({
           id: crypto.randomUUID(),
           group_id: groupId,
           user_email: fm.email,
+          full_name: fm.fullName,
+          surname: fm.surname,
           role: 'member',
           status: 'approved',
-          joined_at: now,
+          joined_at: monthsAgo(6).toISOString(),
         });
       }
 
-      // Fake contributions
-      const allEmails = [user.email, ...fakeMembers.map(fm => fm.email)];
-      for (const email of allEmails) {
-        for (let m = 0; m < 3; m++) {
-          const contribDate = new Date();
-          contribDate.setMonth(contribDate.getMonth() - m);
+      // ─── 3. Contributions (6 months) ─────────────────────────────
+      const allMembers = [
+        { email: user.email, reliable: true },
+        { email: fakeMembers[0].email, reliable: true },   // Thandi: always pays
+        { email: fakeMembers[1].email, reliable: true },   // Sipho: always pays
+        { email: fakeMembers[2].email, reliable: true },   // Precious: mostly pays
+        { email: fakeMembers[3].email, reliable: false },  // Kagiso: inconsistent
+      ];
+
+      for (let month = 5; month >= 0; month--) {
+        const contribDate = monthsAgo(month);
+        for (const member of allMembers) {
+          // Kagiso skips ~40% of months; Precious skips ~10%
+          const paid = member.reliable
+            ? (member.email === fakeMembers[2].email ? Math.random() > 0.1 : true)
+            : Math.random() > 0.4;
+          // Current month: Kagiso hasn't paid yet (for demo effect)
+          const isPaid = month === 0 && !member.reliable ? false : paid;
+
           await supabaseAdmin.from('contributions').insert({
             id: crypto.randomUUID(),
             group_id: groupId,
-            user_email: email,
+            user_email: member.email,
             amount: 500,
-            paid: Math.random() > 0.3,
-            date: contribDate.toISOString(),
+            date: contribDate.toISOString().slice(0, 10),
+            paid: isPaid,
             created_at: contribDate.toISOString(),
           });
         }
       }
 
-      // Demo meeting
-      const meetingDate = new Date();
-      meetingDate.setDate(meetingDate.getDate() + 7);
+      // ─── 4. Payouts ──────────────────────────────────────────────
+      // Completed payout 2 months ago
+      await supabaseAdmin.from('payouts').insert({
+        id: crypto.randomUUID(),
+        group_id: groupId,
+        recipient_email: fakeMembers[0].email,
+        amount: 2500,
+        status: 'completed',
+        scheduled_date: monthsAgo(2).toISOString().slice(0, 10),
+        completed_at: monthsAgo(2).toISOString(),
+        reference_number: 'EFT-DEMO-001',
+        confirmed_by_recipient: true,
+        confirmed_at: monthsAgo(2).toISOString(),
+        payment_method: 'eft',
+        created_at: monthsAgo(2).toISOString(),
+      });
+
+      // Completed payout last month
+      await supabaseAdmin.from('payouts').insert({
+        id: crypto.randomUUID(),
+        group_id: groupId,
+        recipient_email: fakeMembers[1].email,
+        amount: 2500,
+        status: 'completed',
+        scheduled_date: monthsAgo(1).toISOString().slice(0, 10),
+        completed_at: monthsAgo(1).toISOString(),
+        reference_number: 'EFT-DEMO-002',
+        confirmed_by_recipient: true,
+        confirmed_at: monthsAgo(1).toISOString(),
+        payment_method: 'eft',
+        created_at: monthsAgo(1).toISOString(),
+      });
+
+      // Scheduled payout this month (upcoming)
+      await supabaseAdmin.from('payouts').insert({
+        id: crypto.randomUUID(),
+        group_id: groupId,
+        recipient_email: fakeMembers[2].email,
+        amount: 2500,
+        status: 'scheduled',
+        scheduled_date: daysFromNow(5).toISOString().slice(0, 10),
+        created_at: now.toISOString(),
+      });
+
+      // ─── 5. Meetings ─────────────────────────────────────────────
+      // Past meeting (2 months ago) with attendance
+      const pastMeetingId = crypto.randomUUID();
+      await supabaseAdmin.from('meetings').insert({
+        id: pastMeetingId,
+        group_id: groupId,
+        title: 'Monthly check-in — February',
+        date: monthsAgo(2).toISOString().slice(0, 10),
+        time: '18:00',
+        venue: 'Community Hall, Soweto',
+        agenda: '1. Review contributions\\n2. Confirm payout to Thandi\\n3. Discuss late payments\\n4. Set next meeting date',
+        attendance: {
+          [user.email]: true,
+          [fakeMembers[0].email]: true,
+          [fakeMembers[1].email]: true,
+          [fakeMembers[2].email]: true,
+          [fakeMembers[3].email]: false,
+        },
+        created_by: user.email,
+        created_at: monthsAgo(2).toISOString(),
+      });
+
+      // Past meeting (last month)
       await supabaseAdmin.from('meetings').insert({
         id: crypto.randomUUID(),
         group_id: groupId,
-        title: 'Monthly Stokvel Meeting',
-        description: 'Discuss contributions and upcoming payout',
-        date: meetingDate.toISOString(),
-        location: 'Community Hall, Soweto',
+        title: 'Monthly check-in — March',
+        date: monthsAgo(1).toISOString().slice(0, 10),
+        time: '18:00',
+        venue: 'Community Hall, Soweto',
+        agenda: '1. March contributions review\\n2. Sipho payout confirmation\\n3. Constitution update',
+        attendance: {
+          [user.email]: true,
+          [fakeMembers[0].email]: true,
+          [fakeMembers[1].email]: true,
+          [fakeMembers[2].email]: false,
+          [fakeMembers[3].email]: true,
+        },
         created_by: user.email,
-        created_at: now,
+        created_at: monthsAgo(1).toISOString(),
       });
 
-      // Demo announcement
+      // Upcoming meeting (next week)
+      await supabaseAdmin.from('meetings').insert({
+        id: crypto.randomUUID(),
+        group_id: groupId,
+        title: 'Monthly check-in — April',
+        date: daysFromNow(7).toISOString().slice(0, 10),
+        time: '18:00',
+        venue: 'Community Hall, Soweto',
+        agenda: '1. April contributions\\n2. Precious payout schedule\\n3. Kagiso late payment discussion',
+        created_by: user.email,
+        created_at: now.toISOString(),
+      });
+
+      // ─── 6. Announcements ────────────────────────────────────────
       await supabaseAdmin.from('announcements').insert({
         id: crypto.randomUUID(),
         group_id: groupId,
-        title: 'Welcome to the Demo Group!',
-        content: 'This is a sample group to help you explore all Stokpile features. Feel free to click around!',
+        title: 'Welcome to your Demo Group!',
+        content: 'This group has 6 months of sample data so you can explore every feature in Stokpile. Try recording a contribution, scheduling a payout, or creating a meeting. When you\'re ready, create your own group and invite real members.',
         urgent: false,
         pinned: true,
         created_by: user.email,
-        created_at: now,
+        created_at: monthsAgo(6).toISOString(),
       });
+
+      await supabaseAdmin.from('announcements').insert({
+        id: crypto.randomUUID(),
+        group_id: groupId,
+        title: 'Reminder: April contributions due by the 25th',
+        content: 'Please ensure your R500 contribution is paid before the 25th. Late payments may attract a fine as per our constitution.',
+        urgent: true,
+        pinned: false,
+        created_by: user.email,
+        created_at: now.toISOString(),
+      });
+
+      // ─── 7. Rotation order ───────────────────────────────────────
+      await supabaseAdmin.from('rotation_orders').upsert({
+        group_id: groupId,
+        slots: [
+          { email: fakeMembers[0].email, position: 0, fullName: 'Thandi', surname: 'Mokoena', cycleReceived: true },
+          { email: fakeMembers[1].email, position: 1, fullName: 'Sipho', surname: 'Dlamini', cycleReceived: true },
+          { email: fakeMembers[2].email, position: 2, fullName: 'Precious', surname: 'Khumalo', cycleReceived: false },
+          { email: fakeMembers[3].email, position: 3, fullName: 'Kagiso', surname: 'Tladi', cycleReceived: false },
+          { email: user.email, position: 4, cycleReceived: false },
+        ],
+        current_position: 2,
+        current_cycle: 1,
+        updated_at: now.toISOString(),
+      }, { onConflict: 'group_id' });
+
+      // ─── 8. Notes on past meeting ────────────────────────────────
+      await supabaseAdmin.from('notes').insert({
+        id: crypto.randomUUID(),
+        group_id: groupId,
+        meeting_id: pastMeetingId,
+        content: 'Agreed: Kagiso will pay his outstanding R500 by end of week. Constitution to be updated with a R50 late payment fine.',
+        created_by: user.email,
+        created_at: monthsAgo(2).toISOString(),
+      });
+
+      // ─── 9. Vote on past meeting ─────────────────────────────────
+      await supabaseAdmin.from('votes').insert({
+        id: crypto.randomUUID(),
+        group_id: groupId,
+        meeting_id: pastMeetingId,
+        question: 'Should we introduce a R50 fine for late payments?',
+        active: true,
+        created_by: user.email,
+        created_at: monthsAgo(2).toISOString(),
+      });
+
+      // ─── 10. Audit log entries ───────────────────────────────────
+      const auditEntries = [
+        { action: 'group_created', userEmail: user.email, timestamp: monthsAgo(6) },
+        { action: 'member_joined', userEmail: fakeMembers[0].email, timestamp: monthsAgo(6) },
+        { action: 'member_joined', userEmail: fakeMembers[1].email, timestamp: monthsAgo(6) },
+        { action: 'member_joined', userEmail: fakeMembers[2].email, timestamp: monthsAgo(6) },
+        { action: 'member_joined', userEmail: fakeMembers[3].email, timestamp: monthsAgo(6) },
+        { action: 'payout_completed', userEmail: user.email, timestamp: monthsAgo(2) },
+        { action: 'payout_completed', userEmail: user.email, timestamp: monthsAgo(1) },
+        { action: 'announcement_created', userEmail: user.email, timestamp: now },
+      ];
+      for (const entry of auditEntries) {
+        await supabaseAdmin.from('audit_log').insert({
+          id: crypto.randomUUID(),
+          group_id: groupId,
+          user_email: entry.userEmail,
+          action: entry.action,
+          timestamp: entry.timestamp.toISOString(),
+        });
+      }
+
+      // ─── 11. Subscription (trial) ────────────────────────────────
+      const trialEnd = new Date(now);
+      trialEnd.setDate(trialEnd.getDate() + 90);
+      await supabaseAdmin.from('subscriptions').upsert({
+        group_id: groupId,
+        tier: 'trial',
+        trial_started_at: now.toISOString(),
+        trial_ends_at: trialEnd.toISOString(),
+        updated_at: now.toISOString(),
+      }, { onConflict: 'group_id' });
 
       return c.json({
         groupId,
-        groupName: 'Demo Stokvel Group',
+        groupName: 'Stokpile Demo Group',
         memberCount: 5,
-        message: 'Demo group created successfully',
+        monthsOfData: 6,
+        message: 'Demo group created with 6 months of sample data',
+        alreadyExisted: false,
       });
     } catch (err: any) { return handleError(c, err); }
   });
