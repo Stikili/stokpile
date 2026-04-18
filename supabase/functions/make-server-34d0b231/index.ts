@@ -2,6 +2,8 @@ import { Hono } from "npm:hono@4.6.14";
 import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
 import { createClient } from "jsr:@supabase/supabase-js@2.49.8";
+import { Ratelimit } from "npm:@upstash/ratelimit@2.0.5";
+import { Redis } from "npm:@upstash/redis@1.34.3";
 import { registerExtraRoutes } from "./extra_routes.ts";
 import { registerMoreRoutes } from "./more_routes.ts";
 
@@ -19,6 +21,55 @@ app.use('*', async (c: any, next: any) => {
   await next();
 });
 
+// Global rate limit: 100 requests/min per IP (skip health check)
+app.use('*', async (c: any, next: any) => {
+  const path = c.req.path;
+  if (path.endsWith('/health') || path.endsWith('/webhook/paystack') || path.endsWith('/flutterwave/webhook')) {
+    return next(); // Don't rate-limit health checks or webhooks
+  }
+  try {
+    const ip = getClientIp(c);
+    const { success } = await apiLimiter.limit(ip);
+    if (!success) {
+      return c.json({ error: 'Rate limit exceeded. Please slow down.' }, 429);
+    }
+  } catch {
+    // If Redis is down, allow the request (fail-open)
+  }
+  await next();
+});
+
+// ─── Redis rate limiting (Upstash) ───────────────────────────────────────
+const redis = new Redis({
+  url: Deno.env.get('UPSTASH_REDIS_REST_URL')!,
+  token: Deno.env.get('UPSTASH_REDIS_REST_TOKEN')!,
+});
+
+const loginLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(5, '15m'),  // 5 attempts per 15 min per IP
+  prefix: 'rl:login',
+});
+
+const signupLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(3, '1h'),   // 3 signups per hour per IP
+  prefix: 'rl:signup',
+});
+
+const apiLimiter = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(100, '1m'),  // 100 requests/min per IP
+  prefix: 'rl:api',
+});
+
+function getClientIp(c: any): string {
+  return c.req.header('x-forwarded-for')?.split(',')[0]?.trim() ||
+         c.req.header('cf-connecting-ip') ||
+         'unknown';
+}
+
+// ─── Supabase client ─────────────────────────────────────────────────────
 const db = () =>
   createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -242,6 +293,10 @@ async function isGroupNameUnique(name: string, excludeGroupId?: string) {
 
 app.post('/make-server-34d0b231/signup', async (c) => {
   try {
+    const ip = getClientIp(c);
+    const { success } = await signupLimiter.limit(ip);
+    if (!success) return c.json({ error: 'Too many signup attempts. Try again later.' }, 429);
+
     const { email, password, fullName, surname, country } = await c.req.json();
 
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
@@ -273,6 +328,10 @@ app.post('/make-server-34d0b231/signup', async (c) => {
 
 app.post('/make-server-34d0b231/signin', async (c) => {
   try {
+    const ip = getClientIp(c);
+    const { success } = await loginLimiter.limit(ip);
+    if (!success) return c.json({ error: 'Too many login attempts. Try again in 15 minutes.' }, 429);
+
     const { email, password } = await c.req.json();
     const { data, error } = await supabaseAdmin.auth.signInWithPassword({ email, password });
     if (error) return c.json({ error: error.message }, 400);
