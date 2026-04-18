@@ -96,7 +96,7 @@ import { useSession } from "@/application/hooks/useSession";
 import { useGroups } from "@/application/hooks/useGroups";
 import { useInviteToken } from "@/application/hooks/useInviteToken";
 import { api } from "@/infrastructure/api";
-import { exportToCSV, setUserCountry } from "@/lib/export";
+import { exportToCSV, setUserCountry, setGroupCurrency } from "@/lib/export";
 import "@/lib/offlineQueue"; // registers online listener
 import { initAnalytics, track } from "@/lib/analytics";
 
@@ -224,6 +224,12 @@ export default function App() {
     setUserCountry(country);
     if (session?.user) track('login');
   }, [session]);
+
+  // Set group currency when a group is selected — overrides user country for formatting
+  useEffect(() => {
+    setGroupCurrency(selectedGroup?.currency ?? null);
+  }, [selectedGroup?.currency]);
+
   const pendingCounts = usePendingCounts(selectedGroup?.id, isAdmin);
 
   // Handle Paystack billing callback (?billing=success&groupId=xxx)

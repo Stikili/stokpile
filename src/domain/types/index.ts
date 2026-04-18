@@ -35,10 +35,12 @@ export interface Group {
   payoutsAllowed: boolean;
   contributionFrequency?: string;
   groupType?: GroupType;
+  currency?: string;
   contributionTarget?: number | null;
   contributionTargetAnnual?: number | null;
   archived?: boolean;
   archivedAt?: string | null;
+  isDemo?: boolean;
   createdBy: string;
   createdAt: string;
   admin1?: string;

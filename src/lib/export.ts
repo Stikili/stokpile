@@ -48,9 +48,19 @@ export const setUserCountry = (country: string | null | undefined) => {
   CURRENT_COUNTRY = country || null;
 };
 
-import { formatCurrency as localeCurrency, formatDate as localeDate, formatDateTime as localeDateTime } from './locale';
+import { formatCurrency as localeCurrency, formatCurrencyByCode, formatDate as localeDate, formatDateTime as localeDateTime } from './locale';
+
+// Module-level group currency — set when a group is selected so all
+// formatCurrency calls in views use the group's currency, not the user's.
+let GROUP_CURRENCY: string | null = null;
+
+export const setGroupCurrency = (currency: string | null | undefined) => {
+  GROUP_CURRENCY = currency || null;
+};
 
 export const formatCurrency = (amount: number, country?: string | null) => {
+  // Group currency takes precedence over user country
+  if (GROUP_CURRENCY) return formatCurrencyByCode(amount, GROUP_CURRENCY);
   return localeCurrency(amount, country ?? CURRENT_COUNTRY);
 };
 

@@ -117,6 +117,7 @@ function toGroup(row: any, userRole?: string) {
     inviteToken: row.invite_token ?? null,
     inviteTokenCreatedAt: row.invite_token_created_at ?? null,
     groupType: row.group_type ?? 'rotating',
+    currency: row.currency ?? 'ZAR',
     contributionTarget: row.contribution_target ?? null,
     contributionTargetAnnual: row.contribution_target_annual ?? null,
     archived: row.archived ?? false,
@@ -550,7 +551,7 @@ app.post('/make-server-34d0b231/groups', async (c) => {
     const user = await getAuthUser(c);
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
-    const { name, description, contributionFrequency, isPublic } = await c.req.json();
+    const { name, description, contributionFrequency, isPublic, currency, groupType, contributionTarget } = await c.req.json();
 
     if (!(await isGroupNameUnique(name)))
       return c.json({ error: 'A group with this name already exists.' }, 400);
@@ -571,6 +572,9 @@ app.post('/make-server-34d0b231/groups', async (c) => {
         is_public: isPublic ?? false,
         group_code: generateGroupCode(),
         payouts_allowed: true,
+        currency: currency ?? 'ZAR',
+        group_type: groupType ?? 'rotating',
+        contribution_target: contributionTarget ?? null,
         admin1: user.email,
         created_by: user.email,
       })
@@ -690,7 +694,7 @@ app.put('/make-server-34d0b231/groups/:id', async (c) => {
     if (!membership || membership.role !== 'admin')
       return c.json({ error: 'Not authorized – admin only' }, 403);
 
-    const { isPublic, payoutsAllowed, name, description } = await c.req.json();
+    const { isPublic, payoutsAllowed, name, description, currency, contributionTarget } = await c.req.json();
     const updates: Record<string, any> = {
       updated_at: new Date().toISOString(),
       updated_by: user.email,
@@ -705,6 +709,8 @@ app.put('/make-server-34d0b231/groups/:id', async (c) => {
     }
     if (description !== undefined && description !== null)
       updates.description = description.trim();
+    if (currency) updates.currency = currency;
+    if (contributionTarget !== undefined) updates.contribution_target = contributionTarget;
 
     const { data: group, error } = await supabaseAdmin
       .from('groups').update(updates).eq('id', groupId).select().single();

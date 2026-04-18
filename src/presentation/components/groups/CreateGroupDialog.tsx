@@ -26,6 +26,7 @@ export function CreateGroupDialog({ onSuccess, open: controlledOpen, onOpenChang
   const [contributionFrequency, setContributionFrequency] = useState('monthly');
   const [isPublic, setIsPublic] = useState(false);
   const [groupType, setGroupType] = useState('rotating');
+  const [currency, setCurrency] = useState('ZAR');
   const [submitting, setSubmitting] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
 
@@ -47,6 +48,7 @@ export function CreateGroupDialog({ onSuccess, open: controlledOpen, onOpenChang
         contributionFrequency,
         isPublic,
         groupType,
+        currency,
       });
       toast.success(`Group created! Share code: ${result.group.groupCode}`);
       setOpen(false);
@@ -55,6 +57,7 @@ export function CreateGroupDialog({ onSuccess, open: controlledOpen, onOpenChang
       setContributionFrequency('monthly');
       setIsPublic(false);
       setGroupType('rotating');
+      setCurrency('ZAR');
       onSuccess();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to create group');
@@ -186,6 +189,43 @@ export function CreateGroupDialog({ onSuccess, open: controlledOpen, onOpenChang
               {groupType === 'grocery' && 'Members save together to bulk-buy groceries at a discount.'}
               {groupType === 'investment' && 'Members pool money to invest collectively and share returns.'}
               {groupType === 'goal' && 'Save toward a shared goal — school fees, holiday, equipment, or any target amount.'}
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="currency">Group Currency</Label>
+            <Select
+              value={currency}
+              onValueChange={setCurrency}
+              disabled={submitting}
+            >
+              <SelectTrigger id="currency">
+                <SelectValue placeholder="Select currency" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ZAR">ZAR — South African Rand (R)</SelectItem>
+                <SelectItem value="BWP">BWP — Botswana Pula (P)</SelectItem>
+                <SelectItem value="NAD">NAD — Namibian Dollar (N$)</SelectItem>
+                <SelectItem value="SZL">SZL — Swazi Lilangeni (E)</SelectItem>
+                <SelectItem value="LSL">LSL — Lesotho Loti (L)</SelectItem>
+                <SelectItem value="ZWL">ZWL — Zimbabwe Dollar (Z$)</SelectItem>
+                <SelectItem value="ZMW">ZMW — Zambian Kwacha (K)</SelectItem>
+                <SelectItem value="MWK">MWK — Malawian Kwacha (MK)</SelectItem>
+                <SelectItem value="MZN">MZN — Mozambican Metical (MT)</SelectItem>
+                <SelectItem value="AOA">AOA — Angolan Kwanza (Kz)</SelectItem>
+                <SelectItem value="KES">KES — Kenyan Shilling (KSh)</SelectItem>
+                <SelectItem value="NGN">NGN — Nigerian Naira (₦)</SelectItem>
+                <SelectItem value="GHS">GHS — Ghanaian Cedi (GH₵)</SelectItem>
+                <SelectItem value="UGX">UGX — Ugandan Shilling (USh)</SelectItem>
+                <SelectItem value="TZS">TZS — Tanzanian Shilling (TSh)</SelectItem>
+                <SelectItem value="RWF">RWF — Rwandan Franc (RF)</SelectItem>
+                <SelectItem value="CDF">CDF — Congolese Franc (FC)</SelectItem>
+                <SelectItem value="ETB">ETB — Ethiopian Birr (Br)</SelectItem>
+                <SelectItem value="USD">USD — US Dollar ($)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              All amounts in this group will display in this currency
             </p>
           </div>
 

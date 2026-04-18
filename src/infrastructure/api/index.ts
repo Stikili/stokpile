@@ -101,7 +101,7 @@ export const api = {
     request<{ url: string }>("/profile/picture", { method: "POST", body: formData }),
 
   // Groups
-  createGroup: (data: { name: string; description?: string; contributionFrequency?: string; isPublic: boolean; groupType?: string; contributionTarget?: number | null }) =>
+  createGroup: (data: { name: string; description?: string; contributionFrequency?: string; isPublic: boolean; groupType?: string; currency?: string; contributionTarget?: number | null }) =>
     request<{ group: Group; groupCode: string }>("/groups", { method: "POST", body: data }),
 
   getGroups: () =>
@@ -113,7 +113,7 @@ export const api = {
   updateGroupFrequency: (groupId: string, frequency: string) =>
     request<{ message: string }>(`/groups/${groupId}/frequency`, { method: "PUT", body: { frequency } }),
 
-  updateGroup: (id: string, data: { isPublic?: boolean; payoutsAllowed?: boolean; name?: string; description?: string; contributionTarget?: number | null }) =>
+  updateGroup: (id: string, data: { isPublic?: boolean; payoutsAllowed?: boolean; name?: string; description?: string; currency?: string; contributionTarget?: number | null }) =>
     request<{ message: string }>(`/groups/${id}`, { method: "PUT", body: data }),
 
   archiveGroup: (id: string) =>

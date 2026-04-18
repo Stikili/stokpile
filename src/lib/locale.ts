@@ -48,6 +48,22 @@ export function formatCurrency(amount: number, country?: string | null): string 
   }
 }
 
+/**
+ * Format amount using a specific currency code (e.g. 'ZAR', 'KES', 'NGN').
+ * Used when the group has a currency setting that overrides the user's country.
+ */
+export function formatCurrencyByCode(amount: number, currencyCode: string): string {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: currencyCode,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  } catch {
+    return `${currencyCode} ${amount.toFixed(2)}`;
+  }
+}
+
 export function formatNumber(value: number, country?: string | null): string {
   const { locale } = getLocale(country);
   try {
