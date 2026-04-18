@@ -64,6 +64,7 @@ export function useSession() {
         if (data?.session) {
           setSession(data.session as Session);
           setSupabaseSession(token).catch(() => {}); // Enable direct Supabase reads
+          localStorage.setItem('stokpile-has-account', 'true'); // Skip landing on future visits
           resetSessionTimer();
         } else {
           setAccessToken(null);

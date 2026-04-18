@@ -91,6 +91,7 @@ import {
 
 // Keep Keyboard import out — header icon was removed (still accessible via ? shortcut)
 import { Toaster } from "@/presentation/ui/sonner";
+import { enableAutoInvalidation } from "@/infrastructure/api/invalidation";
 import { useSession } from "@/application/hooks/useSession";
 import { useGroups } from "@/application/hooks/useGroups";
 import { useInviteToken } from "@/application/hooks/useInviteToken";
@@ -118,7 +119,11 @@ export default function App() {
   const [showAuthFromLanding, setShowAuthFromLanding] = useState(() => {
     if (typeof window === 'undefined') return false;
     const params = new URLSearchParams(window.location.search);
-    return params.get('signin') === '1' || params.get('ref') !== null;
+    // Skip landing page if: ?signin=1, ?ref=CODE, or user has logged in before
+    return params.get('signin') === '1'
+      || params.get('ref') !== null
+      || sessionStorage.getItem('accessToken') !== null
+      || localStorage.getItem('stokpile-has-account') === 'true';
   });
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
@@ -206,9 +211,10 @@ export default function App() {
   const isAdmin = selectedGroup?.userRole === "admin";
   const unreadAnnouncements = useUnreadAnnouncements(selectedGroup?.id, activeTab);
 
-  // Initialise analytics + error reporting once on mount
+  // Initialise analytics + auto-invalidation once on mount
   useEffect(() => {
     initAnalytics();
+    enableAutoInvalidation();
   }, []);
 
   // Set the user's country once on session load so all formatCurrency/formatDate

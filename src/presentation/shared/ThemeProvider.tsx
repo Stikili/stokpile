@@ -19,28 +19,30 @@ const CYCLE: AppTheme[] = ['navy', 'light'];
 
 function applyTheme(theme: AppTheme) {
   const root = window.document.documentElement;
-  // Remove all theme-related classes (legacy 'theme-aurora' is also stripped
-  // in case a user has an older value persisted in localStorage).
   root.classList.remove('dark', 'light', 'theme-aurora');
-
   if (theme === 'navy') {
     root.classList.add('dark');
   }
-  // 'light' — no dark class, clean :root styles apply
+}
+
+function getStoredTheme(defaultTheme: AppTheme): AppTheme {
+  if (typeof window === 'undefined') return defaultTheme;
+  const stored = localStorage.getItem('stokpile-theme');
+  if (stored === 'aurora') return 'navy';
+  if (stored === 'navy' || stored === 'light') return stored;
+  return defaultTheme;
+}
+
+// Apply theme BEFORE first render to prevent flash
+if (typeof window !== 'undefined') {
+  applyTheme(getStoredTheme('navy'));
 }
 
 export function ThemeProvider({
   children,
   defaultTheme = 'navy',
 }: ThemeProviderProps) {
-  const [theme, setThemeState] = useState<AppTheme>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('stokpile-theme') as AppTheme | 'aurora';
-      if (stored === 'aurora') return 'navy'; // migrate stale aurora users
-      if (stored && CYCLE.includes(stored as AppTheme)) return stored as AppTheme;
-    }
-    return defaultTheme;
-  });
+  const [theme, setThemeState] = useState<AppTheme>(() => getStoredTheme(defaultTheme));
 
   useEffect(() => {
     applyTheme(theme);
