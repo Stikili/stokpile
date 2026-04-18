@@ -10,13 +10,31 @@ export function useGroups(session: Session | null) {
   const [groupsLoading, setGroupsLoading] = useState(false);
   const hasLoadedRef = useRef(false);
 
+  const ensureDemoGroup = async (existingGroups: Group[]) => {
+    // Silently create a demo group if the user doesn't have one
+    const hasDemo = existingGroups.some((g: any) => g.isDemo);
+    if (!hasDemo) {
+      try {
+        await api.createDemoGroup();
+        // Reload groups to include the new demo group
+        const data = await api.getGroups();
+        setGroups(data.groups || []);
+      } catch {
+        // Non-fatal — don't block the user
+      }
+    }
+  };
+
   const loadGroups = async () => {
     if (!session?.user?.id || !getAccessToken()) return;
 
     setGroupsLoading(true);
     try {
       const data = await api.getGroups();
-      setGroups(data.groups || []);
+      const loadedGroups = data.groups || [];
+      setGroups(loadedGroups);
+      // Ensure every user has a demo group (idempotent, runs in background)
+      ensureDemoGroup(loadedGroups);
     } catch (error) {
       console.error("Failed to load groups:", error);
       toast.error("Failed to load groups. Check your connection and try again.");
