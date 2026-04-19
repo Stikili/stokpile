@@ -478,6 +478,7 @@ app.get('/make-server-34d0b231/profile', async (c) => {
       country: profile?.country ?? user.user_metadata?.country ?? null,
       profilePictureUrl:
         profile?.profile_picture_url ?? user.user_metadata?.profilePictureUrl ?? null,
+      phone: profile?.phone ?? user.user_metadata?.phone ?? null,
     });
   } catch (err: any) {
     return c.json({ error: err.message }, 500);
@@ -489,21 +490,23 @@ app.put('/make-server-34d0b231/profile', async (c) => {
     const user = await getAuthUser(c);
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
 
-    const { fullName, surname, profilePictureUrl } = await c.req.json();
+    const { fullName, surname, profilePictureUrl, phone } = await c.req.json();
 
     const { data: updatedUser, error } = await supabaseAdmin.auth.admin.updateUserById(
       user.id,
-      { user_metadata: { ...user.user_metadata, fullName, surname, profilePictureUrl } },
+      { user_metadata: { ...user.user_metadata, fullName, surname, profilePictureUrl, phone } },
     );
     if (error) return c.json({ error: error.message }, 500);
 
-    // Keep profiles table in sync
-    await supabaseAdmin.from('profiles').upsert({
+    // Keep profiles table in sync — only overwrite phone when explicitly provided
+    const profileRow: Record<string, unknown> = {
       email: user.email!,
       full_name: fullName,
       surname,
       profile_picture_url: profilePictureUrl ?? null,
-    }, { onConflict: 'email' });
+    };
+    if (phone !== undefined) profileRow.phone = phone;
+    await supabaseAdmin.from('profiles').upsert(profileRow, { onConflict: 'email' });
 
     return c.json({ success: true, user: updatedUser });
   } catch (err: any) {

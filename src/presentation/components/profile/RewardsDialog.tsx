@@ -46,7 +46,7 @@ const ZAR = (n: number) => `R${n.toFixed(2)}`;
 
 export function RewardsDialog({ open, onOpenChange, onShowReferral, groups }: RewardsDialogProps) {
   const queryClient = useQueryClient();
-  const { data: accountData, isLoading: loadingAccount } = useRewardsAccount();
+  const { data: accountData, isLoading: loadingAccount, error: accountError } = useRewardsAccount();
   const { data: ledgerData } = useRewardsLedger();
   const { data: commissionsData } = useRewardsCommissions();
 
@@ -107,10 +107,27 @@ export function RewardsDialog({ open, onOpenChange, onShowReferral, groups }: Re
           </DialogDescription>
         </DialogHeader>
 
-        {loadingAccount || !account ? (
+        {loadingAccount ? (
           <div className="py-12 flex items-center justify-center text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin mr-2" />
             Loading your rewards...
+          </div>
+        ) : accountError || !account ? (
+          <div className="py-10 px-4 text-center space-y-2">
+            <p className="text-sm font-medium">Couldn't load rewards</p>
+            <p className="text-xs text-muted-foreground">
+              {accountError instanceof Error
+                ? accountError.message
+                : 'The rewards service is not reachable yet. If you just deployed, wait a minute and try again.'}
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => queryClient.invalidateQueries({ queryKey: queryKeys.rewardsAccount() })}
+              className="mt-3"
+            >
+              Retry
+            </Button>
           </div>
         ) : (
           <div className="space-y-5">
