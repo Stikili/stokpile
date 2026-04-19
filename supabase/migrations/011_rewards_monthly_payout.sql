@@ -71,9 +71,9 @@ BEGIN
 
   RETURN QUERY
   SELECT
-    COUNT(*)::int                                AS out_referrers_paid,
-    COALESCE(SUM((c.total_zar * 100)::bigint), 0) AS out_points_awarded,
-    COALESCE(SUM(c.total_zar), 0)                AS out_zar_closed
+    COUNT(*)::int                                         AS out_referrers_paid,
+    COALESCE(SUM((c.total_zar * 100)::bigint), 0)::bigint AS out_points_awarded,
+    COALESCE(SUM(c.total_zar), 0)::numeric                AS out_zar_closed
   FROM closing_summary c;
 END;
 $$;
