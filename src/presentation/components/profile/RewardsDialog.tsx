@@ -169,19 +169,21 @@ export function RewardsDialog({ open, onOpenChange, onShowReferral, groups }: Re
             {/* Stats */}
             <div className="grid grid-cols-3 gap-2">
               <div className="rounded-xl border bg-card p-3">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Available</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Spendable</p>
                 <p className="text-xl font-bold tracking-tight mt-0.5">{account.availablePoints.toLocaleString()}</p>
                 <p className="text-[10px] text-muted-foreground">points</p>
               </div>
               <div className="rounded-xl border bg-card p-3">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Earned</p>
-                <p className="text-xl font-bold tracking-tight mt-0.5">{ZAR(account.lifetimeEarningsZar)}</p>
-                <p className="text-[10px] text-muted-foreground">from referrals</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Pending</p>
+                <p className="text-xl font-bold tracking-tight mt-0.5">{ZAR(account.pendingEarningsZar)}</p>
+                <p className="text-[10px] text-muted-foreground">lands 1st of month</p>
               </div>
               <div className="rounded-xl border bg-card p-3">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Redeemed</p>
-                <p className="text-xl font-bold tracking-tight mt-0.5">{ZAR(account.creditedZar)}</p>
-                <p className="text-[10px] text-muted-foreground">subscription credit</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">All-time</p>
+                <p className="text-xl font-bold tracking-tight mt-0.5">{ZAR(account.lifetimeEarningsZar)}</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {account.creditedZar > 0 ? `${ZAR(account.creditedZar)} redeemed` : 'earned from referrals'}
+                </p>
               </div>
             </div>
 
@@ -342,16 +344,22 @@ export function RewardsDialog({ open, onOpenChange, onShowReferral, groups }: Re
             </Tabs>
 
             {/* How to earn hint */}
-            <div className="rounded-xl border bg-muted/30 p-3 text-[11px] text-muted-foreground">
-              <p className="font-semibold text-foreground mb-1 flex items-center gap-1.5">
-                <TrendingUp className="h-3.5 w-3.5" />
-                How to earn
-              </p>
-              <ul className="space-y-0.5 list-disc list-inside">
-                <li>Paid subscription month: +50 pts</li>
-                <li>Refer a paying group: up to 22% of their subscription for 24 months</li>
-                <li>First-time referral conversion: +300 pts bonus</li>
-              </ul>
+            <div className="rounded-xl border bg-muted/30 p-3 text-[11px] text-muted-foreground space-y-2">
+              <div>
+                <p className="font-semibold text-foreground mb-1 flex items-center gap-1.5">
+                  <TrendingUp className="h-3.5 w-3.5" />
+                  How to earn
+                </p>
+                <ul className="space-y-0.5 list-disc list-inside">
+                  <li>Paid subscription month: +50 pts</li>
+                  <li>Refer a paying group: up to 22% of their subscription for 24 months</li>
+                  <li>First-time referral conversion: +300 pts bonus</li>
+                </ul>
+              </div>
+              <div className="pt-2 border-t">
+                <p className="font-semibold text-foreground mb-1">Monthly payout</p>
+                <p>Referral commissions accrue during the month (shown as Pending ZAR) and convert to spendable points at R1 = 100 pts on the 1st of the next month.</p>
+              </div>
             </div>
           </div>
         )}

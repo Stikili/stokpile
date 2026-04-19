@@ -459,6 +459,14 @@ app.post('/make-server-34d0b231/auth/reset-password', async (c) => {
 // PROFILE ENDPOINTS
 // ============================================================
 
+function isPlatformAdmin(email: string | null | undefined): boolean {
+  if (!email) return false;
+  const raw = typeof Deno !== 'undefined' ? Deno.env.get('PLATFORM_ADMIN_EMAILS') : '';
+  const list = (raw || '')
+    .split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean);
+  return list.includes(email.toLowerCase());
+}
+
 app.get('/make-server-34d0b231/profile', async (c) => {
   try {
     const user = await getAuthUser(c);
@@ -479,6 +487,7 @@ app.get('/make-server-34d0b231/profile', async (c) => {
       profilePictureUrl:
         profile?.profile_picture_url ?? user.user_metadata?.profilePictureUrl ?? null,
       phone: profile?.phone ?? user.user_metadata?.phone ?? null,
+      isPlatformAdmin: isPlatformAdmin(user.email),
     });
   } catch (err: any) {
     return c.json({ error: err.message }, 500);

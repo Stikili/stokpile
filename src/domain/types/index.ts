@@ -21,6 +21,7 @@ export interface Profile {
   country: string;
   profilePictureUrl?: string | null;
   phone?: string | null;
+  isPlatformAdmin?: boolean;
 }
 
 // === Groups ===

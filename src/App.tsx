@@ -17,6 +17,7 @@ const PayoutsView = lazy(() => import("@/presentation/components/payouts/Payouts
 const MeetingsView = lazy(() => import("@/presentation/components/meetings/MeetingsView").then(m => ({ default: m.MeetingsView })));
 const GroupInfoView = lazy(() => import("@/presentation/components/groups/GroupInfoView").then(m => ({ default: m.GroupInfoView })));
 const AuditLogView = lazy(() => import("@/presentation/components/groups/AuditLogView").then(m => ({ default: m.AuditLogView })));
+const RewardsAdminView = lazy(() => import("@/presentation/components/analytics/RewardsAdminView").then(m => ({ default: m.RewardsAdminView })));
 const AnnouncementsView = lazy(() => import("@/presentation/components/announcements/AnnouncementsView").then(m => ({ default: m.AnnouncementsView })));
 const FinancialReportsView = lazy(() => import("@/presentation/components/reports/FinancialReportsView").then(m => ({ default: m.FinancialReportsView })));
 const AnalyticsView = lazy(() => import("@/presentation/components/analytics/AnalyticsView").then(m => ({ default: m.AnalyticsView })));
@@ -723,6 +724,7 @@ export default function App() {
                       {isAdmin && (
                         <TabsContent value="audit" className="space-y-3">
                           <FeatureGate feature="audit" onUpgradeClick={() => setShowUpgradeDialog(true)}>
+                            <RewardsAdminView />
                             <AuditLogView groupId={selectedGroup.id} />
                           </FeatureGate>
                         </TabsContent>

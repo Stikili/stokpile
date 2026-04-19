@@ -578,4 +578,34 @@ export const api = {
       method: "POST",
       body: { groupId, points },
     }),
+
+  getRewardsAdminSummary: () =>
+    request<{
+      summary: {
+        totalAccounts: number;
+        tierCounts: Record<string, number>;
+        totalLifetimeEarningsZar: number;
+        totalPendingZar: number;
+        totalRedeemedZar: number;
+        thisMonth: {
+          accruingTotalZar: number;
+          accruingReferrers: number;
+          accruingCommissions: number;
+          subsCount: number;
+          subsTotalZar: number;
+        };
+        lastClosedMonth: {
+          totalZar: number;
+          referrers: number;
+          commissions: number;
+        };
+        topReferrers: Array<{
+          userId: string;
+          email: string;
+          tier: string;
+          lifetimeEarningsZar: number;
+          lifetimePoints: number;
+        }>;
+      };
+    }>(`/rewards/admin/summary`),
 };

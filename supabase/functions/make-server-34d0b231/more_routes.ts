@@ -1741,4 +1741,111 @@ export function registerMoreRoutes(
     } catch (err: any) { return handleError(c, err); }
   });
 
+  // Platform-admin-only: aggregated rewards analytics
+  function checkPlatformAdmin(email: string | null | undefined): boolean {
+    if (!email) return false;
+    const raw = typeof Deno !== 'undefined' ? Deno.env.get('PLATFORM_ADMIN_EMAILS') : '';
+    const list = (raw || '').split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean);
+    return list.includes(email.toLowerCase());
+  }
+
+  app.get(`${PREFIX}/rewards/admin/summary`, async (c: any) => {
+    try {
+      const user = await requireUser(c);
+      if (!checkPlatformAdmin(user.email)) return c.json({ error: 'Platform admin only' }, 403);
+
+      const monthStart = new Date();
+      monthStart.setUTCDate(1);
+      monthStart.setUTCHours(0, 0, 0, 0);
+      const monthStartIso = monthStart.toISOString().slice(0, 10);
+
+      // 1. Tier distribution
+      const { data: accounts } = await supabaseAdmin
+        .from('rewards_accounts')
+        .select('tier, lifetime_points, lifetime_earnings_zar, pending_earnings_zar, credited_zar');
+      const tierCounts: Record<string, number> = { bronze: 0, silver: 0, gold: 0, platinum: 0 };
+      let totalLifetimeEarnings = 0;
+      let totalPending = 0;
+      let totalRedeemed = 0;
+      for (const a of accounts || []) {
+        tierCounts[a.tier] = (tierCounts[a.tier] || 0) + 1;
+        totalLifetimeEarnings += Number(a.lifetime_earnings_zar || 0);
+        totalPending += Number(a.pending_earnings_zar || 0);
+        totalRedeemed += Number(a.credited_zar || 0);
+      }
+
+      // 2. Top 10 referrers by lifetime earnings
+      const { data: topRaw } = await supabaseAdmin
+        .from('rewards_accounts')
+        .select('user_id, email, tier, lifetime_earnings_zar, lifetime_points')
+        .order('lifetime_earnings_zar', { ascending: false })
+        .limit(10);
+      const top = (topRaw || []).filter((r: any) => Number(r.lifetime_earnings_zar) > 0);
+
+      // 3. This month: accrued commissions (pending = true)
+      const { data: monthAccruing } = await supabaseAdmin
+        .from('rewards_referral_commissions')
+        .select('commission_amount_zar, referrer_id, id')
+        .gte('month', monthStartIso)
+        .eq('paid_out', false);
+      const accruingTotalZar = (monthAccruing || []).reduce(
+        (sum: number, r: any) => sum + Number(r.commission_amount_zar || 0), 0,
+      );
+      const accruingReferrers = new Set((monthAccruing || []).map((r: any) => r.referrer_id)).size;
+
+      // 4. Last closed month
+      const lastMonthStart = new Date(monthStart);
+      lastMonthStart.setUTCMonth(lastMonthStart.getUTCMonth() - 1);
+      const { data: lastClosed } = await supabaseAdmin
+        .from('rewards_referral_commissions')
+        .select('commission_amount_zar, referrer_id')
+        .gte('month', lastMonthStart.toISOString().slice(0, 10))
+        .lt('month', monthStartIso)
+        .eq('paid_out', true);
+      const lastClosedTotalZar = (lastClosed || []).reduce(
+        (sum: number, r: any) => sum + Number(r.commission_amount_zar || 0), 0,
+      );
+      const lastClosedReferrers = new Set((lastClosed || []).map((r: any) => r.referrer_id)).size;
+
+      // 5. Paid subscriptions this month (counts, volume)
+      const { data: subPayments } = await supabaseAdmin
+        .from('subscription_payments')
+        .select('amount_zar, tier')
+        .gte('paid_at', monthStart.toISOString());
+      const subsThisMonthCount = (subPayments || []).length;
+      const subsThisMonthZar = (subPayments || []).reduce(
+        (sum: number, r: any) => sum + Number(r.amount_zar || 0), 0,
+      );
+
+      return c.json({
+        summary: {
+          totalAccounts: (accounts || []).length,
+          tierCounts,
+          totalLifetimeEarningsZar: totalLifetimeEarnings,
+          totalPendingZar: totalPending,
+          totalRedeemedZar: totalRedeemed,
+          thisMonth: {
+            accruingTotalZar,
+            accruingReferrers,
+            accruingCommissions: (monthAccruing || []).length,
+            subsCount: subsThisMonthCount,
+            subsTotalZar: subsThisMonthZar,
+          },
+          lastClosedMonth: {
+            totalZar: lastClosedTotalZar,
+            referrers: lastClosedReferrers,
+            commissions: (lastClosed || []).length,
+          },
+          topReferrers: top.map((r: any) => ({
+            userId: r.user_id,
+            email: r.email,
+            tier: r.tier,
+            lifetimeEarningsZar: Number(r.lifetime_earnings_zar),
+            lifetimePoints: r.lifetime_points,
+          })),
+        },
+      });
+    } catch (err: any) { return handleError(c, err); }
+  });
+
 } // end registerMoreRoutes
