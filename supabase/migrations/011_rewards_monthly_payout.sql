@@ -17,7 +17,7 @@ ALTER TABLE rewards_ledger ADD CONSTRAINT rewards_ledger_event_type_check
   ));
 
 CREATE OR REPLACE FUNCTION rewards_close_month()
-RETURNS TABLE(referrers_paid int, total_points_awarded bigint, total_zar numeric)
+RETURNS TABLE(out_referrers_paid int, out_points_awarded bigint, out_zar_closed numeric)
 LANGUAGE plpgsql
 AS $$
 DECLARE
@@ -50,17 +50,17 @@ BEGIN
   -- Ledger entries for each referrer
   INSERT INTO rewards_ledger (user_id, event_type, points_delta, zar_delta, source_id, metadata)
   SELECT
-    referrer_id,
+    c.referrer_id,
     'monthly_payout',
-    (total_zar * 100)::int,
+    (c.total_zar * 100)::int,
     0,
     month_start::text,
     jsonb_build_object(
       'month',       month_start,
-      'commissions', commission_count,
-      'zar',         total_zar
+      'commissions', c.commission_count,
+      'zar',         c.total_zar
     )
-  FROM closing_summary;
+  FROM closing_summary c;
 
   -- Mark commissions as paid out
   UPDATE rewards_referral_commissions
@@ -71,10 +71,10 @@ BEGIN
 
   RETURN QUERY
   SELECT
-    COUNT(*)::int                      AS referrers_paid,
-    COALESCE(SUM((total_zar * 100)::bigint), 0) AS total_points_awarded,
-    COALESCE(SUM(total_zar), 0)        AS total_zar
-  FROM closing_summary;
+    COUNT(*)::int                                AS out_referrers_paid,
+    COALESCE(SUM((c.total_zar * 100)::bigint), 0) AS out_points_awarded,
+    COALESCE(SUM(c.total_zar), 0)                AS out_zar_closed
+  FROM closing_summary c;
 END;
 $$;
 
