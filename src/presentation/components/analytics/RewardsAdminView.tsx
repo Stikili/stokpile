@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/ui/card';
 import { Badge } from '@/presentation/ui/badge';
-import { Skeleton } from '@/presentation/ui/skeleton';
-import { Trophy, TrendingUp, Users, Coins, Loader2 } from 'lucide-react';
+import { Trophy, TrendingUp, Users, Coins } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 
 type Summary = {
@@ -43,35 +42,19 @@ const ZAR = (n: number) => `R${n.toLocaleString(undefined, { minimumFractionDigi
 
 export function RewardsAdminView() {
   const [summary, setSummary] = useState<Summary | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     api.getRewardsAdminSummary()
-      .then((d) => setSummary(d.summary))
-      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
-      .finally(() => setLoading(false));
+      .then((d) => { if (!cancelled && d?.summary) setSummary(d.summary); })
+      .catch(() => { /* silent — non-admins get 403, anything else is non-fatal */ });
+    return () => { cancelled = true; };
   }, []);
 
-  if (loading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-amber-500" />
-            Rewards — Platform Overview
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-32 w-full" />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error || !summary) {
-    return null; // Fail silently so non-admins don't see broken state
-  }
+  // Render nothing until we have a valid summary. No loading state,
+  // no error state — this is a top-shelf admin widget that appears
+  // only for platform admins.
+  if (!summary || !summary.tierCounts) return null;
 
   return (
     <Card>
