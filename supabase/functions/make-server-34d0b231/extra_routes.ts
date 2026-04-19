@@ -19,6 +19,198 @@ const PLAN_CODES: Record<string, string | undefined> = {
   pro:       typeof Deno !== 'undefined' ? Deno.env.get('PAYSTACK_PRO_PLAN_CODE') : undefined,
 };
 
+// ────────────────────────────────────────────────────────────
+// REWARDS — lifetime loyalty & referral commission accrual
+// Credit-only, no point expiry. Called from Paystack + Flutterwave
+// webhooks on successful subscription charges.
+// ────────────────────────────────────────────────────────────
+const REWARDS_TIER_THRESHOLDS: Array<[string, number]> = [
+  ['platinum', 10000],
+  ['gold',      2000],
+  ['silver',     500],
+  ['bronze',       0],
+];
+const REWARDS_COMMISSION_RATES: Record<string, number> = {
+  platinum: 0.22, gold: 0.20, silver: 0.18, bronze: 0.15,
+};
+const REWARDS_SUBSCRIPTION_MONTH_POINTS = 50;
+const REWARDS_REFERRAL_CONVERSION_POINTS = 300;
+const REWARDS_ACTIVE_REFERRAL_CAP = 10;
+const REWARDS_LIFETIME_WINDOW_MONTHS = 24;
+
+function rewardsTier(points: number): string {
+  for (const [tier, threshold] of REWARDS_TIER_THRESHOLDS) {
+    if (points >= threshold) return tier;
+  }
+  return 'bronze';
+}
+
+async function rewardsEnsureAccount(supabaseAdmin: any, userId: string, email: string) {
+  const { data } = await supabaseAdmin
+    .from('rewards_accounts')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (data) return data;
+  const { data: created } = await supabaseAdmin
+    .from('rewards_accounts')
+    .insert({ user_id: userId, email })
+    .select()
+    .single();
+  return created;
+}
+
+async function rewardsApplyDelta(
+  supabaseAdmin: any,
+  userId: string,
+  pointsDelta: number,
+  zarDelta: number,
+) {
+  const { data: acc } = await supabaseAdmin
+    .from('rewards_accounts')
+    .select('lifetime_points, available_points, lifetime_earnings_zar, pending_earnings_zar')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (!acc) return;
+  const newLifetime = (acc.lifetime_points || 0) + Math.max(0, pointsDelta);
+  await supabaseAdmin.from('rewards_accounts').update({
+    lifetime_points: newLifetime,
+    available_points: (acc.available_points || 0) + pointsDelta,
+    lifetime_earnings_zar: Number(acc.lifetime_earnings_zar || 0) + Math.max(0, zarDelta),
+    pending_earnings_zar: Number(acc.pending_earnings_zar || 0) + zarDelta,
+    tier: rewardsTier(newLifetime),
+    updated_at: new Date().toISOString(),
+  }).eq('user_id', userId);
+}
+
+async function rewardsAccrueForPayment(
+  supabaseAdmin: any,
+  opts: {
+    provider: 'paystack' | 'flutterwave';
+    providerEventId: string;
+    providerReference?: string;
+    groupId: string | null;
+    tier: string;
+    payerEmail: string;
+    amountZar: number;
+    currency?: string;
+  },
+) {
+  try {
+    const { provider, providerEventId, providerReference, groupId, tier, payerEmail, amountZar, currency } = opts;
+
+    // 1. Insert subscription_payment (idempotent)
+    const { data: payerUser } = await supabaseAdmin
+      .from('app_users').select('id').eq('email', payerEmail).maybeSingle();
+    const payerUserId = payerUser?.id || null;
+
+    const { data: payment, error: payErr } = await supabaseAdmin
+      .from('subscription_payments')
+      .insert({
+        group_id: groupId,
+        payer_email: payerEmail,
+        payer_user_id: payerUserId,
+        tier,
+        amount_zar: amountZar,
+        currency: currency || 'ZAR',
+        provider,
+        provider_event_id: providerEventId,
+        provider_reference: providerReference || null,
+      })
+      .select()
+      .single();
+    if (payErr || !payment) return; // duplicate or error — don't double-accrue
+
+    // 2. Award "subscription month" points to payer
+    if (payerUserId) {
+      await rewardsEnsureAccount(supabaseAdmin, payerUserId, payerEmail);
+      await supabaseAdmin.from('rewards_ledger').insert({
+        user_id: payerUserId,
+        event_type: 'subscription_month',
+        points_delta: REWARDS_SUBSCRIPTION_MONTH_POINTS,
+        source_id: payment.id,
+        metadata: { tier, amount_zar: amountZar },
+      });
+      await rewardsApplyDelta(supabaseAdmin, payerUserId, REWARDS_SUBSCRIPTION_MONTH_POINTS, 0);
+    }
+
+    // 3. Referral commission accrual
+    const { data: claim } = await supabaseAdmin
+      .from('referral_claims')
+      .select('referrer_id, claimed_at')
+      .eq('new_user_email', payerEmail)
+      .maybeSingle();
+    if (!claim) return;
+
+    // 24-month window from first claim
+    const claimedAt = new Date(claim.claimed_at);
+    const windowEnd = new Date(claimedAt);
+    windowEnd.setMonth(windowEnd.getMonth() + REWARDS_LIFETIME_WINDOW_MONTHS);
+    if (new Date() > windowEnd) return;
+
+    // Active referral cap — count distinct referred emails in last 24 months with commissions
+    const since = new Date();
+    since.setMonth(since.getMonth() - REWARDS_LIFETIME_WINDOW_MONTHS);
+    const { data: active } = await supabaseAdmin
+      .from('rewards_referral_commissions')
+      .select('referred_user_email')
+      .eq('referrer_id', claim.referrer_id)
+      .gte('month', since.toISOString().slice(0, 10));
+    const activeSet = new Set((active || []).map((r: any) => r.referred_user_email));
+    if (!activeSet.has(payerEmail) && activeSet.size >= REWARDS_ACTIVE_REFERRAL_CAP) return;
+
+    // Determine referrer's tier → commission rate
+    await rewardsEnsureAccount(supabaseAdmin, claim.referrer_id, '');
+    const { data: referrerAcc } = await supabaseAdmin
+      .from('rewards_accounts')
+      .select('tier, lifetime_points')
+      .eq('user_id', claim.referrer_id)
+      .maybeSingle();
+    const referrerTier = referrerAcc?.tier || 'bronze';
+    const rate = REWARDS_COMMISSION_RATES[referrerTier] ?? 0.15;
+    const commission = Math.round(amountZar * rate * 100) / 100;
+    const monthStr = new Date().toISOString().slice(0, 7) + '-01';
+
+    const { error: commErr } = await supabaseAdmin
+      .from('rewards_referral_commissions')
+      .insert({
+        referrer_id: claim.referrer_id,
+        referred_user_email: payerEmail,
+        subscription_payment_id: payment.id,
+        gross_amount_zar: amountZar,
+        commission_rate: rate,
+        commission_amount_zar: commission,
+        month: monthStr,
+      });
+    if (commErr) return; // unique violation — already accrued
+
+    // First conversion bonus — only if this is the first commission for this pair
+    const { count } = await supabaseAdmin
+      .from('rewards_referral_commissions')
+      .select('id', { count: 'exact', head: true })
+      .eq('referrer_id', claim.referrer_id)
+      .eq('referred_user_email', payerEmail);
+    const isFirst = (count || 0) === 1;
+
+    await supabaseAdmin.from('rewards_ledger').insert({
+      user_id: claim.referrer_id,
+      event_type: 'referral_commission',
+      points_delta: isFirst ? REWARDS_REFERRAL_CONVERSION_POINTS : 0,
+      zar_delta: commission,
+      source_id: payment.id,
+      metadata: { referred_email: payerEmail, rate, tier: referrerTier, first: isFirst },
+    });
+    await rewardsApplyDelta(
+      supabaseAdmin,
+      claim.referrer_id,
+      isFirst ? REWARDS_REFERRAL_CONVERSION_POINTS : 0,
+      commission,
+    );
+  } catch (e: any) {
+    console.warn('rewardsAccrueForPayment failed:', e?.message);
+  }
+}
+
 export function registerExtraRoutes(
   app: any,
   supabaseAdmin: any,
@@ -1112,12 +1304,33 @@ export function registerExtraRoutes(
   app.post(`${PREFIX}/billing/initialize`, async (c: any) => {
     try {
       const user = await requireUser(c);
-      const { groupId, tier, email } = await c.req.json();
+      const { groupId, tier, email, useCredit } = await c.req.json();
 
       if (!['community', 'pro'].includes(tier)) return c.json({ error: 'Invalid tier for billing' }, 400);
 
       const m = await getMembership(groupId, user.email);
       if (!m || m.role !== 'admin') return c.json({ error: 'Admin only' }, 403);
+
+      const tierCostZar = tier === 'community' ? 19 : 39;
+
+      // Rewards credit fully covers this month — skip Paystack, upgrade directly
+      if (useCredit) {
+        const { data: sub } = await supabaseAdmin
+          .from('subscriptions').select('credit_balance_zar').eq('group_id', groupId).maybeSingle();
+        const credit = Number(sub?.credit_balance_zar || 0);
+        if (credit >= tierCostZar) {
+          const nextBilling = new Date();
+          nextBilling.setMonth(nextBilling.getMonth() + 1);
+          await supabaseAdmin.from('subscriptions').upsert({
+            group_id: groupId,
+            tier,
+            credit_balance_zar: credit - tierCostZar,
+            next_billing_date: nextBilling.toISOString().slice(0, 10),
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'group_id' });
+          return c.json({ creditOnly: true, tier, creditUsedZar: tierCostZar, creditRemainingZar: credit - tierCostZar });
+        }
+      }
 
       const planCode = PLAN_CODES[tier];
       if (!planCode) return c.json({ error: `Plan code for ${tier} not configured` }, 503);
@@ -1194,7 +1407,7 @@ export function registerExtraRoutes(
 
       const { groupId, tier } = event.data?.metadata || {};
 
-      // charge.success — upgrade subscription
+      // charge.success — upgrade subscription + accrue rewards
       if (event.event === 'charge.success' && groupId && tier) {
         await supabaseAdmin.from('subscriptions').upsert({
           group_id: groupId,
@@ -1202,44 +1415,49 @@ export function registerExtraRoutes(
           updated_at: new Date().toISOString(),
         }, { onConflict: 'group_id' });
 
-        // Referral reward processing
-        try {
-          const customerEmail = event.data?.customer?.email;
-          if (customerEmail) {
-            const { data: claim } = await supabaseAdmin
+        const customerEmail = event.data?.customer?.email;
+        const amountKobo = Number(event.data?.amount || 0);
+        const amountZar = amountKobo / 100;
+        const reference = event.data?.reference || null;
+
+        // Mark first-claim referral as rewarded (legacy counter — kept for backwards compat)
+        if (customerEmail) {
+          const { data: claim } = await supabaseAdmin
+            .from('referral_claims')
+            .select('id, referrer_id, rewarded')
+            .eq('new_user_email', customerEmail)
+            .maybeSingle();
+          if (claim && !claim.rewarded) {
+            await supabaseAdmin
               .from('referral_claims')
-              .select('*')
-              .eq('new_user_email', customerEmail)
-              .eq('rewarded', false)
+              .update({ rewarded: true, rewarded_at: new Date().toISOString() })
+              .eq('id', claim.id);
+            const { data: ref } = await supabaseAdmin
+              .from('referrals')
+              .select('rewarded_count')
+              .eq('user_id', claim.referrer_id)
               .maybeSingle();
-
-            if (claim) {
-              await supabaseAdmin
-                .from('referral_claims')
-                .update({ rewarded: true, rewarded_at: new Date().toISOString() })
-                .eq('id', claim.id);
-
+            if (ref) {
               await supabaseAdmin
                 .from('referrals')
-                .update({ rewarded_count: supabaseAdmin.rpc ? undefined : 1 })
+                .update({ rewarded_count: (ref.rewarded_count || 0) + 1 })
                 .eq('user_id', claim.referrer_id);
-
-              // Simple increment via raw SQL or just fetch+update
-              const { data: ref } = await supabaseAdmin
-                .from('referrals')
-                .select('rewarded_count')
-                .eq('user_id', claim.referrer_id)
-                .maybeSingle();
-              if (ref) {
-                await supabaseAdmin
-                  .from('referrals')
-                  .update({ rewarded_count: (ref.rewarded_count || 0) + 1 })
-                  .eq('user_id', claim.referrer_id);
-              }
             }
           }
-        } catch (e: any) {
-          console.warn('Referral reward processing failed:', e.message);
+        }
+
+        // Rewards: subscription_payment + per-user points + lifetime commission
+        if (customerEmail && amountZar > 0) {
+          await rewardsAccrueForPayment(supabaseAdmin, {
+            provider: 'paystack',
+            providerEventId: eventId || reference || `${groupId}-${Date.now()}`,
+            providerReference: reference,
+            groupId,
+            tier,
+            payerEmail: customerEmail,
+            amountZar,
+            currency: event.data?.currency || 'ZAR',
+          });
         }
       }
 

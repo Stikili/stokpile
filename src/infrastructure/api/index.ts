@@ -521,12 +521,61 @@ export const api = {
   getSubscription: (groupId: string) =>
     request<Subscription>(`/groups/${groupId}/subscription`),
 
-  initializeBilling: (groupId: string, tier: SubscriptionTier, email: string) =>
-    request<{ authorizationUrl: string; reference: string }>(`/billing/initialize`, {
+  initializeBilling: (groupId: string, tier: SubscriptionTier, email: string, useCredit?: boolean) =>
+    request<{ authorizationUrl?: string; reference?: string; creditOnly?: boolean; tier?: string; creditUsedZar?: number; creditRemainingZar?: number }>(`/billing/initialize`, {
       method: "POST",
-      body: { groupId, tier, email },
+      body: { groupId, tier, email, useCredit: !!useCredit },
     }),
 
   cancelSubscription: (groupId: string) =>
     request<{ message: string }>(`/billing/cancel`, { method: "POST", body: { groupId } }),
+
+  // Rewards
+  getRewardsAccount: () =>
+    request<{
+      account: {
+        tier: 'bronze' | 'silver' | 'gold' | 'platinum';
+        lifetimePoints: number;
+        availablePoints: number;
+        lifetimeEarningsZar: number;
+        pendingEarningsZar: number;
+        creditedZar: number;
+        nextTierAt: number | null;
+        pointsToNextTier: number;
+        commissionRate: number;
+        conversionRate: { pointsPerZar: number; minPoints: number };
+      };
+    }>(`/rewards/account`),
+
+  getRewardsLedger: () =>
+    request<{
+      ledger: Array<{
+        id: string;
+        eventType: string;
+        pointsDelta: number;
+        zarDelta: number;
+        metadata: Record<string, unknown>;
+        createdAt: string;
+      }>;
+    }>(`/rewards/ledger`),
+
+  getRewardsCommissions: () =>
+    request<{
+      commissions: Array<{
+        id: string;
+        referredEmail: string;
+        grossZar: number;
+        rate: number;
+        commissionZar: number;
+        month: string;
+        paidOut: boolean;
+        createdAt: string;
+      }>;
+    }>(`/rewards/commissions`),
+
+  redeemRewards: (groupId: string, points: number) =>
+    request<{ redemption: { id: string; creditZar: number; pointsCost: number } }>(`/rewards/redeem`, {
+      method: "POST",
+      body: { groupId, points },
+    }),
 };

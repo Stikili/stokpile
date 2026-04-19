@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/presentation/ui/dropdown-menu';
-import { User, Plus, UserPlus, Search, LogOut, Trash2, UserX, Bell, HelpCircle, Sparkles, Monitor, Gift, Download } from 'lucide-react';
+import { User, Plus, UserPlus, Search, LogOut, Trash2, UserX, Bell, HelpCircle, Sparkles, Monitor, Gift, Download, Trophy } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
 import { NotificationPrefsDialog } from '@/presentation/components/profile/NotificationPrefsDialog';
 import { ProfileDialog } from '@/presentation/components/profile/ProfileDialog';
@@ -21,8 +21,9 @@ import { HelpDialog } from '@/presentation/components/help/HelpDialog';
 import { ChangelogDialog, LATEST_VERSION } from '@/presentation/components/help/ChangelogDialog';
 import { SessionsDialog } from '@/presentation/components/profile/SessionsDialog';
 import { ReferralDialog } from '@/presentation/components/profile/ReferralDialog';
+import { RewardsDialog } from '@/presentation/components/profile/RewardsDialog';
 import { DataExportDialog } from '@/presentation/components/profile/DataExportDialog';
-import type { Session } from '@/domain/types';
+import type { Session, Group } from '@/domain/types';
 
 interface ProfileMenuProps {
   session: Session;
@@ -30,6 +31,7 @@ interface ProfileMenuProps {
   onGroupsChanged: () => void;
   onSignOut: () => void;
   hasGroups?: boolean;
+  groups?: Group[];
 }
 
 export function ProfileMenu({
@@ -37,7 +39,8 @@ export function ProfileMenu({
   onProfileUpdate,
   onGroupsChanged,
   onSignOut,
-  hasGroups: _hasGroups = false
+  hasGroups: _hasGroups = false,
+  groups = [],
 }: ProfileMenuProps) {
   const [showProfile, setShowProfile] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
@@ -49,6 +52,7 @@ export function ProfileMenu({
   const [showChangelog, setShowChangelog] = useState(false);
   const [showSessions, setShowSessions] = useState(false);
   const [showReferral, setShowReferral] = useState(false);
+  const [showRewards, setShowRewards] = useState(false);
   const [showDataExport, setShowDataExport] = useState(false);
   const [hasUnseenChangelog, setHasUnseenChangelog] = useState(() => {
     const seen = localStorage.getItem('changelog-seen-version');
@@ -113,7 +117,11 @@ export function ProfileMenu({
 
           <DropdownMenuSeparator />
 
-          {/* Referral upfront — revenue lever */}
+          {/* Rewards + Referral — revenue levers */}
+          <DropdownMenuItem onClick={() => setShowRewards(true)} className="text-amber-600 dark:text-amber-400 focus:text-amber-600 dark:focus:text-amber-400">
+            <Trophy className="h-4 w-4 mr-2" />
+            My Rewards
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setShowReferral(true)} className="text-primary focus:text-primary">
             <Gift className="h-4 w-4 mr-2" />
             Refer & Earn
@@ -226,6 +234,17 @@ export function ProfileMenu({
       <ChangelogDialog open={showChangelog} onOpenChange={setShowChangelog} />
       <SessionsDialog open={showSessions} onOpenChange={setShowSessions} />
       <ReferralDialog open={showReferral} onOpenChange={setShowReferral} />
+      {showRewards && (
+        <RewardsDialog
+          open={showRewards}
+          onOpenChange={setShowRewards}
+          groups={groups}
+          onShowReferral={() => {
+            setShowRewards(false);
+            setShowReferral(true);
+          }}
+        />
+      )}
       <DataExportDialog open={showDataExport} onOpenChange={setShowDataExport} />
     </>
   );

@@ -429,6 +429,7 @@ export default function App() {
                     onGroupsChanged={refreshGroups}
                     onSignOut={() => setShowSignOutDialog(true)}
                     hasGroups={groups.length > 0}
+                    groups={groups}
                   />
                 </div>
               </div>

@@ -39,6 +39,9 @@ export const queryKeys = {
   penalties: (groupId: string) => ['penalties', groupId] as const,
   grocery: (groupId: string) => ['grocery', groupId] as const,
   dependents: (groupId: string) => ['dependents', groupId] as const,
+  rewardsAccount: () => ['rewards', 'account'] as const,
+  rewardsLedger: () => ['rewards', 'ledger'] as const,
+  rewardsCommissions: () => ['rewards', 'commissions'] as const,
 };
 
 // ─── Read hooks ──────────────────────────────────────────────────────────
@@ -128,6 +131,33 @@ export function useSessions() {
     queryFn: () => api.getSessions(),
     staleTime: 5 * 60_000,       // sessions don't change often
     gcTime: 30 * 60_000,
+  });
+}
+
+export function useRewardsAccount() {
+  return useQuery({
+    queryKey: queryKeys.rewardsAccount(),
+    queryFn: () => api.getRewardsAccount(),
+    staleTime: 60_000,           // 1 min — updates on subscription events
+    gcTime: 10 * 60_000,
+  });
+}
+
+export function useRewardsLedger() {
+  return useQuery({
+    queryKey: queryKeys.rewardsLedger(),
+    queryFn: () => api.getRewardsLedger(),
+    staleTime: 60_000,
+    gcTime: 10 * 60_000,
+  });
+}
+
+export function useRewardsCommissions() {
+  return useQuery({
+    queryKey: queryKeys.rewardsCommissions(),
+    queryFn: () => api.getRewardsCommissions(),
+    staleTime: 60_000,
+    gcTime: 10 * 60_000,
   });
 }
 

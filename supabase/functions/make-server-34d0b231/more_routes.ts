@@ -1581,4 +1581,164 @@ export function registerMoreRoutes(
     } catch (err: any) { return handleError(c, err); }
   });
 
+  // ────────────────────────────────────────────────────────────
+  // REWARDS — account, ledger, commissions, redemptions
+  // ────────────────────────────────────────────────────────────
+
+  const REWARDS_POINTS_PER_ZAR = 100; // 100 points = R1 subscription credit
+  const REWARDS_MIN_REDEMPTION_POINTS = 1000; // minimum R10 redemption
+  const REWARDS_TIER_ORDER = ['bronze', 'silver', 'gold', 'platinum'];
+  const REWARDS_NEXT_THRESHOLDS: Record<string, number | null> = {
+    bronze: 500, silver: 2000, gold: 10000, platinum: null,
+  };
+
+  // GET /rewards/account — current account + computed tier progress
+  app.get(`${PREFIX}/rewards/account`, async (c: any) => {
+    try {
+      const user = await requireUser(c);
+      // Ensure account exists
+      let { data: acc } = await supabaseAdmin
+        .from('rewards_accounts').select('*').eq('user_id', user.id).maybeSingle();
+      if (!acc) {
+        const { data: created } = await supabaseAdmin
+          .from('rewards_accounts')
+          .insert({ user_id: user.id, email: user.email })
+          .select().single();
+        acc = created;
+      }
+      const nextThreshold = REWARDS_NEXT_THRESHOLDS[acc.tier];
+      return c.json({
+        account: {
+          tier: acc.tier,
+          lifetimePoints: acc.lifetime_points,
+          availablePoints: acc.available_points,
+          lifetimeEarningsZar: Number(acc.lifetime_earnings_zar),
+          pendingEarningsZar: Number(acc.pending_earnings_zar),
+          creditedZar: Number(acc.credited_zar),
+          nextTierAt: nextThreshold,
+          pointsToNextTier: nextThreshold ? Math.max(0, nextThreshold - acc.lifetime_points) : 0,
+          commissionRate: acc.tier === 'platinum' ? 0.22 : acc.tier === 'gold' ? 0.20 : acc.tier === 'silver' ? 0.18 : 0.15,
+          conversionRate: { pointsPerZar: REWARDS_POINTS_PER_ZAR, minPoints: REWARDS_MIN_REDEMPTION_POINTS },
+        },
+      });
+    } catch (err: any) { return handleError(c, err); }
+  });
+
+  // GET /rewards/ledger — recent events
+  app.get(`${PREFIX}/rewards/ledger`, async (c: any) => {
+    try {
+      const user = await requireUser(c);
+      const { data } = await supabaseAdmin
+        .from('rewards_ledger')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      return c.json({
+        ledger: (data || []).map((r: any) => ({
+          id: r.id,
+          eventType: r.event_type,
+          pointsDelta: r.points_delta,
+          zarDelta: Number(r.zar_delta),
+          metadata: r.metadata,
+          createdAt: r.created_at,
+        })),
+      });
+    } catch (err: any) { return handleError(c, err); }
+  });
+
+  // GET /rewards/commissions — referral commission history
+  app.get(`${PREFIX}/rewards/commissions`, async (c: any) => {
+    try {
+      const user = await requireUser(c);
+      const { data } = await supabaseAdmin
+        .from('rewards_referral_commissions')
+        .select('*')
+        .eq('referrer_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(200);
+      return c.json({
+        commissions: (data || []).map((r: any) => ({
+          id: r.id,
+          referredEmail: r.referred_user_email,
+          grossZar: Number(r.gross_amount_zar),
+          rate: Number(r.commission_rate),
+          commissionZar: Number(r.commission_amount_zar),
+          month: r.month,
+          paidOut: r.paid_out,
+          createdAt: r.created_at,
+        })),
+      });
+    } catch (err: any) { return handleError(c, err); }
+  });
+
+  // POST /rewards/redeem — convert points → subscription credit
+  // Body: { groupId, points }
+  app.post(`${PREFIX}/rewards/redeem`, async (c: any) => {
+    try {
+      const user = await requireUser(c);
+      const { groupId, points } = await c.req.json();
+      const pointsNum = Number(points);
+      if (!groupId || !Number.isFinite(pointsNum) || pointsNum < REWARDS_MIN_REDEMPTION_POINTS) {
+        return c.json({ error: `Minimum redemption is ${REWARDS_MIN_REDEMPTION_POINTS} points` }, 400);
+      }
+      if (pointsNum % REWARDS_POINTS_PER_ZAR !== 0) {
+        return c.json({ error: `Points must be a multiple of ${REWARDS_POINTS_PER_ZAR}` }, 400);
+      }
+
+      // Must be a member of the group receiving the credit
+      const m = await getMembership(groupId, user.email);
+      if (!m || m.status !== 'approved') return c.json({ error: 'Not a member of this group' }, 403);
+
+      const creditZar = pointsNum / REWARDS_POINTS_PER_ZAR;
+
+      const { data: acc } = await supabaseAdmin
+        .from('rewards_accounts').select('available_points, credited_zar').eq('user_id', user.id).maybeSingle();
+      if (!acc || acc.available_points < pointsNum) {
+        return c.json({ error: 'Insufficient points' }, 400);
+      }
+
+      // Create redemption
+      const { data: redemption, error: redErr } = await supabaseAdmin
+        .from('rewards_redemptions')
+        .insert({
+          user_id: user.id,
+          points_cost: pointsNum,
+          credit_zar: creditZar,
+          status: 'applied',
+          applied_to_group_id: groupId,
+          applied_at: new Date().toISOString(),
+        })
+        .select().single();
+      if (redErr) return c.json({ error: redErr.message }, 500);
+
+      // Add credit to subscription
+      const { data: sub } = await supabaseAdmin
+        .from('subscriptions').select('credit_balance_zar').eq('group_id', groupId).maybeSingle();
+      const currentCredit = Number(sub?.credit_balance_zar || 0);
+      await supabaseAdmin.from('subscriptions').upsert({
+        group_id: groupId,
+        credit_balance_zar: currentCredit + creditZar,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'group_id' });
+
+      // Ledger + account update
+      await supabaseAdmin.from('rewards_ledger').insert({
+        user_id: user.id,
+        event_type: 'redemption',
+        points_delta: -pointsNum,
+        zar_delta: 0,
+        source_id: redemption.id,
+        metadata: { group_id: groupId, credit_zar: creditZar },
+      });
+      await supabaseAdmin.from('rewards_accounts').update({
+        available_points: acc.available_points - pointsNum,
+        credited_zar: Number(acc.credited_zar || 0) + creditZar,
+        updated_at: new Date().toISOString(),
+      }).eq('user_id', user.id);
+
+      return c.json({ redemption: { id: redemption.id, creditZar, pointsCost: pointsNum } });
+    } catch (err: any) { return handleError(c, err); }
+  });
+
 } // end registerMoreRoutes

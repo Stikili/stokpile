@@ -7,8 +7,15 @@ import { useTheme } from '@/presentation/shared/ThemeProvider';
 import {
   Check, Sparkles, Shield, Globe, Users, TrendingUp,
   HeartHandshake, ShoppingCart, RefreshCw, MessageCircle, FileText,
-  ArrowRight, Star, Sun, Moon,
+  ArrowRight, Star, Sun, Moon, Trophy, Gift, Coins,
 } from 'lucide-react';
+
+const REWARD_TIERS = [
+  { name: 'Bronze',   points: '0 pts',       rate: '15%', color: 'from-amber-700 to-amber-900',     ring: 'ring-amber-700/30',  glow: '' },
+  { name: 'Silver',   points: '500 pts',     rate: '18%', color: 'from-slate-400 to-slate-600',     ring: 'ring-slate-400/30',  glow: '' },
+  { name: 'Gold',     points: '2,000 pts',   rate: '20%', color: 'from-yellow-400 to-amber-500',    ring: 'ring-yellow-400/40', glow: 'shadow-yellow-500/20' },
+  { name: 'Platinum', points: '10,000 pts',  rate: '22%', color: 'from-cyan-300 via-sky-400 to-indigo-500', ring: 'ring-cyan-400/50', glow: 'shadow-cyan-500/30' },
+];
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -146,7 +153,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
               <Globe className="h-3 w-3 text-primary" />19 countries
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border text-xs text-muted-foreground">
-              <Sparkles className="h-3 w-3 text-primary" />Offline
+              <Trophy className="h-3 w-3 text-amber-500" />Earn rewards
             </div>
           </div>
         </div>
@@ -234,6 +241,56 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                 </Button>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* MOBILE Rewards — tier ladder */}
+      <section
+        className="md:hidden px-6 py-10 flex flex-col"
+        style={{ minHeight: 'calc(100dvh - 96px)' }}
+      >
+        <div className="mb-5">
+          <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 mb-3 px-3 py-1 text-[11px]">
+            <Trophy className="h-3 w-3 mr-1" />
+            Lifetime rewards
+          </Badge>
+          <h2 className="text-2xl font-bold tracking-tight">Stokpile pays you back</h2>
+          <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+            Earn points every month you subscribe. Refer a group and earn up to <span className="font-semibold text-foreground">22% lifetime commission</span> on their subscription — for 24 months.
+          </p>
+        </div>
+
+        <div className="flex-1 flex items-center">
+          <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x-mandatory pb-4 w-full">
+            {REWARD_TIERS.map((t) => (
+              <div
+                key={t.name}
+                className={`snap-center shrink-0 w-[72vw] max-w-[280px] rounded-3xl border bg-card p-5 tap-none shadow-lg ${t.glow} ring-1 ${t.ring}`}
+                style={{ minHeight: '48vh' }}
+              >
+                <div className={`h-14 w-14 rounded-2xl bg-gradient-to-br ${t.color} flex items-center justify-center mb-4 shadow-lg`}>
+                  <Trophy className="h-7 w-7 text-white" />
+                </div>
+                <h3 className="font-bold text-xl">{t.name}</h3>
+                <p className="text-xs text-muted-foreground mt-1 mb-4">Reach at {t.points}</p>
+                <div className="rounded-xl bg-muted/40 border p-3">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Referral rate</p>
+                  <p className="text-3xl font-extrabold tracking-tight mt-1">{t.rate}</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">of every referred subscription, lifetime</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-2xl border bg-gradient-to-br from-primary/5 to-emerald-500/5 p-4 flex items-start gap-3">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <Coins className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold">Redeem points for subscription credit</p>
+            <p className="text-xs text-muted-foreground mt-0.5">100 points = R1. Wipe out your monthly bill when you hit Gold.</p>
           </div>
         </div>
       </section>
@@ -375,6 +432,74 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
         </div>
       </section>
 
+      {/* ─── DESKTOP Rewards ─── */}
+      <section className="hidden md:block py-16 bg-gradient-to-b from-transparent via-amber-50/30 to-transparent dark:via-amber-950/10">
+        <div className="max-w-5xl mx-auto px-5">
+          <div className="text-center mb-10">
+            <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 mb-4 px-3 py-1 text-xs">
+              <Trophy className="h-3 w-3 mr-1" />
+              Lifetime rewards program
+            </Badge>
+            <h2 className="text-3xl font-bold tracking-tight">Stokpile pays you back</h2>
+            <p className="text-base text-muted-foreground mt-2 max-w-2xl mx-auto">
+              Earn points every month you subscribe. Refer a group and earn up to{' '}
+              <span className="font-semibold text-foreground">22% lifetime commission</span>{' '}
+              on their subscription — for 24 months. Redeem points for subscription credit.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-4 gap-3 mb-8">
+            {REWARD_TIERS.map((t) => (
+              <div
+                key={t.name}
+                className={`rounded-2xl border bg-card p-4 shadow-md ${t.glow} ring-1 ${t.ring}`}
+              >
+                <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${t.color} flex items-center justify-center mb-3 shadow-md`}>
+                  <Trophy className="h-5 w-5 text-white" />
+                </div>
+                <h3 className="font-semibold text-base">{t.name}</h3>
+                <p className="text-[11px] text-muted-foreground mt-0.5 mb-3">Reach at {t.points}</p>
+                <div className="rounded-lg bg-muted/40 border p-2.5">
+                  <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">Referral rate</p>
+                  <p className="text-2xl font-extrabold tracking-tight mt-0.5">{t.rate}</p>
+                  <p className="text-[9px] text-muted-foreground mt-0.5">lifetime</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-2xl border bg-card p-4 flex items-start gap-3">
+              <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+                <Gift className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold">Earn by using the app</p>
+                <p className="text-xs text-muted-foreground mt-0.5">50 pts per subscription month, bonus pts for streaks, treasurer duties, and milestones.</p>
+              </div>
+            </div>
+            <div className="rounded-2xl border bg-card p-4 flex items-start gap-3">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <TrendingUp className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold">Refer and earn for life</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Up to 22% commission on every group you refer, every month, for 24 months.</p>
+              </div>
+            </div>
+            <div className="rounded-2xl border bg-card p-4 flex items-start gap-3">
+              <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
+                <Coins className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold">Redeem for credit</p>
+                <p className="text-xs text-muted-foreground mt-0.5">100 points = R1 off your group's subscription. Gold-tier referrers can go free.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ─── DESKTOP Pricing ─── */}
       <section className="hidden md:block bg-muted/20 py-16">
         <div className="px-5 max-w-5xl mx-auto">
@@ -441,8 +566,8 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
             19 countries
           </div>
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border">
-            <Sparkles className="h-3.5 w-3.5" />
-            Lite mode
+            <Trophy className="h-3.5 w-3.5 text-amber-500" />
+            Lifetime rewards
           </div>
         </div>
       </section>
