@@ -21,7 +21,7 @@ const ACTION_LABELS: Record<string, { label: string; color: string }> = {
 };
 
 function formatAction(entry: AuditEntry): string {
-  const d = entry.details as Record<string, unknown>;
+  const d = (entry.details ?? {}) as Record<string, unknown>;
   switch (entry.action) {
     case 'contribution_created':
       return `Added contribution of R ${Number(d.amount ?? 0).toFixed(2)} for ${d.targetUserEmail ?? ''}`;
