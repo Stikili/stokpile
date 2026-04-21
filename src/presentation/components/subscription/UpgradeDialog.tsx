@@ -36,7 +36,7 @@ const PLANS: {
       'Payment proofs',
       'Rotation order manager',
       'Grocery & burial workflows',
-      'Flutterwave payments',
+      'Mobile money payments',
       '50 SMS / month',
     ],
   },
