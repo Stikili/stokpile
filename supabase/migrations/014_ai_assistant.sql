@@ -23,7 +23,10 @@ CREATE TABLE IF NOT EXISTS ai_usage (
   language        text,
   created_at      timestamptz DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS idx_ai_usage_user_month ON ai_usage(user_id, date_trunc('month', created_at));
+-- Timezone-aware date_trunc is only STABLE, so we can't index by it directly.
+-- (user_id, created_at DESC) gives the optimizer everything it needs for the
+-- month-filter query in ai_usage_this_month.
+CREATE INDEX IF NOT EXISTS idx_ai_usage_user_created ON ai_usage(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_ai_usage_group ON ai_usage(group_id, created_at DESC);
 
 -- 3. Per-month aggregated view for fast budget checks
