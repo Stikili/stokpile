@@ -974,7 +974,7 @@ app.post('/make-server-34d0b231/groups/:id/requests/:email/approve', async (c) =
 
     // Tier-based member cap
     const capResult = await checkMemberCap(groupId);
-    if (!capResult.ok) return c.json({ error: capResult.message, cap: capResult.cap, tier: capResult.tier }, 402);
+    if (!capResult.ok) return c.json({ error: capResult.message, cap: capResult.cap, tier: capResult.tier, groupId, feature: 'members' }, 402);
 
     const { data: membership, error } = await supabaseAdmin
       .from('group_memberships')
@@ -2091,7 +2091,7 @@ app.post('/make-server-34d0b231/invite/:token/join', async (c) => {
 
     // Tier-based member cap
     const capResult = await checkMemberCap(group.id);
-    if (!capResult.ok) return c.json({ error: capResult.message, cap: capResult.cap, tier: capResult.tier }, 402);
+    if (!capResult.ok) return c.json({ error: capResult.message, cap: capResult.cap, tier: capResult.tier, groupId, feature: 'members' }, 402);
 
     await supabaseAdmin.from('profiles').upsert({
       email: user.email!,

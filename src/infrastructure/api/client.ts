@@ -8,12 +8,24 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public status: number,
-    public code?: string
+    public code?: string,
+    public data?: unknown,
   ) {
     super(message);
     this.name = 'ApiError';
   }
 }
+
+// Event fired when the backend returns a 402 Payment Required so a global
+// upgrade dialog can surface (vs each call site showing its own toast).
+export interface UpgradePromptDetail {
+  message: string;
+  cap?: number;
+  tier?: string;
+  feature?: string;
+  groupId?: string;
+}
+export const UPGRADE_PROMPT_EVENT = 'stokpile:upgrade-prompt';
 
 interface FetchClientOptions {
   /** Request timeout in milliseconds (default: 15000) */
@@ -138,7 +150,21 @@ export async function fetchClient<T = unknown>(
           (typeof data === 'string' ? data : null) ||
           `HTTP ${response.status}`;
 
-        const error = new ApiError(errorMessage, response.status);
+        const error = new ApiError(errorMessage, response.status, undefined, data);
+
+        // 402 Payment Required — dispatch a global prompt so the user sees
+        // an upgrade dialog instead of a naked toast at the call site.
+        if (response.status === 402 && typeof window !== 'undefined' && data && typeof data === 'object') {
+          const d = data as Record<string, unknown>;
+          const detail: UpgradePromptDetail = {
+            message: (d.error as string) || errorMessage,
+            cap: typeof d.cap === 'number' ? d.cap : undefined,
+            tier: typeof d.tier === 'string' ? d.tier : undefined,
+            feature: typeof d.feature === 'string' ? d.feature : undefined,
+            groupId: typeof d.groupId === 'string' ? d.groupId : undefined,
+          };
+          window.dispatchEvent(new CustomEvent<UpgradePromptDetail>(UPGRADE_PROMPT_EVENT, { detail }));
+        }
 
         // Retry on retryable status codes (except on last attempt)
         if (RETRYABLE_STATUS_CODES.has(response.status) && attempt < retries) {

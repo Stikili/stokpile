@@ -14,6 +14,7 @@ interface UpgradeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   groupId: string;
+  reason?: string;
 }
 
 const PLANS: {
@@ -98,7 +99,7 @@ function CancelButton({ groupId }: { groupId: string }) {
   );
 }
 
-export function UpgradeDialog({ open, onOpenChange, groupId }: UpgradeDialogProps) {
+export function UpgradeDialog({ open, onOpenChange, groupId, reason }: UpgradeDialogProps) {
   const { tier: currentTier, subscription } = useSubscription();
   const { session } = useSession();
   const [upgrading, setUpgrading] = useState<SubscriptionTier | null>(null);
@@ -130,6 +131,13 @@ export function UpgradeDialog({ open, onOpenChange, groupId }: UpgradeDialogProp
             {currentTier === 'trial' && ' Your trial includes all Pro features.'}
           </DialogDescription>
         </DialogHeader>
+
+        {reason && (
+          <div className="rounded-xl border border-amber-500/40 bg-amber-50 dark:bg-amber-950/20 px-3 py-2.5 mt-1 flex items-start gap-2">
+            <Sparkles className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-900 dark:text-amber-200 leading-relaxed">{reason}</p>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
           {PLANS.map(plan => (

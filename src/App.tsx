@@ -53,6 +53,7 @@ import { DisplayMenu } from "@/presentation/shared/DisplayMenu";
 import { SubscriptionProvider } from "@/application/context/SubscriptionContext";
 import { SubscriptionBanner } from "@/presentation/components/subscription/SubscriptionBanner";
 import { UpgradeDialog } from "@/presentation/components/subscription/UpgradeDialog";
+import { UpgradePromptProvider } from "@/presentation/components/subscription/UpgradePromptProvider";
 import { FeatureGate } from "@/presentation/components/subscription/FeatureGate";
 import { TrialBadge } from "@/presentation/components/subscription/TrialBadge";
 import { useUnreadAnnouncements } from "@/application/hooks/useUnreadAnnouncements";
@@ -319,6 +320,7 @@ export default function App() {
         <SubscriptionProvider groupId={selectedGroup?.id ?? null}>
         <TooltipProvider>
         <PiloProvider>
+        <UpgradePromptProvider fallbackGroupId={selectedGroup?.id}>
           <PullToRefresh>
           <div className="min-h-screen bg-gradient-to-br from-slate-50/80 to-blue-50/30 dark:bg-transparent dark:bg-none dark:from-transparent dark:to-transparent">
             {/* Skip to main content for accessibility */}
@@ -761,6 +763,7 @@ export default function App() {
             />
           </div>
           </PullToRefresh>
+        </UpgradePromptProvider>
         </PiloProvider>
         </TooltipProvider>
         </SubscriptionProvider>
