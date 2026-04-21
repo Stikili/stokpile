@@ -242,7 +242,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
                     required
                     disabled={loading}
                   >
-                    <SelectTrigger className={fieldErrors.country ? "border-destructive" : ""}>
+                    <SelectTrigger id="country" className={fieldErrors.country ? "border-destructive" : ""}>
                       <SelectValue placeholder="Select your country" />
                     </SelectTrigger>
                     <SelectContent>
