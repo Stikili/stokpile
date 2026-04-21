@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/presentation/ui/tabs
 import { Progress } from '@/presentation/ui/progress';
 import { Badge } from '@/presentation/ui/badge';
 import { Trophy, Coins, TrendingUp, Gift, Loader2, ArrowRight, Medal } from 'lucide-react';
+import { TierExplainerButton, RewardsCalculatorButton } from '@/presentation/components/ai/AiActions';
 import { toast } from 'sonner';
 import { api } from '@/infrastructure/api';
 import { useRewardsAccount, useRewardsLedger, useRewardsCommissions, queryKeys } from '@/application/hooks/queries';
@@ -162,6 +163,11 @@ export function RewardsDialog({ open, onOpenChange, onShowReferral, groups }: Re
                       You've reached the top tier
                     </p>
                   )}
+
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    <TierExplainerButton tier={account.tier} lifetimePoints={account.lifetimePoints} />
+                    <RewardsCalculatorButton tier={account.tier} commissionRate={Math.round(account.commissionRate * 100)} />
+                  </div>
                 </div>
               </div>
             </div>

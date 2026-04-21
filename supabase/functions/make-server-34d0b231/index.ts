@@ -6,6 +6,7 @@ import { Ratelimit } from "npm:@upstash/ratelimit@2.0.5";
 import { Redis } from "npm:@upstash/redis@1.34.3";
 import { registerExtraRoutes } from "./extra_routes.ts";
 import { registerMoreRoutes } from "./more_routes.ts";
+import { registerAiRoutes } from "./ai_routes.ts";
 
 const app = new Hono();
 
@@ -2441,5 +2442,6 @@ function cacheFor(c: any, seconds: number) {
 // ============================================================
 registerExtraRoutes(app, supabaseAdmin, getAuthUser, getMembership);
 registerMoreRoutes(app, supabaseAdmin, getAuthUser, getMembership);
+registerAiRoutes(app, supabaseAdmin, getAuthUser, getMembership);
 
 Deno.serve(app.fetch);

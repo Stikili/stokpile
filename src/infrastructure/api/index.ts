@@ -579,6 +579,25 @@ export const api = {
       body: { groupId, points },
     }),
 
+  // AI assistant
+  getAiOptIn: () =>
+    request<{ optedIn: boolean; optedInAt: string | null }>("/ai/opt-in"),
+
+  setAiOptIn: (accept: boolean) =>
+    request<{ ok: boolean; optedIn: boolean }>("/ai/opt-in", {
+      method: "POST",
+      body: { accept },
+    }),
+
+  getAiUsage: () =>
+    request<{ callsThisMonth: number; costZarThisMonth: number }>("/ai/usage"),
+
+  aiChat: (params: { task: string; groupId?: string; language?: string; context?: Record<string, unknown> }) =>
+    request<{ text: string; costZar: number; latencyMs: number; callsThisMonth: number; cap: number }>("/ai/chat", {
+      method: "POST",
+      body: params,
+    }),
+
   getRewardsAdminSummary: () =>
     request<{
       summary: {

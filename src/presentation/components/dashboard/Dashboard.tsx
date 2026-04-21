@@ -9,6 +9,7 @@ import { EditTotalContributionsDialog } from '@/presentation/components/groups/E
 import { ThisMonthStatus } from '@/presentation/components/dashboard/ThisMonthStatus';
 import { NextTurnCard } from '@/presentation/components/dashboard/NextTurnCard';
 import { LeaderboardCard } from '@/presentation/components/dashboard/LeaderboardCard';
+import { AiAssistantCard } from '@/presentation/components/ai/AiAssistantCard';
 import { AnnualProgressCard } from '@/presentation/components/dashboard/AnnualProgressCard';
 import { api } from '@/infrastructure/api';
 import { formatCurrency, formatDate } from '@/lib/export';
@@ -340,6 +341,15 @@ export function Dashboard({ groupId, groupType, annualTarget, isAdmin = false, u
 
       {/* Top Contributors leaderboard */}
       <LeaderboardCard groupId={groupId} />
+
+      {/* AI assistant */}
+      <AiAssistantCard
+        groupId={groupId}
+        groupName="your group"
+        groupType={groupType}
+        isAdmin={isAdmin}
+        userEmail={userEmail || ''}
+      />
 
       {/* Group Health Score */}
       <GroupHealthScore groupId={groupId} />
