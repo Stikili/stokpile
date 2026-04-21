@@ -598,6 +598,25 @@ export const api = {
       body: params,
     }),
 
+  piloChat: (params: {
+    messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+    groupId?: string;
+    groupName?: string;
+    isAdmin?: boolean;
+    language?: string;
+    tier?: string;
+    lifetimePoints?: number;
+    commissionRate?: number;
+  }) =>
+    request<{
+      text: string;
+      suggestedActions: Array<{ label: string; task: string; context?: Record<string, unknown> }>;
+      callsThisMonth: number;
+      cap: number;
+      costZar: number;
+      latencyMs: number;
+    }>("/ai/pilo", { method: "POST", body: params }),
+
   getRewardsAdminSummary: () =>
     request<{
       summary: {

@@ -35,6 +35,7 @@ import { PublicJoinView } from "@/presentation/components/groups/PublicJoinView"
 import { ProfileMenu } from "@/presentation/components/profile/ProfileMenu";
 import { MobileNav } from "@/presentation/layout/MobileNav";
 import { QuickActions } from "@/presentation/layout/QuickActions";
+import { PiloFab } from "@/presentation/components/ai/PiloFab";
 import {
   KeyboardShortcuts,
   useKeyboardShortcuts,
@@ -757,6 +758,13 @@ export default function App() {
                 renderAsBottomNav
               />
             </div>
+
+            {/* Pilo AI assistant — global FAB */}
+            <PiloFab
+              groupId={selectedGroup?.id}
+              groupName={selectedGroup?.name}
+              isAdmin={isAdmin}
+            />
           </div>
           </PullToRefresh>
         </TooltipProvider>

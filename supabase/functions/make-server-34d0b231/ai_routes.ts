@@ -742,6 +742,145 @@ export function registerAiRoutes(
     } catch (err: any) { return handleError(c, err); }
   });
 
+  // ─── Pilo: conversational assistant ─────────────────────────────────
+  // Body: { messages: [{role, content}], groupId?, language?, userEmail, userName, tier, commissionRate }
+  // Returns: { text, suggestedActions?: [{label, task, context}], callsThisMonth, cap, costZar, latencyMs }
+  app.post(`${PREFIX}/ai/pilo`, async (c: any) => {
+    try {
+      if (!API_KEY) return c.json({ error: 'AI not configured (ANTHROPIC_API_KEY missing)' }, 503);
+
+      const user = await requireUser(c);
+      await requireOptIn(user);
+
+      const body = await c.req.json();
+      const { messages, groupId, language, groupName, isAdmin, tier, lifetimePoints, commissionRate } = body || {};
+
+      if (!Array.isArray(messages) || messages.length === 0) {
+        return c.json({ error: 'messages required' }, 400);
+      }
+
+      if (groupId) {
+        const m = await getMembership(groupId, user.email);
+        if (!m || m.status !== 'approved') return c.json({ error: 'Not a member of that group' }, 403);
+      }
+
+      const subTier = await getTier(groupId, user.email);
+
+      // Budget check
+      const { data: usageRows } = await supabaseAdmin.rpc('ai_usage_this_month', { p_user_id: user.id });
+      const callsThisMonth = Number(usageRows?.[0]?.call_count || 0);
+      const cap = MONTHLY_CAPS[subTier] ?? MONTHLY_CAPS.free;
+      if (callsThisMonth >= cap) {
+        return c.json({ error: `Monthly AI cap reached (${cap}). Upgrade for more.`, cap, callsThisMonth }, 429);
+      }
+
+      const system = `You are Pilo, the AI assistant for Stokpile — a savings-group / stokvel management app built for South Africa and broader Africa. You help members and admins run their stokvels, chamas, burial societies, rotating/susu groups, grocery stokvels, and investment clubs.
+
+Behaviour:
+- Be warm, respectful, and concise. Use ubuntu principles — value the community, respect elders, acknowledge cultural context.
+- Language: respond in ${language || 'English'}. If the user writes in another language, match it.
+- Never invent numbers. Call tools to fetch live data (get_contributions, get_members, etc.) — every number you state must come from a tool or explicit user input.
+- When the user asks for something actionable (draft an announcement, log a contribution, remind a member), suggest a concrete next step.
+- If the user is asking about a specific group, you already have their group context.
+- Keep responses short by default (2-4 sentences). Only go longer if the user asks for detail.
+- Never discuss other users' data the current user isn't authorised to see.
+
+Context you already know:
+- User: ${user.email}${groupName ? ` · Group: ${groupName}` : ''}${isAdmin ? ' · role: admin' : ''}
+${tier ? `- Rewards tier: ${tier} (${lifetimePoints || 0} lifetime points, ${commissionRate || 15}% referral rate)` : ''}
+${groupId ? `- Current groupId: ${groupId} (pass this to tools)` : ''}`;
+
+      const tools = makeTools(supabaseAdmin, user.email);
+      const convMessages: any[] = messages.map((m: any) => ({ role: m.role, content: m.content }));
+      let totalUsage = { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 };
+      let finalText = '';
+      let response: any;
+      const started = Date.now();
+
+      for (let loop = 0; loop < 6; loop++) {
+        response = await callAnthropic(API_KEY, {
+          model: MODEL_IDS.haiku,
+          system,
+          messages: convMessages,
+          tools: tools.definitions,
+          maxTokens: 1200,
+          cacheSystem: true,
+        });
+
+        const u = response.usage || {};
+        totalUsage.input_tokens += u.input_tokens || 0;
+        totalUsage.output_tokens += u.output_tokens || 0;
+        totalUsage.cache_creation_input_tokens += u.cache_creation_input_tokens || 0;
+        totalUsage.cache_read_input_tokens += u.cache_read_input_tokens || 0;
+
+        if (response.stop_reason === 'tool_use') {
+          convMessages.push({ role: 'assistant', content: response.content });
+          const toolResults: any[] = [];
+          for (const block of response.content) {
+            if (block.type === 'tool_use') {
+              const result = await tools.run(block.name, block.input);
+              toolResults.push({
+                type: 'tool_result',
+                tool_use_id: block.id,
+                content: JSON.stringify(result),
+                is_error: !result.ok,
+              });
+            }
+          }
+          convMessages.push({ role: 'user', content: toolResults });
+          continue;
+        }
+
+        for (const block of response.content) {
+          if (block.type === 'text') finalText += block.text;
+        }
+        break;
+      }
+
+      const cost = calculateCost(MODEL_IDS.haiku, totalUsage);
+      const latency = Date.now() - started;
+
+      // Suggest quick follow-up actions based on simple keyword heuristics
+      const suggestedActions: Array<{ label: string; task: string; context?: any }> = [];
+      const lowerReply = finalText.toLowerCase();
+      if (isAdmin && groupId) {
+        if (/remind|nudge|overdue|hasn't paid|behind/.test(lowerReply)) {
+          suggestedActions.push({ label: 'Draft a reminder', task: 'nudge_writer' });
+        }
+        if (/announce|announcement|message the group/.test(lowerReply)) {
+          suggestedActions.push({ label: 'Draft an announcement', task: 'announcement_drafter' });
+        }
+        if (/meeting|agenda/.test(lowerReply)) {
+          suggestedActions.push({ label: 'Generate meeting agenda', task: 'agenda_generator' });
+        }
+      }
+
+      await supabaseAdmin.from('ai_usage').insert({
+        user_id: user.id,
+        user_email: user.email,
+        group_id: groupId || null,
+        task: 'pilo',
+        model: MODEL_IDS.haiku,
+        input_tokens: totalUsage.input_tokens,
+        output_tokens: totalUsage.output_tokens,
+        cached_tokens: totalUsage.cache_read_input_tokens,
+        cost_zar: cost,
+        latency_ms: latency,
+        success: true,
+        language: language || 'en',
+      }).then(() => {}, (e: any) => console.warn('ai_usage log failed:', e?.message));
+
+      return c.json({
+        text: finalText,
+        suggestedActions,
+        callsThisMonth: callsThisMonth + 1,
+        cap,
+        costZar: cost,
+        latencyMs: latency,
+      });
+    } catch (err: any) { return handleError(c, err); }
+  });
+
   // Main dispatch endpoint
   app.post(`${PREFIX}/ai/chat`, async (c: any) => {
     try {
