@@ -4,7 +4,7 @@ import { Button } from '@/presentation/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
 import {
   Menu, Home, DollarSign, TrendingUp, Calendar, Settings, LogOut, User,
-  Moon, Sun, MoreHorizontal, Megaphone, RefreshCw, ShoppingCart,
+  Moon, Sun, Megaphone, RefreshCw, ShoppingCart,
   HeartHandshake, Gavel, FileBarChart, Activity, ClipboardList, Gauge,
   Sparkles,
 } from 'lucide-react';
@@ -75,8 +75,6 @@ export function MobileNav({
   const allTabs = ALL_TABS(selectedGroup, isAdmin ?? false);
   const mainTabs = allTabs.filter(t => t.section === 'main');
   const moreTabs = allTabs.filter(t => t.section === 'more' || t.section === 'admin');
-  const moreTabIds = new Set(moreTabs.map(t => t.id));
-  const activeIsInMore = moreTabIds.has(activeTab);
 
   const nav = (tab: string) => { onTabChange(tab); setOpen(false); };
 
@@ -127,25 +125,74 @@ export function MobileNav({
             </div>
           </button>
 
-          {/* Quick nav shortcuts (if group selected) */}
+          {/* All navigation tabs, split by section */}
           {selectedGroup && (
-            <div className="mb-2">
-              <p className="text-xs text-muted-foreground font-medium px-1 mb-1.5">Quick Navigate</p>
-              <div className="grid grid-cols-2 gap-1.5">
-                {allTabs.slice(0, 6).map(t => (
-                  <button
-                    key={t.id}
-                    onClick={() => nav(t.id)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left
-                      ${activeTab === t.id
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted/50 hover:bg-muted text-foreground'}`}
-                  >
-                    <t.icon className="h-4 w-4 shrink-0" />
-                    <span className="truncate">{t.label}</span>
-                  </button>
-                ))}
-              </div>
+            <div className="mb-2 space-y-3">
+              {/* Main tabs (Home, Contribute, Payouts, Meetings) */}
+              {mainTabs.length > 0 && (
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium px-1 mb-1.5">Navigate</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {mainTabs.map(t => (
+                      <button
+                        key={t.id}
+                        onClick={() => nav(t.id)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left
+                          ${activeTab === t.id
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted/50 hover:bg-muted text-foreground'}`}
+                      >
+                        <t.icon className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{t.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* More sections (Rotation, Grocery, Burial, Announcements, Settings) */}
+              {moreTabs.filter(t => t.section === 'more').length > 0 && (
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium px-1 mb-1.5">Sections</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {moreTabs.filter(t => t.section === 'more').map(t => (
+                      <button
+                        key={t.id}
+                        onClick={() => nav(t.id)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left
+                          ${activeTab === t.id
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted/50 hover:bg-muted text-foreground'}`}
+                      >
+                        <t.icon className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{t.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Admin-only tabs (Insights, Penalties, Audit) */}
+              {moreTabs.filter(t => t.section === 'admin').length > 0 && (
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium px-1 mb-1.5">Admin</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {moreTabs.filter(t => t.section === 'admin').map(t => (
+                      <button
+                        key={t.id}
+                        onClick={() => nav(t.id)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left
+                          ${activeTab === t.id
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted/50 hover:bg-muted text-foreground'}`}
+                      >
+                        <t.icon className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{t.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -201,197 +248,69 @@ export function MobileNav({
   }
 
   // ─── Bottom nav ────────────────────────────────────────────────────────────
-  // Layout on mobile: [Home] [Contribute] [Pilo] [Payouts/Meetings] [More]
-  // Pilo sits in the centre as a prominent circular button.
-  const bottomLeftTabs = mainTabs.slice(0, 2);
-  const bottomRightTabs = mainTabs.slice(2, 3);
+  // Layout on mobile: [Home] [Contribute] [Pilo] [Payouts] [Meetings]
+  // Pilo sits in the centre as a prominent circular button. All overflow
+  // navigation (rotation, grocery, burial, admin tabs, settings) lives in
+  // the hamburger drawer at the top-left.
+  const leftTabs = mainTabs.slice(0, 2);
+  const rightTabs = mainTabs.slice(2, 4);
   return (
     <div className="bg-white/95 dark:bg-[#0f0f14]/95 border-t border-border backdrop-blur-sm">
-      <Sheet open={open} onOpenChange={setOpen}>
-        <div className="flex items-center justify-around px-2 py-2 max-w-lg mx-auto">
-          {selectedGroup ? (
-            <>
-              {bottomLeftTabs.map((item) => (
-                <button
-                  key={item.id}
-                  className={`flex flex-col items-center gap-0.5 min-w-0 flex-1 py-1.5 px-1 rounded-xl transition-all
-                    ${activeTab === item.id ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                  onClick={() => onTabChange(item.id)}
-                  aria-label={item.label}
-                  aria-current={activeTab === item.id ? 'page' : undefined}
-                >
-                  <item.icon className={`h-5 w-5 transition-transform ${activeTab === item.id ? 'scale-110' : ''}`} />
-                  <span className="text-[10px] font-medium truncate w-full text-center leading-tight mt-0.5">
-                    {item.label}
-                  </span>
-                </button>
-              ))}
-
-              {/* Pilo — prominent centre button */}
-              <div className="flex-1 flex justify-center">
-                <button
-                  onClick={openPilo}
-                  aria-label="Ask Pilo"
-                  className="relative -mt-6 h-14 w-14 rounded-full bg-gradient-to-br from-primary via-primary to-emerald-500 shadow-xl shadow-primary/30 ring-4 ring-background flex items-center justify-center active:scale-95 transition-transform"
-                >
-                  <Sparkles className="h-6 w-6 text-white" />
-                  <span className="absolute inset-0 rounded-full bg-primary/40 animate-ping opacity-20 pointer-events-none" />
-                </button>
-              </div>
-
-              {bottomRightTabs.map((item) => (
-                <button
-                  key={item.id}
-                  className={`flex flex-col items-center gap-0.5 min-w-0 flex-1 py-1.5 px-1 rounded-xl transition-all
-                    ${activeTab === item.id ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                  onClick={() => onTabChange(item.id)}
-                  aria-label={item.label}
-                  aria-current={activeTab === item.id ? 'page' : undefined}
-                >
-                  <item.icon className={`h-5 w-5 transition-transform ${activeTab === item.id ? 'scale-110' : ''}`} />
-                  <span className="text-[10px] font-medium truncate w-full text-center leading-tight mt-0.5">
-                    {item.label}
-                  </span>
-                </button>
-              ))}
-
-              {/* More button — highlights when active tab is in the overflow set */}
-              <SheetTrigger asChild>
-                <button
-                  className={`flex flex-col items-center gap-0.5 min-w-0 flex-1 py-1.5 px-1 rounded-xl transition-all relative
-                    ${activeIsInMore ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                  aria-label="More options"
-                >
-                  <MoreHorizontal className={`h-5 w-5 transition-transform ${activeIsInMore ? 'scale-110' : ''}`} />
-                  <span className="text-[10px] font-medium leading-tight mt-0.5">More</span>
-                  {activeIsInMore && (
-                    <span className="absolute top-1 right-3 h-1.5 w-1.5 rounded-full bg-primary" />
-                  )}
-                </button>
-              </SheetTrigger>
-            </>
-          ) : (
-            <SheetTrigger asChild>
-              <button className="flex flex-col items-center gap-1 flex-1 py-1.5 px-2 rounded-xl text-muted-foreground hover:text-foreground transition-colors">
-                <Menu className="h-5 w-5" />
-                <span className="text-[10px] font-medium">Menu</span>
-              </button>
-            </SheetTrigger>
-          )}
-        </div>
-
-        {/* More sheet — 2-col grid */}
-        <SheetContent side="bottom" className="h-auto max-h-[85vh] rounded-t-2xl pb-safe">
-          <SheetHeader className="mb-4">
-            <SheetTitle className="text-base">
-              {selectedGroup ? selectedGroup.name : 'Navigation'}
-            </SheetTitle>
-            <SheetDescription className="sr-only">All app sections</SheetDescription>
-          </SheetHeader>
-
-          <div className="overflow-y-auto space-y-4 pb-4">
-            {/* Pilo AI — hero entry */}
-            <button
-              onClick={() => { setOpen(false); openPilo(); }}
-              className="w-full group flex items-center gap-3 p-3 rounded-xl border bg-gradient-to-r from-primary/10 to-emerald-500/10 hover:from-primary/15 hover:to-emerald-500/15 transition-colors"
-            >
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary via-primary to-emerald-500 flex items-center justify-center shadow-md shadow-primary/30 shrink-0">
-                <Sparkles className="h-5 w-5 text-white group-hover:rotate-12 transition-transform" />
-              </div>
-              <div className="flex-1 min-w-0 text-left">
-                <p className="text-sm font-semibold">Ask Pilo</p>
-                <p className="text-[11px] text-muted-foreground">Your AI savings assistant</p>
-              </div>
-            </button>
-
-            {/* Demoted main tabs (Meetings when displaced by Pilo in bottom nav) + More sections */}
-            {(() => {
-              const demotedMain = mainTabs.slice(3);
-              const moreOnly = moreTabs.filter(t => t.section === 'more');
-              const combined = [...demotedMain, ...moreOnly];
-              if (combined.length === 0) return null;
-              return (
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium mb-2 px-1">Sections</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {combined.map(t => (
-                      <button
-                        key={t.id}
-                        onClick={() => nav(t.id)}
-                        className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all
-                          ${activeTab === t.id
-                            ? 'border-primary bg-primary/10 text-primary'
-                            : 'border-border bg-card hover:bg-muted text-foreground'}`}
-                      >
-                        <t.icon className="h-5 w-5" />
-                        <span className="text-xs font-medium text-center leading-tight">{t.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Admin tabs */}
-            {moreTabs.filter(t => t.section === 'admin').length > 0 && (
-              <div>
-                <p className="text-xs text-muted-foreground font-medium mb-2 px-1 flex items-center gap-1.5">
-                  <span className="inline-block h-px flex-1 bg-border" />
-                  Admin
-                  <span className="inline-block h-px flex-1 bg-border" />
-                </p>
-                <div className="grid grid-cols-3 gap-2">
-                  {moreTabs.filter(t => t.section === 'admin').map(t => (
-                    <button
-                      key={t.id}
-                      onClick={() => nav(t.id)}
-                      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all
-                        ${activeTab === t.id
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-border bg-card hover:bg-muted text-foreground'}`}
-                    >
-                      <t.icon className="h-5 w-5" />
-                      <span className="text-xs font-medium text-center leading-tight">{t.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Account actions */}
-            <div className="border-t pt-3 grid grid-cols-2 gap-2">
-              <Button variant="outline" size="sm" className="justify-start" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-                {theme === 'dark' ? <Sun className="h-4 w-4 mr-2" /> : <Moon className="h-4 w-4 mr-2" />}
-                {theme === 'dark' ? 'Light' : 'Dark'} Mode
-              </Button>
-              <Button variant="outline" size="sm" className="justify-start" onClick={toggleLiteMode}>
-                <Gauge className={`h-4 w-4 mr-2 ${liteMode ? 'text-green-500' : ''}`} />
-                Lite {liteMode ? 'ON' : 'OFF'}
-              </Button>
-              <ProfileDialog session={session} onProfileUpdate={onProfileUpdate} />
-              <Button
-                variant="outline"
-                size="sm"
-                className="justify-start text-destructive hover:text-destructive"
-                onClick={() => { onSignOut(); setOpen(false); }}
+      <div className="flex items-center justify-around px-2 py-2 max-w-lg mx-auto">
+        {selectedGroup ? (
+          <>
+            {leftTabs.map((item) => (
+              <button
+                key={item.id}
+                className={`flex flex-col items-center gap-0.5 min-w-0 flex-1 py-1.5 px-1 rounded-xl transition-all
+                  ${activeTab === item.id ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                onClick={() => onTabChange(item.id)}
+                aria-label={item.label}
+                aria-current={activeTab === item.id ? 'page' : undefined}
               >
-                <LogOut className="h-4 w-4 mr-2" />
-                Sign Out
-              </Button>
+                <item.icon className={`h-5 w-5 transition-transform ${activeTab === item.id ? 'scale-110' : ''}`} />
+                <span className="text-[10px] font-medium truncate w-full text-center leading-tight mt-0.5">
+                  {item.label}
+                </span>
+              </button>
+            ))}
+
+            {/* Pilo — prominent centre button */}
+            <div className="flex-1 flex justify-center">
+              <button
+                onClick={openPilo}
+                aria-label="Ask Pilo"
+                className="relative -mt-6 h-14 w-14 rounded-full bg-gradient-to-br from-primary via-primary to-emerald-500 shadow-xl shadow-primary/30 ring-4 ring-background flex items-center justify-center active:scale-95 transition-transform"
+              >
+                <Sparkles className="h-6 w-6 text-white" />
+                <span className="absolute inset-0 rounded-full bg-primary/40 animate-ping opacity-20 pointer-events-none" />
+              </button>
             </div>
 
-            {/* Group actions */}
-            <div className="border-t pt-3">
-              <p className="text-xs text-muted-foreground font-medium mb-2 px-1">Groups</p>
-              <div className="space-y-1">
-                <CreateGroupDialog onSuccess={() => { onGroupsChanged(); setOpen(false); }} />
-                <JoinGroupDialog onSuccess={() => { onGroupsChanged(); setOpen(false); }} />
-                <SearchPublicGroupsDialog onSuccess={onGroupsChanged} />
-              </div>
-            </div>
+            {rightTabs.map((item) => (
+              <button
+                key={item.id}
+                className={`flex flex-col items-center gap-0.5 min-w-0 flex-1 py-1.5 px-1 rounded-xl transition-all
+                  ${activeTab === item.id ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                onClick={() => onTabChange(item.id)}
+                aria-label={item.label}
+                aria-current={activeTab === item.id ? 'page' : undefined}
+              >
+                <item.icon className={`h-5 w-5 transition-transform ${activeTab === item.id ? 'scale-110' : ''}`} />
+                <span className="text-[10px] font-medium truncate w-full text-center leading-tight mt-0.5">
+                  {item.label}
+                </span>
+              </button>
+            ))}
+          </>
+        ) : (
+          <div className="flex-1 flex justify-center">
+            <button onClick={openPilo} aria-label="Ask Pilo" className="relative -mt-6 h-14 w-14 rounded-full bg-gradient-to-br from-primary via-primary to-emerald-500 shadow-xl shadow-primary/30 ring-4 ring-background flex items-center justify-center active:scale-95 transition-transform">
+              <Sparkles className="h-6 w-6 text-white" />
+            </button>
           </div>
-        </SheetContent>
-      </Sheet>
+        )}
+      </div>
     </div>
   );
 }
