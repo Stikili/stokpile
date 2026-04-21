@@ -201,14 +201,45 @@ export function MobileNav({
   }
 
   // ─── Bottom nav ────────────────────────────────────────────────────────────
+  // Layout on mobile: [Home] [Contribute] [Pilo] [Payouts/Meetings] [More]
+  // Pilo sits in the centre as a prominent circular button.
+  const bottomLeftTabs = mainTabs.slice(0, 2);
+  const bottomRightTabs = mainTabs.slice(2, 3);
   return (
     <div className="bg-white/95 dark:bg-[#0f0f14]/95 border-t border-border backdrop-blur-sm">
       <Sheet open={open} onOpenChange={setOpen}>
         <div className="flex items-center justify-around px-2 py-2 max-w-lg mx-auto">
           {selectedGroup ? (
             <>
-              {/* Core nav items */}
-              {mainTabs.slice(0, 4).map((item) => (
+              {bottomLeftTabs.map((item) => (
+                <button
+                  key={item.id}
+                  className={`flex flex-col items-center gap-0.5 min-w-0 flex-1 py-1.5 px-1 rounded-xl transition-all
+                    ${activeTab === item.id ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                  onClick={() => onTabChange(item.id)}
+                  aria-label={item.label}
+                  aria-current={activeTab === item.id ? 'page' : undefined}
+                >
+                  <item.icon className={`h-5 w-5 transition-transform ${activeTab === item.id ? 'scale-110' : ''}`} />
+                  <span className="text-[10px] font-medium truncate w-full text-center leading-tight mt-0.5">
+                    {item.label}
+                  </span>
+                </button>
+              ))}
+
+              {/* Pilo — prominent centre button */}
+              <div className="flex-1 flex justify-center">
+                <button
+                  onClick={openPilo}
+                  aria-label="Ask Pilo"
+                  className="relative -mt-6 h-14 w-14 rounded-full bg-gradient-to-br from-primary via-primary to-emerald-500 shadow-xl shadow-primary/30 ring-4 ring-background flex items-center justify-center active:scale-95 transition-transform"
+                >
+                  <Sparkles className="h-6 w-6 text-white" />
+                  <span className="absolute inset-0 rounded-full bg-primary/40 animate-ping opacity-20 pointer-events-none" />
+                </button>
+              </div>
+
+              {bottomRightTabs.map((item) => (
                 <button
                   key={item.id}
                   className={`flex flex-col items-center gap-0.5 min-w-0 flex-1 py-1.5 px-1 rounded-xl transition-all
@@ -273,27 +304,33 @@ export function MobileNav({
               </div>
             </button>
 
-            {/* More navigation tabs */}
-            {moreTabs.filter(t => t.section === 'more').length > 0 && (
-              <div>
-                <p className="text-xs text-muted-foreground font-medium mb-2 px-1">Sections</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {moreTabs.filter(t => t.section === 'more').map(t => (
-                    <button
-                      key={t.id}
-                      onClick={() => nav(t.id)}
-                      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all
-                        ${activeTab === t.id
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-border bg-card hover:bg-muted text-foreground'}`}
-                    >
-                      <t.icon className="h-5 w-5" />
-                      <span className="text-xs font-medium text-center leading-tight">{t.label}</span>
-                    </button>
-                  ))}
+            {/* Demoted main tabs (Meetings when displaced by Pilo in bottom nav) + More sections */}
+            {(() => {
+              const demotedMain = mainTabs.slice(3);
+              const moreOnly = moreTabs.filter(t => t.section === 'more');
+              const combined = [...demotedMain, ...moreOnly];
+              if (combined.length === 0) return null;
+              return (
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium mb-2 px-1">Sections</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {combined.map(t => (
+                      <button
+                        key={t.id}
+                        onClick={() => nav(t.id)}
+                        className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all
+                          ${activeTab === t.id
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-border bg-card hover:bg-muted text-foreground'}`}
+                      >
+                        <t.icon className="h-5 w-5" />
+                        <span className="text-xs font-medium text-center leading-tight">{t.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Admin tabs */}
             {moreTabs.filter(t => t.section === 'admin').length > 0 && (
