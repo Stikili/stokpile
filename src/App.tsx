@@ -34,7 +34,6 @@ import { PendingInvitesView } from "@/presentation/components/members/PendingInv
 import { PublicJoinView } from "@/presentation/components/groups/PublicJoinView";
 import { ProfileMenu } from "@/presentation/components/profile/ProfileMenu";
 import { MobileNav } from "@/presentation/layout/MobileNav";
-import { QuickActions } from "@/presentation/layout/QuickActions";
 import { PiloFab } from "@/presentation/components/ai/PiloFab";
 import { PiloProvider } from "@/presentation/components/ai/PiloContext";
 import {
@@ -735,13 +734,6 @@ export default function App() {
                     </Suspense>
                   </Tabs>
                   
-                  {/* Quick Actions FAB */}
-                  <QuickActions
-                    onAction={handleQuickAction}
-                    isAdmin={isAdmin}
-                    payoutsAllowed={selectedGroup.payoutsAllowed}
-                    groupType={selectedGroup.groupType}
-                  />
                 </div>
               )}
             </main>
