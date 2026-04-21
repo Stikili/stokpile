@@ -87,13 +87,21 @@ export function ProfileMenu({
 
           <DropdownMenuSeparator />
 
-          {/* Account */}
+          {/* Account — alphabetical */}
           <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
             Account
           </DropdownMenuLabel>
+          <DropdownMenuItem onClick={() => setShowSessions(true)}>
+            <Monitor className="h-4 w-4 mr-2" />
+            Active Sessions
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setShowProfile(true)}>
             <User className="h-4 w-4 mr-2" />
             Edit Profile
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setShowDataExport(true)}>
+            <Download className="h-4 w-4 mr-2" />
+            Export My Data
           </DropdownMenuItem>
           <NotificationPrefsDialog>
             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
@@ -101,18 +109,10 @@ export function ProfileMenu({
               Notifications
             </DropdownMenuItem>
           </NotificationPrefsDialog>
-          <DropdownMenuItem onClick={() => setShowSessions(true)}>
-            <Monitor className="h-4 w-4 mr-2" />
-            Active Sessions
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setShowDataExport(true)}>
-            <Download className="h-4 w-4 mr-2" />
-            Export My Data
-          </DropdownMenuItem>
 
           <DropdownMenuSeparator />
 
-          {/* Groups */}
+          {/* Groups — alphabetical */}
           <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
             Groups
           </DropdownMenuLabel>
@@ -131,7 +131,10 @@ export function ProfileMenu({
 
           <DropdownMenuSeparator />
 
-          {/* Rewards + Referral — revenue levers */}
+          {/* Rewards — alphabetical */}
+          <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
+            Rewards
+          </DropdownMenuLabel>
           <DropdownMenuItem onClick={() => setShowRewards(true)} className="text-amber-600 dark:text-amber-400 focus:text-amber-600 dark:focus:text-amber-400">
             <Trophy className="h-4 w-4 mr-2" />
             My Rewards
@@ -143,7 +146,7 @@ export function ProfileMenu({
 
           <DropdownMenuSeparator />
 
-          {/* Support */}
+          {/* Support — alphabetical */}
           <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
             Support
           </DropdownMenuLabel>
@@ -163,7 +166,10 @@ export function ProfileMenu({
 
           <DropdownMenuSeparator />
 
-          {/* Danger zone */}
+          {/* Danger zone — alphabetical */}
+          <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-destructive/70 font-semibold">
+            Danger
+          </DropdownMenuLabel>
           {import.meta.env.DEV && (
             <DropdownMenuItem
               onClick={() => setShowClearData(true)}
