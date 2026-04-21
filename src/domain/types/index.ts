@@ -56,7 +56,9 @@ export interface Member {
   fullName: string;
   surname: string;
   role: 'admin' | 'member';
-  status: 'approved' | 'pending' | 'inactive';
+  status: 'approved' | 'pending' | 'inactive' | 'managed';
+  managed?: boolean;
+  phone?: string | null;
   joinedAt: string;
   profilePictureUrl?: string | null;
   country?: string;

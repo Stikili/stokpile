@@ -9,6 +9,8 @@ import { EditTotalContributionsDialog } from '@/presentation/components/groups/E
 import { ThisMonthStatus } from '@/presentation/components/dashboard/ThisMonthStatus';
 import { NextTurnCard } from '@/presentation/components/dashboard/NextTurnCard';
 import { LeaderboardCard } from '@/presentation/components/dashboard/LeaderboardCard';
+import { SharePayoutImage } from '@/presentation/components/reports/SharePayoutImage';
+import { Share2 } from 'lucide-react';
 import { AnnualProgressCard } from '@/presentation/components/dashboard/AnnualProgressCard';
 import { api } from '@/infrastructure/api';
 import { formatCurrency, formatDate } from '@/lib/export';
@@ -214,6 +216,17 @@ export function Dashboard({ groupId, groupType, annualTarget, isAdmin = false, u
               </div>
             </div>
             {isAdmin && (
+              <div className="flex flex-col gap-1 shrink-0">
+                <ShareCycleButton
+                  groupId={groupId}
+                  groupName={members[0] ? 'this group' : 'this group'}
+                  totalContributed={stats.totalContributions}
+                  totalPaidOut={stats.totalPayouts}
+                  memberCount={members.length}
+                />
+              </div>
+            )}
+            {isAdmin && (
               <EditTotalContributionsDialog
                 groupId={groupId}
                 currentTotal={stats.totalContributions}
@@ -344,6 +357,39 @@ export function Dashboard({ groupId, groupType, annualTarget, isAdmin = false, u
       {/* Group Health Score */}
       <GroupHealthScore groupId={groupId} />
     </div>
+  );
+}
+
+function ShareCycleButton({
+  groupId: _groupId, groupName, totalContributed, totalPaidOut, memberCount,
+}: {
+  groupId: string;
+  groupName: string;
+  totalContributed: number;
+  totalPaidOut: number;
+  memberCount: number;
+}) {
+  const [open, setOpen] = useState(false);
+  const period = String(new Date().getFullYear());
+  return (
+    <>
+      <Button size="sm" variant="outline" className="gap-1.5 h-7 text-[11px]" onClick={() => setOpen(true)}>
+        <Share2 className="h-3 w-3" />
+        Share summary
+      </Button>
+      <SharePayoutImage
+        open={open}
+        onOpenChange={setOpen}
+        data={{
+          groupName,
+          period,
+          totalContributedZar: totalContributed,
+          totalPaidOutZar: totalPaidOut,
+          memberCount,
+          headline: 'A strong year, together.',
+        }}
+      />
+    </>
   );
 }
 

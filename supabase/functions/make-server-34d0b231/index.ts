@@ -7,6 +7,7 @@ import { Redis } from "npm:@upstash/redis@1.34.3";
 import { registerExtraRoutes } from "./extra_routes.ts";
 import { registerMoreRoutes } from "./more_routes.ts";
 import { registerAiRoutes } from "./ai_routes.ts";
+import { registerWhatsappRoutes } from "./whatsapp_routes.ts";
 
 const app = new Hono();
 
@@ -305,7 +306,7 @@ async function checkMemberCap(groupId: string): Promise<{ ok: true } | { ok: fal
     .from('group_memberships')
     .select('id', { count: 'exact', head: true })
     .eq('group_id', groupId)
-    .eq('status', 'approved');
+    .in('status', ['approved', 'managed']);
   if ((count ?? 0) >= (cap ?? 0)) {
     return {
       ok: false,
@@ -358,6 +359,14 @@ app.post('/make-server-34d0b231/signup', async (c) => {
       terms_accepted_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
     }, { onConflict: 'email' });
+
+    // If this email was previously added as a managed member by a treasurer,
+    // promote those rows to full 'approved' memberships.
+    await supabaseAdmin
+      .from('group_memberships')
+      .update({ status: 'approved', managed_name: null, managed_phone: null, joined_at: new Date().toISOString() })
+      .eq('user_email', email)
+      .eq('status', 'managed');
 
     return c.json({ success: true, user: data.user });
   } catch (err: any) {
@@ -1039,19 +1048,29 @@ async function handleGetMembers(c: any) {
       .from('group_memberships')
       .select('*, profiles(*)')
       .eq('group_id', groupId)
-      .in('status', ['approved', 'inactive']);
+      .in('status', ['approved', 'inactive', 'managed']);
 
-    const members = (data ?? []).map((m: any) => ({
-      email: m.user_email,
-      fullName: m.profiles?.full_name ?? 'Unknown',
-      surname: m.profiles?.surname ?? 'User',
-      profilePictureUrl: m.profiles?.profile_picture_url ?? null,
-      role: m.role,
-      status: m.status,
-      joinedAt: m.joined_at,
-      deactivatedAt: m.deactivated_at ?? null,
-      deactivatedBy: m.deactivated_by ?? null,
-    }));
+    const members = (data ?? []).map((m: any) => {
+      const isManaged = m.status === 'managed';
+      // Managed members don't have a profile — use the stored display name.
+      const fallbackName = isManaged
+        ? (m.managed_name || m.user_email?.split('@')[0] || 'Member')
+        : 'Unknown';
+      const [first, ...rest] = (m.profiles?.full_name ?? fallbackName).split(' ');
+      return {
+        email: m.user_email,
+        fullName: m.profiles?.full_name ?? first ?? fallbackName,
+        surname: m.profiles?.surname ?? rest.join(' ') ?? '',
+        profilePictureUrl: m.profiles?.profile_picture_url ?? null,
+        phone: isManaged ? m.managed_phone : (m.profiles?.phone ?? null),
+        role: m.role,
+        status: m.status,
+        managed: isManaged,
+        joinedAt: m.joined_at,
+        deactivatedAt: m.deactivated_at ?? null,
+        deactivatedBy: m.deactivated_by ?? null,
+      };
+    });
 
     return c.json({ members });
   } catch (err: any) {
@@ -1061,6 +1080,151 @@ async function handleGetMembers(c: any) {
 
 app.get('/make-server-34d0b231/groups/:groupId/members', handleGetMembers);
 app.get('/make-server-34d0b231/groups/:id/members', handleGetMembers);
+
+// Bulk import from a parsed spreadsheet: an array of members and an optional
+// array of contributions keyed by member name. Used by the CSV importer in
+// the frontend. Atomic-ish: bails on the first unrecoverable error but logs
+// partial progress to the caller.
+app.post('/make-server-34d0b231/groups/:id/members/bulk-import', async (c: any) => {
+  try {
+    const user = await getAuthUser(c);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('id');
+    const myMembership = await getMembership(groupId, user.email!);
+    if (!myMembership || myMembership.role !== 'admin')
+      return c.json({ error: 'Admin only' }, 403);
+
+    const { members, contributions } = await c.req.json();
+    if (!Array.isArray(members) || members.length === 0)
+      return c.json({ error: 'members array required' }, 400);
+
+    // Tier cap check — reject the whole batch if it'd push over
+    const capResult = await checkMemberCap(groupId);
+    if (!capResult.ok) {
+      return c.json({ error: capResult.message, cap: capResult.cap, tier: capResult.tier, groupId, feature: 'members' }, 402);
+    }
+
+    const errors: string[] = [];
+    const nameToEmail: Record<string, string> = {};
+    let membersCreated = 0;
+
+    for (const m of members) {
+      const name = (m.name || '').trim();
+      if (!name) { errors.push('Row with empty name skipped'); continue; }
+
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 24);
+      const userEmail = (m.email && m.email.trim().toLowerCase()) || `managed+${groupId.slice(0, 8)}+${slug}@stokpile.local`;
+
+      // Skip duplicates
+      const existing = await getMembership(groupId, userEmail);
+      if (existing) { nameToEmail[name] = userEmail; continue; }
+
+      // Per-iteration cap check so we don't exceed mid-batch
+      const cap = await checkMemberCap(groupId);
+      if (!cap.ok) {
+        errors.push(`Stopped at cap: ${cap.message}`);
+        break;
+      }
+
+      const { error } = await supabaseAdmin
+        .from('group_memberships')
+        .insert({
+          group_id: groupId,
+          user_email: userEmail,
+          role: 'member',
+          status: 'managed',
+          joined_at: new Date().toISOString(),
+          joined_via: 'bulk-import',
+          managed_name: name,
+          managed_phone: m.phone?.trim() || null,
+        });
+
+      if (error) errors.push(`${name}: ${error.message}`);
+      else {
+        nameToEmail[name] = userEmail;
+        membersCreated += 1;
+      }
+    }
+
+    let contributionsCreated = 0;
+    if (Array.isArray(contributions) && contributions.length > 0) {
+      for (const c of contributions) {
+        const email = nameToEmail[(c.memberName || '').trim()];
+        if (!email) continue;
+        const amount = Number(c.amount);
+        if (!Number.isFinite(amount) || amount <= 0) continue;
+
+        const { error } = await supabaseAdmin
+          .from('contributions')
+          .insert({
+            group_id: groupId,
+            user_email: email,
+            amount,
+            date: c.date || new Date().toISOString().split('T')[0],
+            paid: c.paid !== false,
+            created_by: user.email,
+          });
+        if (error) errors.push(`Contribution for ${c.memberName}: ${error.message}`);
+        else contributionsCreated += 1;
+      }
+    }
+
+    return c.json({ success: true, membersCreated, contributionsCreated, errors });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+// Treasurer-solo mode: add a member who doesn't use the app yet.
+// The admin logs contributions on their behalf; if they later sign up
+// with a matching email, the membership is promoted to 'approved'.
+app.post('/make-server-34d0b231/groups/:id/members/managed', async (c: any) => {
+  try {
+    const user = await getAuthUser(c);
+    if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+    const groupId = c.req.param('id');
+    const myMembership = await getMembership(groupId, user.email!);
+    if (!myMembership || myMembership.role !== 'admin')
+      return c.json({ error: 'Admin only' }, 403);
+
+    const { name, phone, email } = await c.req.json();
+    if (!name?.trim()) return c.json({ error: 'Name is required' }, 400);
+
+    // Use supplied email, or synthesize a stable placeholder so lookups work.
+    // The synthesized form is `managed+<group>+<slug>@stokpile.local`.
+    const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 24);
+    const userEmail = (email && email.trim().toLowerCase()) || `managed+${groupId.slice(0, 8)}+${slug}@stokpile.local`;
+
+    // Tier-based member cap
+    const capResult = await checkMemberCap(groupId);
+    if (!capResult.ok) return c.json({ error: capResult.message, cap: capResult.cap, tier: capResult.tier, groupId, feature: 'members' }, 402);
+
+    const existing = await getMembership(groupId, userEmail);
+    if (existing) return c.json({ error: 'A member with this email already exists in this group' }, 400);
+
+    const { data: membership, error } = await supabaseAdmin
+      .from('group_memberships')
+      .insert({
+        group_id: groupId,
+        user_email: userEmail,
+        role: 'member',
+        status: 'managed',
+        joined_at: new Date().toISOString(),
+        joined_via: 'treasurer-added',
+        managed_name: name.trim(),
+        managed_phone: phone?.trim() || null,
+      })
+      .select()
+      .single();
+    if (error) return c.json({ error: error.message }, 500);
+
+    return c.json({ success: true, membership: toMembership(membership) });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
 
 app.delete('/make-server-34d0b231/groups/:id/members/:email', async (c) => {
   try {
@@ -1382,8 +1546,8 @@ app.post('/make-server-34d0b231/contributions', async (c) => {
       if (myMembership.role !== 'admin')
         return c.json({ error: 'Only admins can add contributions for others' }, 403);
       const targetM = await getMembership(groupId, userEmail);
-      if (!targetM || targetM.status !== 'approved')
-        return c.json({ error: 'Target user is not an approved member' }, 400);
+      if (!targetM || (targetM.status !== 'approved' && targetM.status !== 'managed'))
+        return c.json({ error: 'Target user is not an active member' }, 400);
       targetEmail = userEmail;
     }
 
@@ -2502,5 +2666,6 @@ function cacheFor(c: any, seconds: number) {
 registerExtraRoutes(app, supabaseAdmin, getAuthUser, getMembership);
 registerMoreRoutes(app, supabaseAdmin, getAuthUser, getMembership);
 registerAiRoutes(app, supabaseAdmin, getAuthUser, getMembership);
+registerWhatsappRoutes(app, supabaseAdmin);
 
 Deno.serve(app.fetch);

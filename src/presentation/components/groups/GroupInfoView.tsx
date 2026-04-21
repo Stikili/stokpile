@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/presentation/ui/badge';
 import { Button } from '@/presentation/ui/button';
 import { Skeleton } from '@/presentation/ui/skeleton';
-import { InviteMembersDialog } from '@/presentation/components/members/InviteMembersDialog';
+import { AdminAddMembersMenu } from '@/presentation/components/members/AdminAddMembersMenu';
 import { ShareInviteDialog } from '@/presentation/components/members/ShareInviteDialog';
 import { BulkInviteDialog } from '@/presentation/components/members/BulkInviteDialog';
 import { ConstitutionGeneratorDialog } from '@/presentation/components/groups/ConstitutionGeneratorDialog';
@@ -594,7 +594,7 @@ export function GroupInfoView({ group, onGroupUpdate, userEmail }: GroupInfoView
             )}
           </div>
           {group.userRole === 'admin' && (
-            <InviteMembersDialog groupId={group.id} />
+            <AdminAddMembersMenu groupId={group.id} onSuccess={loadMembers} />
           )}
         </CardHeader>
         <CardContent>
@@ -681,9 +681,15 @@ export function GroupInfoView({ group, onGroupUpdate, userEmail }: GroupInfoView
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={member.status === 'inactive' ? 'destructive' : 'default'}>
-                            {member.status === 'inactive' ? 'Inactive' : 'Active'}
-                          </Badge>
+                          {member.managed || member.status === 'managed' ? (
+                            <Badge variant="outline" className="border-amber-500/40 text-amber-600 dark:text-amber-400">
+                              Managed
+                            </Badge>
+                          ) : (
+                            <Badge variant={member.status === 'inactive' ? 'destructive' : 'default'}>
+                              {member.status === 'inactive' ? 'Inactive' : 'Active'}
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell>{formatDate(member.joinedAt)}</TableCell>
                         <TableCell className="text-right">

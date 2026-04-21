@@ -367,6 +367,13 @@ export function registerExtraRoutes(
         }
       }
 
+      // Relay to WhatsApp (no-op if WA provider isn't configured)
+      import('./whatsapp_routes.ts')
+        .then((m) => m.relayAnnouncementToWhatsApp({
+          supabaseAdmin, groupId, title: title.trim(), content: content.trim(),
+        }))
+        .catch((e) => console.warn('WhatsApp relay failed:', e?.message));
+
       return c.json({
         announcement: {
           id, groupId, title: title.trim(), content: content.trim(),

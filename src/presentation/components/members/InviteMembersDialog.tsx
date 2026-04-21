@@ -12,10 +12,17 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/toolt
 
 interface InviteMembersDialogProps {
   groupId: string;
+  open?: boolean;                         // allow controlled usage
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;                  // hide the built-in trigger when controlled externally
 }
 
-export function InviteMembersDialog({ groupId }: InviteMembersDialogProps) {
-  const [open, setOpen] = useState(false);
+export function InviteMembersDialog({
+  groupId, open: controlledOpen, onOpenChange, hideTrigger,
+}: InviteMembersDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState<UserSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -64,12 +71,14 @@ export function InviteMembersDialog({ groupId }: InviteMembersDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button>
-          <UserPlus className="h-4 w-4 mr-2" />
-          Invite Members
-        </Button>
-      </DialogTrigger>
+      {!hideTrigger && (
+        <DialogTrigger asChild>
+          <Button>
+            <UserPlus className="h-4 w-4 mr-2" />
+            Invite Members
+          </Button>
+        </DialogTrigger>
+      )}
       {open && (
         <DialogContent className="max-w-md">
         <DialogHeader>

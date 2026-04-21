@@ -199,6 +199,21 @@ export const api = {
   getMembers: (groupId: string) =>
     request<{ members: Member[] }>(`/groups/${groupId}/members`),
 
+  addManagedMember: (groupId: string, data: { name: string; phone?: string; email?: string }) =>
+    request<{ success: boolean; membership: { email: string; role: string; status: string } }>(
+      `/groups/${groupId}/members/managed`,
+      { method: "POST", body: data },
+    ),
+
+  bulkImportMembers: (groupId: string, data: {
+    members: Array<{ name: string; phone?: string; email?: string }>;
+    contributions?: Array<{ memberName: string; amount: number; date: string; paid?: boolean }>;
+  }) =>
+    request<{ success: boolean; membersCreated: number; contributionsCreated: number; errors: string[] }>(
+      `/groups/${groupId}/members/bulk-import`,
+      { method: "POST", body: data },
+    ),
+
   promoteMember: (groupId: string, memberEmail: string) =>
     request<{ message: string }>(`/groups/${groupId}/members/${encodeURIComponent(memberEmail)}/promote`, { method: "PUT" }),
 
