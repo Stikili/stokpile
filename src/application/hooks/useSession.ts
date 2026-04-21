@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { api, getAccessToken, setAccessToken } from "@/infrastructure/api";
+import { api, getAccessToken, setAccessToken, setRefreshToken, getRefreshToken, refreshAccessToken } from "@/infrastructure/api";
 import { setSupabaseSession } from "@/infrastructure/supabase/client";
 import { toast } from "sonner";
 import type { Session } from "@/domain/types";
@@ -58,7 +58,11 @@ export function useSession() {
 
   const checkSession = async () => {
     try {
-      const token = getAccessToken();
+      let token = getAccessToken();
+      // No access token but a refresh token exists — rehydrate silently
+      if (!token && getRefreshToken()) {
+        token = await refreshAccessToken();
+      }
       if (token) {
         const data = await api.getSession();
         if (data?.session) {
@@ -67,7 +71,21 @@ export function useSession() {
           localStorage.setItem('stokpile-has-account', 'true'); // Skip landing on future visits
           resetSessionTimer();
         } else {
+          // Access token was stale — try a refresh once more before giving up
+          if (getRefreshToken()) {
+            const fresh = await refreshAccessToken();
+            if (fresh) {
+              const retry = await api.getSession();
+              if (retry?.session) {
+                setSession(retry.session as Session);
+                setSupabaseSession(fresh).catch(() => {});
+                resetSessionTimer();
+                return;
+              }
+            }
+          }
           setAccessToken(null);
+          setRefreshToken(null);
         }
       }
     } catch (error) {
@@ -88,6 +106,7 @@ export function useSession() {
     sessionStorage.removeItem("rememberedEmail");
     sessionStorage.removeItem("rememberMe");
     setAccessToken(null);
+    setRefreshToken(null);
     setSession(null);
   };
 

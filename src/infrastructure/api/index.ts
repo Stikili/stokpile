@@ -18,8 +18,7 @@ let accessToken: string | null = null;
 
 export const setAccessToken = (token: string | null): void => {
   accessToken = token;
-  // Token is kept in memory only for XSS protection.
-  // sessionStorage is used as a fallback for page reloads within the same tab.
+  // Access token — short-lived, kept in memory + sessionStorage fallback.
   if (token) {
     sessionStorage.setItem("accessToken", token);
   } else {
@@ -34,15 +33,56 @@ export const getAccessToken = (): string | null => {
   return accessToken;
 };
 
+// Refresh token — longer-lived, stored in localStorage so sessions survive
+// browser restarts. The access token expires hourly; a 401 triggers a
+// transparent refresh using this token (see fetchClient).
+const REFRESH_KEY = "stokpile-refresh-token";
+
+export const setRefreshToken = (token: string | null): void => {
+  if (token) localStorage.setItem(REFRESH_KEY, token);
+  else localStorage.removeItem(REFRESH_KEY);
+};
+
+export const getRefreshToken = (): string | null =>
+  localStorage.getItem(REFRESH_KEY);
+
+// Attempt to exchange the refresh token for a new access token.
+// Returns the fresh access token, or null if refresh failed (tokens cleared).
+export async function refreshAccessToken(): Promise<string | null> {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) return null;
+  try {
+    const res = await fetch(`${API_URL}/auth/refresh`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${publicAnonKey}`,
+      },
+      body: JSON.stringify({ refreshToken }),
+    });
+    if (!res.ok) {
+      setAccessToken(null);
+      setRefreshToken(null);
+      return null;
+    }
+    const data = await res.json();
+    if (data.accessToken) setAccessToken(data.accessToken);
+    if (data.refreshToken) setRefreshToken(data.refreshToken);
+    return data.accessToken ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // --- Base request helper ---
 
 type AuthMode = "user" | "anon";
 
-function request<T>(
+async function request<T>(
   path: string,
-  options: { method?: string; body?: unknown; auth?: AuthMode } = {}
+  options: { method?: string; body?: unknown; auth?: AuthMode; _retry?: boolean } = {}
 ): Promise<T> {
-  const { method = "GET", body, auth = "user" } = options;
+  const { method = "GET", body, auth = "user", _retry = false } = options;
 
   const token = auth === "anon" ? publicAnonKey : (getAccessToken() || publicAnonKey);
   const headers: Record<string, string> = {
@@ -57,7 +97,20 @@ function request<T>(
     serializedBody = JSON.stringify(body);
   }
 
-  return fetchClient<T>(`${API_URL}${path}`, { method, headers, body: serializedBody });
+  try {
+    return await fetchClient<T>(`${API_URL}${path}`, { method, headers, body: serializedBody });
+  } catch (err: unknown) {
+    // 401 on a user-auth call: try silent refresh once, then retry
+    const isAuthError =
+      !!err && typeof err === "object" && "status" in err && (err as { status: number }).status === 401;
+    if (isAuthError && auth === "user" && !_retry && getRefreshToken()) {
+      const fresh = await refreshAccessToken();
+      if (fresh) {
+        return request<T>(path, { ...options, _retry: true });
+      }
+    }
+    throw err;
+  }
 }
 
 // --- API methods ---
@@ -68,10 +121,11 @@ export const api = {
     request<{ message: string }>("/signup", { method: "POST", body: data, auth: "anon" }),
 
   signin: async (data: { email: string; password: string }) => {
-    const result = await request<{ accessToken: string; session: { user: { id: string; email: string } } }>(
+    const result = await request<{ accessToken: string; refreshToken?: string; session: { user: { id: string; email: string } } }>(
       "/signin", { method: "POST", body: data, auth: "anon" }
     );
     if (result.accessToken) setAccessToken(result.accessToken);
+    if (result.refreshToken) setRefreshToken(result.refreshToken);
     return result;
   },
 
@@ -81,6 +135,7 @@ export const api = {
   signout: async () => {
     const result = await request<{ message: string }>("/signout", { method: "POST" });
     setAccessToken(null);
+    setRefreshToken(null);
     return result;
   },
 

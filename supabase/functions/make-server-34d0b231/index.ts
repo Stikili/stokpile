@@ -346,6 +346,25 @@ app.post('/make-server-34d0b231/signin', async (c) => {
     return c.json({
       success: true,
       accessToken: data.session.access_token,
+      refreshToken: data.session.refresh_token,
+      expiresAt: data.session.expires_at,
+      user: data.user,
+    });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+app.post('/make-server-34d0b231/auth/refresh', async (c) => {
+  try {
+    const { refreshToken } = await c.req.json();
+    if (!refreshToken) return c.json({ error: 'refreshToken required' }, 400);
+    const { data, error } = await supabaseAdmin.auth.refreshSession({ refresh_token: refreshToken });
+    if (error || !data.session) return c.json({ error: 'Refresh failed' }, 401);
+    return c.json({
+      accessToken: data.session.access_token,
+      refreshToken: data.session.refresh_token,
+      expiresAt: data.session.expires_at,
       user: data.user,
     });
   } catch (err: any) {
