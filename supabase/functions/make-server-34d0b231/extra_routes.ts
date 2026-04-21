@@ -6,12 +6,22 @@ const PREFIX = '/make-server-34d0b231';
 const VALID_TIERS = ['free', 'community', 'pro', 'enterprise'];
 const TRIAL_DAYS = 90;
 
+// Keep in sync with src/domain/types/subscription.ts
 const TIER_FEATURES: Record<string, string[]> = {
-  free:       ['announcements'],
-  community:  ['announcements', 'payment-proofs', 'rotation', 'grocery', 'burial', 'sms', 'flutterwave'],
-  pro:        ['announcements', 'payment-proofs', 'rotation', 'grocery', 'burial', 'sms', 'flutterwave', 'reports', 'analytics', 'penalties', 'audit'],
-  enterprise: ['announcements', 'payment-proofs', 'rotation', 'grocery', 'burial', 'sms', 'flutterwave', 'reports', 'analytics', 'penalties', 'audit'],
-  trial:      ['announcements', 'payment-proofs', 'rotation', 'grocery', 'burial', 'sms', 'flutterwave', 'reports', 'analytics', 'penalties', 'audit'],
+  free:       ['announcements', 'rotation'],
+  community:  ['announcements', 'rotation', 'payment-proofs', 'grocery', 'burial', 'sms', 'flutterwave'],
+  pro:        ['announcements', 'rotation', 'payment-proofs', 'grocery', 'burial', 'sms', 'flutterwave', 'reports', 'analytics', 'penalties', 'audit'],
+  enterprise: ['announcements', 'rotation', 'payment-proofs', 'grocery', 'burial', 'sms', 'flutterwave', 'reports', 'analytics', 'penalties', 'audit'],
+  trial:      ['announcements', 'rotation', 'payment-proofs', 'grocery', 'burial', 'sms', 'flutterwave', 'reports', 'analytics', 'penalties', 'audit'],
+};
+
+// Member caps per tier. Null = unlimited.
+export const TIER_MEMBER_CAPS: Record<string, number | null> = {
+  free:       8,
+  community:  30,
+  pro:        100,
+  enterprise: null,
+  trial:      100,
 };
 
 const PLAN_CODES: Record<string, string | undefined> = {

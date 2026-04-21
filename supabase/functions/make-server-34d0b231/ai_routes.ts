@@ -898,9 +898,13 @@ ${tier ? `- Rewards tier: ${tier} · ${lifetimePoints || 0} lifetime points · $
 ${groupId ? `- Current groupId: ${groupId} (pass to tools when needed)` : ''}
 ${snapshot}`;
 
-      // Choose model: Sonnet for analytical queries, Haiku otherwise.
+      // Choose model: Sonnet for analytical queries on paying tiers, Haiku otherwise.
+      // Gating Sonnet to Pro/Trial/Enterprise is a major cost lever — and a
+      // tangible upgrade for Pro ("real financial advisor" vs "quick assistant").
       const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user')?.content || '';
-      const needsReasoning = typeof lastUserMsg === 'string' && SONNET_TRIGGERS.test(lastUserMsg);
+      const analytical = typeof lastUserMsg === 'string' && SONNET_TRIGGERS.test(lastUserMsg);
+      const sonnetAllowed = subTier === 'pro' || subTier === 'trial' || subTier === 'enterprise';
+      const needsReasoning = analytical && sonnetAllowed;
       const chosenModel = needsReasoning ? MODEL_IDS.sonnet : MODEL_IDS.haiku;
 
       const tools = makeTools(supabaseAdmin, user.email);

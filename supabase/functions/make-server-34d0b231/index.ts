@@ -285,6 +285,38 @@ async function getMembership(groupId: string, userEmail: string) {
   return data;
 }
 
+// Keep in sync with TIER_LIMITS in src/domain/types/subscription.ts
+const MEMBER_CAPS: Record<string, number | null> = {
+  free:       8,
+  community:  30,
+  pro:        100,
+  enterprise: null,
+  trial:      100,
+};
+
+async function checkMemberCap(groupId: string): Promise<{ ok: true } | { ok: false; message: string; cap: number; tier: string }> {
+  const { data: sub } = await supabaseAdmin
+    .from('subscriptions').select('tier, trial_ends_at').eq('group_id', groupId).maybeSingle();
+  let tier = sub?.tier || 'trial';
+  if (tier === 'trial' && sub?.trial_ends_at && new Date(sub.trial_ends_at) < new Date()) tier = 'free';
+  const cap = MEMBER_CAPS[tier];
+  if (cap === null) return { ok: true };
+  const { count } = await supabaseAdmin
+    .from('group_memberships')
+    .select('id', { count: 'exact', head: true })
+    .eq('group_id', groupId)
+    .eq('status', 'approved');
+  if ((count ?? 0) >= (cap ?? 0)) {
+    return {
+      ok: false,
+      message: `Your ${tier} plan allows up to ${cap} members. Upgrade to add more.`,
+      cap: cap!,
+      tier,
+    };
+  }
+  return { ok: true };
+}
+
 async function isGroupNameUnique(name: string, excludeGroupId?: string) {
   let q = supabaseAdmin
     .from('groups')
@@ -939,6 +971,10 @@ app.post('/make-server-34d0b231/groups/:id/requests/:email/approve', async (c) =
     const myMembership = await getMembership(groupId, user.email!);
     if (!myMembership || myMembership.role !== 'admin')
       return c.json({ error: 'Not authorized' }, 403);
+
+    // Tier-based member cap
+    const capResult = await checkMemberCap(groupId);
+    if (!capResult.ok) return c.json({ error: capResult.message, cap: capResult.cap, tier: capResult.tier }, 402);
 
     const { data: membership, error } = await supabaseAdmin
       .from('group_memberships')
@@ -2052,6 +2088,10 @@ app.post('/make-server-34d0b231/invite/:token/join', async (c) => {
         return c.json({ error: 'Already a member', alreadyMember: true }, 400);
       return c.json({ error: 'Already requested to join' }, 400);
     }
+
+    // Tier-based member cap
+    const capResult = await checkMemberCap(group.id);
+    if (!capResult.ok) return c.json({ error: capResult.message, cap: capResult.cap, tier: capResult.tier }, 402);
 
     await supabaseAdmin.from('profiles').upsert({
       email: user.email!,
