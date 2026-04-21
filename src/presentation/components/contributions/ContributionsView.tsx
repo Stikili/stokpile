@@ -218,7 +218,7 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
       const data = await api.createFlutterwaveLink(contribution.id);
       window.open(data.paymentLink, '_blank', 'noopener,noreferrer');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Flutterwave payment not available');
+      toast.error(error instanceof Error ? error.message : 'Mobile money payment not available');
     } finally {
       setFlutterwaveId(null);
     }
@@ -566,7 +566,7 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
                                     }
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent>Pay via Paystack (card/bank)</TooltipContent>
+                                <TooltipContent>Pay by card or bank</TooltipContent>
                               </Tooltip>
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -579,11 +579,11 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
                                   >
                                     {flutterwaveId === contribution.id
                                       ? <Loader2 className="h-3 w-3 animate-spin" />
-                                      : <><Zap className="h-3 w-3 mr-1" /><span className="text-xs">Flutterwave</span></>
+                                      : <><Zap className="h-3 w-3 mr-1" /><span className="text-xs">Mobile money</span></>
                                     }
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent>Pay via Flutterwave (mobile money, card)</TooltipContent>
+                                <TooltipContent>Pay by mobile money or card</TooltipContent>
                               </Tooltip>
                             </>
                           )}
