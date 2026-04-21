@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@/presentation/ui/dropdown-menu';
 import { User, Plus, UserPlus, Search, LogOut, Trash2, UserX, Bell, HelpCircle, Sparkles, Monitor, Gift, Download, Trophy } from 'lucide-react';
+import { usePilo } from '@/presentation/components/ai/PiloContext';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
 import { NotificationPrefsDialog } from '@/presentation/components/profile/NotificationPrefsDialog';
 import { ProfileDialog } from '@/presentation/components/profile/ProfileDialog';
@@ -53,6 +54,7 @@ export function ProfileMenu({
   const [showSessions, setShowSessions] = useState(false);
   const [showReferral, setShowReferral] = useState(false);
   const [showRewards, setShowRewards] = useState(false);
+  const { openPilo } = usePilo();
   const [showDataExport, setShowDataExport] = useState(false);
   const [hasUnseenChangelog, setHasUnseenChangelog] = useState(() => {
     const seen = localStorage.getItem('changelog-seen-version');
@@ -73,6 +75,18 @@ export function ProfileMenu({
           <TooltipContent>Account & groups</TooltipContent>
         </Tooltip>
         <DropdownMenuContent align="end" className="w-60">
+          {/* Pilo — AI assistant, top of the menu */}
+          <DropdownMenuItem
+            onClick={openPilo}
+            className="text-primary focus:text-primary"
+          >
+            <Sparkles className="h-4 w-4 mr-2" />
+            Ask Pilo
+            <span className="ml-auto text-[10px] text-muted-foreground font-mono">⌘K</span>
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
           {/* Account */}
           <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
             Account

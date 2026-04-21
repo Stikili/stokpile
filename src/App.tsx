@@ -36,6 +36,7 @@ import { ProfileMenu } from "@/presentation/components/profile/ProfileMenu";
 import { MobileNav } from "@/presentation/layout/MobileNav";
 import { QuickActions } from "@/presentation/layout/QuickActions";
 import { PiloFab } from "@/presentation/components/ai/PiloFab";
+import { PiloProvider } from "@/presentation/components/ai/PiloContext";
 import {
   KeyboardShortcuts,
   useKeyboardShortcuts,
@@ -318,6 +319,7 @@ export default function App() {
         <LiteModeProvider>
         <SubscriptionProvider groupId={selectedGroup?.id ?? null}>
         <TooltipProvider>
+        <PiloProvider>
           <PullToRefresh>
           <div className="min-h-screen bg-gradient-to-br from-slate-50/80 to-blue-50/30 dark:bg-transparent dark:bg-none dark:from-transparent dark:to-transparent">
             {/* Skip to main content for accessibility */}
@@ -767,6 +769,7 @@ export default function App() {
             />
           </div>
           </PullToRefresh>
+        </PiloProvider>
         </TooltipProvider>
         </SubscriptionProvider>
         </LiteModeProvider>

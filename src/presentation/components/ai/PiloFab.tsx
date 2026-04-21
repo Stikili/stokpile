@@ -1,8 +1,9 @@
 // Global floating-action-button that opens the Pilo panel.
 // Appears on every logged-in screen; adapts to mobile/desktop.
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { PiloPanel } from './PiloPanel';
+import { usePilo } from './PiloContext';
 import { Sparkles } from 'lucide-react';
 
 interface PiloFabProps {
@@ -15,19 +16,19 @@ interface PiloFabProps {
 }
 
 export function PiloFab(props: PiloFabProps) {
-  const [open, setOpen] = useState(false);
+  const { open, setOpen, toggle } = usePilo();
 
   // Keyboard shortcut: Cmd/Ctrl + K
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        setOpen((o) => !o);
+        toggle();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [toggle]);
 
   return (
     <>

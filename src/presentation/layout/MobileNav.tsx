@@ -6,7 +6,9 @@ import {
   Menu, Home, DollarSign, TrendingUp, Calendar, Settings, LogOut, User,
   Moon, Sun, MoreHorizontal, Megaphone, RefreshCw, ShoppingCart,
   HeartHandshake, Gavel, FileBarChart, Activity, ClipboardList, Gauge,
+  Sparkles,
 } from 'lucide-react';
+import { usePilo } from '@/presentation/components/ai/PiloContext';
 import { CreateGroupDialog } from '@/presentation/components/groups/CreateGroupDialog';
 import { JoinGroupDialog } from '@/presentation/components/groups/JoinGroupDialog';
 import { SearchPublicGroupsDialog } from '@/presentation/components/groups/SearchPublicGroupsDialog';
@@ -67,6 +69,7 @@ export function MobileNav({
   const [open, setOpen] = useState(false);
   const { theme, setTheme } = useTheme();
   const { liteMode, toggleLiteMode } = useLiteMode();
+  const { openPilo } = usePilo();
 
   const isAdmin = selectedGroup?.userRole === 'admin';
   const allTabs = ALL_TABS(selectedGroup, isAdmin ?? false);
@@ -109,6 +112,20 @@ export function MobileNav({
               <p className="text-xs text-muted-foreground truncate">{session.user.email}</p>
             </div>
           </div>
+
+          {/* Ask Pilo — hero shortcut */}
+          <button
+            onClick={() => { setOpen(false); openPilo(); }}
+            className="w-full flex items-center gap-3 p-3 rounded-xl border bg-gradient-to-r from-primary/10 to-emerald-500/10 hover:from-primary/15 hover:to-emerald-500/15 transition-colors mb-2"
+          >
+            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary via-primary to-emerald-500 flex items-center justify-center shadow-md shadow-primary/30 shrink-0">
+              <Sparkles className="h-4 w-4 text-white" />
+            </div>
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-sm font-semibold">Ask Pilo</p>
+              <p className="text-[11px] text-muted-foreground">AI savings assistant</p>
+            </div>
+          </button>
 
           {/* Quick nav shortcuts (if group selected) */}
           {selectedGroup && (
@@ -242,6 +259,20 @@ export function MobileNav({
           </SheetHeader>
 
           <div className="overflow-y-auto space-y-4 pb-4">
+            {/* Pilo AI — hero entry */}
+            <button
+              onClick={() => { setOpen(false); openPilo(); }}
+              className="w-full group flex items-center gap-3 p-3 rounded-xl border bg-gradient-to-r from-primary/10 to-emerald-500/10 hover:from-primary/15 hover:to-emerald-500/15 transition-colors"
+            >
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary via-primary to-emerald-500 flex items-center justify-center shadow-md shadow-primary/30 shrink-0">
+                <Sparkles className="h-5 w-5 text-white group-hover:rotate-12 transition-transform" />
+              </div>
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-sm font-semibold">Ask Pilo</p>
+                <p className="text-[11px] text-muted-foreground">Your AI savings assistant</p>
+              </div>
+            </button>
+
             {/* More navigation tabs */}
             {moreTabs.filter(t => t.section === 'more').length > 0 && (
               <div>
