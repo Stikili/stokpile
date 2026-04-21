@@ -745,6 +745,87 @@ export function registerAiRoutes(
   // ─── Pilo: conversational assistant ─────────────────────────────────
   // Body: { messages: [{role, content}], groupId?, language?, userEmail, userName, tier, commissionRate }
   // Returns: { text, suggestedActions?: [{label, task, context}], callsThisMonth, cap, costZar, latencyMs }
+  // Pre-load a financial snapshot of the group so Pilo can answer common
+  // questions instantly without a tool-call round trip, and has enough
+  // context to reason about savings, returns, and member trends.
+  async function buildFinancialSnapshot(groupId: string, userEmail: string): Promise<string> {
+    try {
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 10);
+      const yearStart = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10);
+
+      const [{ data: group }, { data: memberships }, { data: contributions }, { data: payouts }, { data: sub }] = await Promise.all([
+        supabaseAdmin.from('groups')
+          .select('name, group_type, currency, description, created_at, annual_target, contribution_target')
+          .eq('id', groupId).maybeSingle(),
+        supabaseAdmin.from('memberships')
+          .select('user_email, role, status, joined_at')
+          .eq('group_id', groupId).eq('status', 'approved'),
+        supabaseAdmin.from('contributions')
+          .select('user_email, amount, paid, date')
+          .eq('group_id', groupId).gte('date', yearStart).limit(2000),
+        supabaseAdmin.from('payouts')
+          .select('recipient_email, amount, status, scheduled_for, completed_at')
+          .eq('group_id', groupId).order('scheduled_for', { ascending: false }).limit(50),
+        supabaseAdmin.from('subscriptions').select('tier').eq('group_id', groupId).maybeSingle(),
+      ]);
+
+      const memberCount = (memberships || []).length;
+      const paidContribs = (contributions || []).filter((c: any) => c.paid);
+      const sumYTD = paidContribs.reduce((s: number, c: any) => s + Number(c.amount || 0), 0);
+      const sumMonth = paidContribs
+        .filter((c: any) => c.date >= monthStart)
+        .reduce((s: number, c: any) => s + Number(c.amount || 0), 0);
+      const sumLastMonth = paidContribs
+        .filter((c: any) => c.date >= lastMonthStart && c.date < monthStart)
+        .reduce((s: number, c: any) => s + Number(c.amount || 0), 0);
+
+      const completedPayouts = (payouts || []).filter((p: any) => p.status === 'completed');
+      const sumPayoutsYTD = completedPayouts.reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+      const balance = sumYTD - sumPayoutsYTD;
+
+      const userContribsYTD = paidContribs
+        .filter((c: any) => c.user_email === userEmail)
+        .reduce((s: number, c: any) => s + Number(c.amount || 0), 0);
+      const userContribsMonth = paidContribs
+        .filter((c: any) => c.user_email === userEmail && c.date >= monthStart)
+        .reduce((s: number, c: any) => s + Number(c.amount || 0), 0);
+
+      // Overdue this month: members who haven't paid this month
+      const paidThisMonthEmails = new Set(
+        paidContribs.filter((c: any) => c.date >= monthStart).map((c: any) => c.user_email),
+      );
+      const overdueCount = (memberships || []).filter((m: any) => !paidThisMonthEmails.has(m.user_email)).length;
+
+      const target = Number(group?.contribution_target || 0);
+      const annualTarget = Number(group?.annual_target || 0);
+      const currency = group?.currency || 'ZAR';
+      const cur = (n: number) => `${currency} ${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+      const nextPayout = (payouts || []).find((p: any) => p.status === 'scheduled');
+
+      return `Group snapshot (live, computed now):
+- Name: ${group?.name || 'Unknown'} · Type: ${group?.group_type || 'n/a'} · Currency: ${currency}
+- Members (approved): ${memberCount} · Sub tier: ${sub?.tier || 'free'}
+- Contribution target/person/period: ${target ? cur(target) : 'not set'}
+- Annual target: ${annualTarget ? cur(annualTarget) : 'not set'}
+- Total contributed YTD: ${cur(sumYTD)}
+- Contributed this month: ${cur(sumMonth)} (last month: ${cur(sumLastMonth)}, delta: ${cur(sumMonth - sumLastMonth)})
+- Total paid out YTD: ${cur(sumPayoutsYTD)}
+- Current balance (YTD in − YTD out): ${cur(balance)}
+- Members overdue this month: ${overdueCount}
+- Next scheduled payout: ${nextPayout ? `${cur(Number(nextPayout.amount))} to ${nextPayout.recipient_email} on ${nextPayout.scheduled_for}` : 'none'}
+- Current user (${userEmail}) contributed this year: ${cur(userContribsYTD)} · this month: ${cur(userContribsMonth)}`;
+    } catch (e: any) {
+      return `Group snapshot unavailable: ${e?.message || 'error'}`;
+    }
+  }
+
+  // Route to Sonnet for analytical / advisory queries. Keyword heuristic —
+  // cheap and works well enough for the kinds of questions users actually ask.
+  const SONNET_TRIGGERS = /(project|projection|forecast|should i|should we|compare|comparison|invest|return|yield|interest|tax|sars|fsca|popia|analyse|analysis|recommend|strategy|optimi[sz]e|roi|risk|break even|cash ?flow|scenario|what if|\bsavings plan\b|\bbudget\b)/i;
+
   app.post(`${PREFIX}/ai/pilo`, async (c: any) => {
     try {
       if (!API_KEY) return c.json({ error: 'AI not configured (ANTHROPIC_API_KEY missing)' }, 503);
@@ -774,21 +855,53 @@ export function registerAiRoutes(
         return c.json({ error: `Monthly AI cap reached (${cap}). Upgrade for more.`, cap, callsThisMonth }, 429);
       }
 
-      const system = `You are Pilo, the AI assistant for Stokpile — a savings-group / stokvel management app built for South Africa and broader Africa. You help members and admins run their stokvels, chamas, burial societies, rotating/susu groups, grocery stokvels, and investment clubs.
+      // Pre-load group financial context when we have a group
+      const snapshot = groupId ? await buildFinancialSnapshot(groupId, user.email) : '';
 
-Behaviour:
-- Be warm, respectful, and concise. Use ubuntu principles — value the community, respect elders, acknowledge cultural context.
-- Language: respond in ${language || 'English'}. If the user writes in another language, match it.
-- Never invent numbers. Call tools to fetch live data (get_contributions, get_members, etc.) — every number you state must come from a tool or explicit user input.
-- When the user asks for something actionable (draft an announcement, log a contribution, remind a member), suggest a concrete next step.
-- If the user is asking about a specific group, you already have their group context.
-- Keep responses short by default (2-4 sentences). Only go longer if the user asks for detail.
+      const system = `You are Pilo — Stokpile's financial assistant for stokvels, chamas, burial societies, rotating/susu circles, grocery stokvels, investment clubs, and goal-based savings groups across Africa. You are warm, numerate, and honest.
+
+CORE BEHAVIOUR
+- Respond in ${language || 'English'}. Match the user's language if they write in another.
+- Be concise (2-4 sentences by default). Go deeper only when the user asks.
+- Ubuntu principles: respect the community, acknowledge cultural context, be respectful of elders and informal leadership structures.
+- Never invent numbers. Numbers must come from the group snapshot below, a tool call, or explicit user input.
+- Extrapolations and projections are fine IF you state the assumption ("at your current R500/month rate..."). Never pretend a projection is a fact.
 - Never discuss other users' data the current user isn't authorised to see.
 
-Context you already know:
+FINANCIAL INTELLIGENCE
+You are a competent personal-finance advisor for African members, not just a chatbot. Apply these frames when relevant:
+
+1. **Compound growth math** — know how to project savings: FV = PV × (1 + r)^n for lump sums, or FV = PMT × [((1+r)^n − 1) / r] for regular contributions. Use realistic rates (SA bank savings ~5-7%, inflation ~5%, JSE equity ~10% nominal long-term).
+
+2. **Opportunity cost & inflation** — flag when a pure-cash stokvel is losing real value to inflation over long holds. Compare against alternatives: Tax-Free Savings Account (TFSA, R36,000/year contribution, R500,000 lifetime, SA), Retirement Annuity (tax-deductible), unit trusts, money-market funds.
+
+3. **SA tax context** — stokvel interest/return earned by the group itself is typically not the member's taxable income until distributed; distributions as winnings are generally exempt unless structured as income. Annual interest exemption: R23,800 (under 65) / R34,500 (over 65). Dividends withholding 20%. Flag clearly when something *may* trigger SARS reporting. Never give binding tax advice — suggest consulting SARS or a tax practitioner for complex situations.
+
+4. **Regulatory awareness** — burial societies operate under NSL/MoU rules and may need registration above certain levels; investment clubs pooling >R500k may fall under FSCA collective investment scheme rules. Flag without alarming.
+
+5. **Risk framing** — always note the tradeoff: a stokvel with no insurance has concentrated risk (admin death, theft, legal dispute). A single-payout rotation is riskier for late recipients. Suggest mitigants (group constitution, joint signatories, dedicated bank account, short cycles).
+
+6. **Member-level coaching** — when a user asks about their own savings, frame it against their contribution history, consistency, and goals. Offer catch-up plans in concrete rands-per-week terms.
+
+7. **Group-level coaching** — identify health signals: contribution consistency, member retention, payout velocity, target-vs-actual. Suggest specific improvements ("6 members overdue; consider a graduated penalty clause").
+
+8. **Diaspora & remittance** — if a user mentions being outside SA, consider FX timing, remittance fees (compare WorldRemit/Mukuru/Sendwave), and cross-border tax notes.
+
+FORMATTING
+- When listing money amounts, use the group's currency (default ZAR). Always include thousand separators.
+- Prefer inline markdown: **bold** for key numbers, bullets for multi-step advice, tables only if the user asks for a comparison.
+- End actionable replies with a single-sentence "next step" the user can take today.
+
+CONTEXT
 - User: ${user.email}${groupName ? ` · Group: ${groupName}` : ''}${isAdmin ? ' · role: admin' : ''}
-${tier ? `- Rewards tier: ${tier} (${lifetimePoints || 0} lifetime points, ${commissionRate || 15}% referral rate)` : ''}
-${groupId ? `- Current groupId: ${groupId} (pass this to tools)` : ''}`;
+${tier ? `- Rewards tier: ${tier} · ${lifetimePoints || 0} lifetime points · ${commissionRate || 15}% referral rate` : ''}
+${groupId ? `- Current groupId: ${groupId} (pass to tools when needed)` : ''}
+${snapshot}`;
+
+      // Choose model: Sonnet for analytical queries, Haiku otherwise.
+      const lastUserMsg = [...messages].reverse().find((m: any) => m.role === 'user')?.content || '';
+      const needsReasoning = typeof lastUserMsg === 'string' && SONNET_TRIGGERS.test(lastUserMsg);
+      const chosenModel = needsReasoning ? MODEL_IDS.sonnet : MODEL_IDS.haiku;
 
       const tools = makeTools(supabaseAdmin, user.email);
       const convMessages: any[] = messages.map((m: any) => ({ role: m.role, content: m.content }));
@@ -799,11 +912,11 @@ ${groupId ? `- Current groupId: ${groupId} (pass this to tools)` : ''}`;
 
       for (let loop = 0; loop < 6; loop++) {
         response = await callAnthropic(API_KEY, {
-          model: MODEL_IDS.haiku,
+          model: chosenModel,
           system,
           messages: convMessages,
           tools: tools.definitions,
-          maxTokens: 1200,
+          maxTokens: needsReasoning ? 2500 : 1200,
           cacheSystem: true,
         });
 
@@ -837,7 +950,7 @@ ${groupId ? `- Current groupId: ${groupId} (pass this to tools)` : ''}`;
         break;
       }
 
-      const cost = calculateCost(MODEL_IDS.haiku, totalUsage);
+      const cost = calculateCost(chosenModel, totalUsage);
       const latency = Date.now() - started;
 
       // Suggest quick follow-up actions based on simple keyword heuristics
@@ -860,7 +973,7 @@ ${groupId ? `- Current groupId: ${groupId} (pass this to tools)` : ''}`;
         user_email: user.email,
         group_id: groupId || null,
         task: 'pilo',
-        model: MODEL_IDS.haiku,
+        model: chosenModel,
         input_tokens: totalUsage.input_tokens,
         output_tokens: totalUsage.output_tokens,
         cached_tokens: totalUsage.cache_read_input_tokens,

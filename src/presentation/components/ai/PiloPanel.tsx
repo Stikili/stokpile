@@ -64,25 +64,25 @@ function saveHistory(history: Message[]) {
 function getStarterPrompts(ctx: PiloContext): string[] {
   if (ctx.isAdmin && ctx.groupId) {
     return [
-      "Who hasn't paid this month?",
-      'Draft a reminder for overdue members',
-      'Summarise activity this week',
-      "What's on this month's agenda?",
+      "Who hasn't paid this month, and what should I do?",
+      'Project our balance if we keep this pace for 12 months',
+      'Should we consider a TFSA for idle cash? Compare vs leaving it in the stokvel account',
+      'What risks does our constitution leave exposed?',
     ];
   }
   if (ctx.groupId) {
     return [
-      "When's my next payout?",
-      'How much have I contributed this year?',
-      'Explain how rotations work',
-      "What's our group balance?",
+      "When's my next payout and how much will I have saved by then?",
+      'Am I on track vs the group target?',
+      'How much am I actually earning vs inflation?',
+      'Should I save extra in a TFSA alongside this stokvel?',
     ];
   }
   return [
-    'How do stokvels work?',
-    "What's the difference between a chama and a rotating stokvel?",
-    'Help me start a new savings group',
-    'Explain my rewards tier',
+    "What's the difference between a chama, susu, and rotating stokvel?",
+    'How much would R500/month grow to in 10 years vs keeping it in savings?',
+    "Can my stokvel's interest earnings be taxed by SARS?",
+    'Help me choose the right stokvel type for a year-end goal',
   ];
 }
 
