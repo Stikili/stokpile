@@ -1,14 +1,20 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/presentation/ui/button';
 import { Badge } from '@/presentation/ui/badge';
 import { Logo } from '@/presentation/layout/Logo';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
 import { useTheme } from '@/presentation/shared/ThemeProvider';
+import { PrivacyPolicy } from '@/presentation/components/legal/PrivacyPolicy';
+import { TermsOfService } from '@/presentation/components/legal/TermsOfService';
+import { RefundPolicy } from '@/presentation/components/legal/RefundPolicy';
+import { CancellationPolicy } from '@/presentation/components/legal/CancellationPolicy';
 import {
   Check, Sparkles, Shield, Globe, Users, TrendingUp,
   HeartHandshake, ShoppingCart, RefreshCw, MessageCircle, FileText,
   ArrowRight, Star, Sun, Moon, Trophy, Gift, Coins,
 } from 'lucide-react';
+
+type LegalKey = 'privacy' | 'terms' | 'refund' | 'cancel' | null;
 
 const REWARD_TIERS = [
   { name: 'Bronze',   points: '0 pts',       rate: '15%', color: 'from-amber-700 to-amber-900',     ring: 'ring-amber-700/30',  glow: '' },
@@ -94,6 +100,7 @@ const PRICING = [
 
 export function LandingPage({ onGetStarted }: LandingPageProps) {
   const { theme, toggleTheme } = useTheme();
+  const [legal, setLegal] = useState<LegalKey>(null);
 
   // Disable pull-to-refresh and overscroll bounce so the page feels native.
   useEffect(() => {
@@ -317,6 +324,12 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
 
       {/* MOBILE compact footer */}
       <footer className="md:hidden py-4 px-5 text-center text-[10px] text-muted-foreground">
+        <div className="flex flex-wrap justify-center gap-3 mb-2">
+          <button type="button" onClick={() => setLegal('terms')} className="hover:text-foreground underline-offset-2 hover:underline">Terms</button>
+          <button type="button" onClick={() => setLegal('privacy')} className="hover:text-foreground underline-offset-2 hover:underline">Privacy</button>
+          <button type="button" onClick={() => setLegal('refund')} className="hover:text-foreground underline-offset-2 hover:underline">Refunds</button>
+          <button type="button" onClick={() => setLegal('cancel')} className="hover:text-foreground underline-offset-2 hover:underline">Cancellation</button>
+        </div>
         © {new Date().getFullYear()} Stokpile
       </footer>
 
@@ -610,9 +623,20 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
 
       {/* ─── DESKTOP Footer ─── */}
       <footer className="hidden md:block border-t border-border/40 py-6 px-5">
-        <div className="max-w-6xl mx-auto flex items-center justify-center gap-2 text-xs text-muted-foreground">
-          <Logo showText={false} />
-          <span>© {new Date().getFullYear()} Stokpile</span>
+        <div className="max-w-6xl mx-auto flex flex-col items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-4">
+            <button type="button" onClick={() => setLegal('terms')} className="hover:text-foreground transition-colors">Terms of Service</button>
+            <span className="text-border">·</span>
+            <button type="button" onClick={() => setLegal('privacy')} className="hover:text-foreground transition-colors">Privacy Policy</button>
+            <span className="text-border">·</span>
+            <button type="button" onClick={() => setLegal('refund')} className="hover:text-foreground transition-colors">Refund Policy</button>
+            <span className="text-border">·</span>
+            <button type="button" onClick={() => setLegal('cancel')} className="hover:text-foreground transition-colors">Cancellation</button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Logo showText={false} />
+            <span>© {new Date().getFullYear()} Stokpile</span>
+          </div>
         </div>
       </footer>
 
@@ -632,6 +656,12 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
           </p>
         </div>
       </div>
+
+      {/* Legal policies — opened from the footer links */}
+      <TermsOfService      open={legal === 'terms'}   onOpenChange={(o) => !o && setLegal(null)} />
+      <PrivacyPolicy       open={legal === 'privacy'} onOpenChange={(o) => !o && setLegal(null)} />
+      <RefundPolicy        open={legal === 'refund'}  onOpenChange={(o) => !o && setLegal(null)} />
+      <CancellationPolicy  open={legal === 'cancel'}  onOpenChange={(o) => !o && setLegal(null)} />
     </div>
   );
 }

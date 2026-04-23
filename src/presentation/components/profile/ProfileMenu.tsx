@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/presentation/ui/dropdown-menu';
-import { User, Plus, UserPlus, Search, LogOut, Trash2, UserX, Bell, HelpCircle, Sparkles, Monitor, Gift, Download, Trophy } from 'lucide-react';
+import { User, Plus, UserPlus, Search, LogOut, Trash2, UserX, Bell, HelpCircle, Sparkles, Monitor, Gift, Download, Trophy, FileText, ShieldCheck, Receipt, XCircle } from 'lucide-react';
 import { usePilo } from '@/presentation/components/ai/PiloContext';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
 import { NotificationPrefsDialog } from '@/presentation/components/profile/NotificationPrefsDialog';
@@ -24,6 +24,10 @@ import { SessionsDialog } from '@/presentation/components/profile/SessionsDialog
 import { ReferralDialog } from '@/presentation/components/profile/ReferralDialog';
 import { RewardsDialog } from '@/presentation/components/profile/RewardsDialog';
 import { DataExportDialog } from '@/presentation/components/profile/DataExportDialog';
+import { PrivacyPolicy } from '@/presentation/components/legal/PrivacyPolicy';
+import { TermsOfService } from '@/presentation/components/legal/TermsOfService';
+import { RefundPolicy } from '@/presentation/components/legal/RefundPolicy';
+import { CancellationPolicy } from '@/presentation/components/legal/CancellationPolicy';
 import type { Session, Group } from '@/domain/types';
 
 interface ProfileMenuProps {
@@ -56,6 +60,7 @@ export function ProfileMenu({
   const [showRewards, setShowRewards] = useState(false);
   const { openPilo } = usePilo();
   const [showDataExport, setShowDataExport] = useState(false);
+  const [legal, setLegal] = useState<null | 'privacy' | 'terms' | 'refund' | 'cancel'>(null);
   const [hasUnseenChangelog, setHasUnseenChangelog] = useState(() => {
     const seen = localStorage.getItem('changelog-seen-version');
     return seen !== LATEST_VERSION;
@@ -166,6 +171,29 @@ export function ProfileMenu({
 
           <DropdownMenuSeparator />
 
+          {/* Legal — alphabetical */}
+          <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
+            Legal
+          </DropdownMenuLabel>
+          <DropdownMenuItem onClick={() => setLegal('cancel')}>
+            <XCircle className="h-4 w-4 mr-2" />
+            Cancellation Policy
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setLegal('privacy')}>
+            <ShieldCheck className="h-4 w-4 mr-2" />
+            Privacy Policy
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setLegal('refund')}>
+            <Receipt className="h-4 w-4 mr-2" />
+            Refund Policy
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setLegal('terms')}>
+            <FileText className="h-4 w-4 mr-2" />
+            Terms of Service
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
           {/* Danger zone — alphabetical */}
           <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-destructive/70 font-semibold">
             Danger
@@ -266,6 +294,10 @@ export function ProfileMenu({
         />
       )}
       <DataExportDialog open={showDataExport} onOpenChange={setShowDataExport} />
+      <TermsOfService      open={legal === 'terms'}   onOpenChange={(o) => !o && setLegal(null)} />
+      <PrivacyPolicy       open={legal === 'privacy'} onOpenChange={(o) => !o && setLegal(null)} />
+      <RefundPolicy        open={legal === 'refund'}  onOpenChange={(o) => !o && setLegal(null)} />
+      <CancellationPolicy  open={legal === 'cancel'}  onOpenChange={(o) => !o && setLegal(null)} />
     </>
   );
 }

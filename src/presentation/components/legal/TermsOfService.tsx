@@ -45,7 +45,7 @@ export function TermsOfService({ open, onOpenChange }: TermsOfServiceProps) {
 
             <section>
               <h3 className="font-semibold mb-2">5. Subscription and payment</h3>
-              <p>Paid plans (Starter R19/mo, Pro R39/mo) are billed monthly via Paystack. New groups receive a 90-day free trial of Pro features. You may cancel at any time and will retain access until the end of the billing period. Refunds are not provided for partial months.</p>
+              <p>Paid plans (Starter R19/mo, Pro R39/mo) are billed monthly via Paystack. New groups receive a 90-day free trial of Pro features. Details on cancellation and what happens to your data are in our <strong>Cancellation Policy</strong>. Eligibility for refunds is covered in our <strong>Refund Policy</strong>. In summary: you can cancel at any time, you keep access until the end of the paid period, and we refund duplicate or erroneous charges but not partial unused months.</p>
             </section>
 
             <section>

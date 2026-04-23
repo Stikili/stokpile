@@ -78,7 +78,15 @@ function CancelButton({ groupId }: { groupId: string }) {
   const [cancelling, setCancelling] = useState(false);
 
   const handleCancel = async () => {
-    if (!confirm('Cancel your subscription? You\'ll keep access until the end of the billing period.')) return;
+    const confirmed = confirm(
+      'Cancel your subscription?\n\n' +
+      '• You keep access until the end of the billing period\n' +
+      '• No pro-rata refund for unused days\n' +
+      '• Group data is retained for 12 months — you can reactivate any time within that window\n' +
+      '• Financial records are kept for 5 years per FICA\n\n' +
+      'Press OK to continue.'
+    );
+    if (!confirmed) return;
     setCancelling(true);
     try {
       await api.cancelSubscription(groupId);

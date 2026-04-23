@@ -69,7 +69,16 @@ export function PrivacyPolicy({ open, onOpenChange }: PrivacyPolicyProps) {
 
             <section>
               <h3 className="font-semibold mb-2">6. Data retention</h3>
-              <p>We keep your data for as long as your account is active. Audit logs are retained for 90 days. When you delete your account, all personal data is permanently removed within 30 days.</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li><strong>Active accounts:</strong> retained indefinitely while you continue to use the service</li>
+                <li><strong>Cancelled subscriptions:</strong> group data retained for 12 months so you can reactivate without losing history</li>
+                <li><strong>After 12 months of inactivity:</strong> personal identifiers are anonymised; aggregated financial records remain for audit purposes</li>
+                <li><strong>Deleted accounts:</strong> personal data purged within 30 days (POPIA s. 14)</li>
+                <li><strong>Audit logs:</strong> retained for 90 days then removed automatically</li>
+                <li><strong>Financial records</strong> (contribution / payout amounts, dates, references): retained for 5 years, anonymised after account deletion — required under the Financial Intelligence Centre Act 38 of 2001</li>
+                <li><strong>AI assistant prompts:</strong> retained in the usage ledger for 180 days for billing accuracy and abuse prevention, then deleted</li>
+              </ul>
+              <p className="mt-2 text-xs text-muted-foreground">See our <strong>Cancellation Policy</strong> for a fuller explanation of what happens to your group's data after cancellation.</p>
             </section>
 
             <section>
