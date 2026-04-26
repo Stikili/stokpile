@@ -185,12 +185,12 @@ function makeTools(supabaseAdmin: any, userEmail: string, userId?: string) {
         // Guard: user must be a member of the target group for any group-scoped call
         if (input?.groupId) {
           const { data: m } = await supabaseAdmin
-            .from('memberships')
+            .from('group_memberships')
             .select('role, status')
             .eq('group_id', input.groupId)
             .eq('user_email', userEmail)
             .maybeSingle();
-          if (!m || m.status !== 'approved') {
+          if (!m || (m.status !== 'approved' && m.status !== 'managed')) {
             return { ok: false, error: 'Not a member of that group' };
           }
         }
@@ -198,7 +198,7 @@ function makeTools(supabaseAdmin: any, userEmail: string, userId?: string) {
         switch (name) {
           case 'get_members': {
             const { data } = await supabaseAdmin
-              .from('memberships')
+              .from('group_memberships')
               .select('user_email, role, status, joined_at')
               .eq('group_id', input.groupId)
               .eq('status', 'approved')
@@ -261,7 +261,7 @@ function makeTools(supabaseAdmin: any, userEmail: string, userId?: string) {
               .eq('id', input.groupId)
               .maybeSingle();
             const { count } = await supabaseAdmin
-              .from('memberships')
+              .from('group_memberships')
               .select('id', { count: 'exact', head: true })
               .eq('group_id', input.groupId)
               .eq('status', 'approved');
@@ -1004,7 +1004,7 @@ export function registerAiRoutes(
         supabaseAdmin.from('groups')
           .select('name, group_type, currency, description, created_at, annual_target, contribution_target')
           .eq('id', groupId).maybeSingle(),
-        supabaseAdmin.from('memberships')
+        supabaseAdmin.from('group_memberships')
           .select('user_email, role, status, joined_at')
           .eq('group_id', groupId).eq('status', 'approved'),
         supabaseAdmin.from('contributions')
