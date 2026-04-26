@@ -143,7 +143,7 @@ function makeTools(supabaseAdmin: any, userEmail: string, userId?: string) {
       },
       {
         name: 'get_cohort_benchmark',
-        description: 'Anonymised platform-wide benchmarks for a metric (e.g. on_time_rate, avg_contribution_zar, retention_pct). Returns p25/median/p75/p90 for the group\\'s type and member-count band so you can answer "is our group above or below typical?". Returns 0 sample if benchmark cache is empty.',
+        description: "Anonymised platform-wide benchmarks for a metric (e.g. on_time_rate, avg_contribution_zar, retention_pct). Returns p25/median/p75/p90 for the group's type and member-count band so you can answer 'is our group above or below typical?'. Returns 0 sample if benchmark cache is empty.",
         input_schema: {
           type: 'object',
           properties: {
