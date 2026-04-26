@@ -8,7 +8,7 @@ import { Button } from '@/presentation/ui/button';
 import { Badge } from '@/presentation/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/presentation/ui/select';
 import {
-  Sparkles, Send, Mic, MicOff, X, Loader2, Languages, Copy, Check, ImagePlus,
+  Sparkles, Send, Mic, MicOff, Loader2, Languages, Copy, Check, ImagePlus,
   MessageCircle, Bell, CalendarDays, Wand2,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -280,7 +280,8 @@ export function PiloPanel({ open, onOpenChange, context }: PiloPanelProps) {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 pr-7">
+            {/* Note: SheetContent renders its own close (X) button at top-right */}
             <Select value={language} onValueChange={setLanguage}>
               <SelectTrigger className="h-7 w-auto border-0 bg-transparent px-2 text-[11px] gap-1 hover:bg-muted">
                 <Languages className="h-3 w-3" />
@@ -292,9 +293,6 @@ export function PiloPanel({ open, onOpenChange, context }: PiloPanelProps) {
                 ))}
               </SelectContent>
             </Select>
-            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onOpenChange(false)}>
-              <X className="h-3.5 w-3.5" />
-            </Button>
           </div>
         </div>
 
