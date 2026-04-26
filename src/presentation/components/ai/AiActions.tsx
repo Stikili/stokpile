@@ -9,6 +9,7 @@ import {
   Sparkles, MessageCircle, Bell, CalendarDays, FileText, FileSignature,
   HandCoins, Scale, Shield, RotateCw, Trophy, Calculator, Search,
   Clock, UserCheck, HelpCircle, ClipboardCheck, AlertTriangle, Coins,
+  Rocket, Landmark,
 } from 'lucide-react';
 
 // ════════════════════════════════════════════════════════════════════
@@ -495,6 +496,52 @@ export function RotationAdvisorButton({ groupId }: { groupId: string }) {
 // ════════════════════════════════════════════════════════════════════
 // Phase 4: Background scan (invoked on demand from admin view)
 // ════════════════════════════════════════════════════════════════════
+
+export function GrowthAuditButton({ groupId }: { groupId: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button size="sm" variant="outline" onClick={() => setOpen(true)} className="gap-1.5">
+        <Rocket className="h-3.5 w-3.5 text-emerald-500" />
+        Growth audit
+      </Button>
+      <AiDrawer
+        open={open}
+        onOpenChange={setOpen}
+        title="Growth audit"
+        description="Pilo runs a diagnostic, applies the SA stokvel growth playbook, and recommends 3 high-leverage moves."
+        task="growth_advisor"
+        groupId={groupId}
+        autoSubmit
+      />
+    </>
+  );
+}
+
+export function BankAccountAdvisorButton({ groupId, groupType }: { groupId: string; groupType?: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button size="sm" variant="outline" onClick={() => setOpen(true)} className="gap-1.5">
+        <Landmark className="h-3.5 w-3.5 text-blue-500" />
+        Bank account advisor
+      </Button>
+      <AiDrawer
+        open={open}
+        onOpenChange={setOpen}
+        title="Bank account advisor"
+        description="Compare SA bank accounts for your group. Pilo uses a curated knowledge base + live web search for current rates."
+        task="ask_group"
+        groupId={groupId}
+        contextStatic={{ groupType }}
+        fields={[
+          { key: 'question', label: 'What do you want to know?', type: 'textarea', required: true,
+            initial: 'Compare bank accounts suitable for my group. Show me their structural facts (fees, signatories, fit) and search the web for current interest rates. Recommend the best 2 options for our group size and type.' },
+        ]}
+      />
+    </>
+  );
+}
 
 export function MissingDocsScanButton({ groupId }: { groupId: string }) {
   const [open, setOpen] = useState(false);

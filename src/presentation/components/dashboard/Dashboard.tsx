@@ -10,6 +10,7 @@ import { ThisMonthStatus } from '@/presentation/components/dashboard/ThisMonthSt
 import { NextTurnCard } from '@/presentation/components/dashboard/NextTurnCard';
 import { LeaderboardCard } from '@/presentation/components/dashboard/LeaderboardCard';
 import { SharePayoutImage } from '@/presentation/components/reports/SharePayoutImage';
+import { GrowthAuditButton, BankAccountAdvisorButton } from '@/presentation/components/ai/AiActions';
 import { Share2 } from 'lucide-react';
 import { AnnualProgressCard } from '@/presentation/components/dashboard/AnnualProgressCard';
 import { api } from '@/infrastructure/api';
@@ -238,6 +239,14 @@ export function Dashboard({ groupId, groupType, annualTarget, isAdmin = false, u
           </div>
         </CardContent>
       </Card>
+
+      {/* AI advisors — admin-only quick access */}
+      {isAdmin && (
+        <div className="flex flex-wrap gap-2">
+          <GrowthAuditButton groupId={groupId} />
+          <BankAccountAdvisorButton groupId={groupId} groupType={groupType} />
+        </div>
+      )}
 
       {/* Whose turn? (only for rotating-style groups) */}
       <NextTurnCard groupId={groupId} groupType={groupType} />

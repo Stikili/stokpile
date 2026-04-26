@@ -8,7 +8,7 @@ import { Button } from '@/presentation/ui/button';
 import { Badge } from '@/presentation/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/presentation/ui/select';
 import {
-  Sparkles, Send, Mic, MicOff, X, Loader2, Languages, Copy, Check,
+  Sparkles, Send, Mic, MicOff, X, Loader2, Languages, Copy, Check, ImagePlus,
   MessageCircle, Bell, CalendarDays, Wand2,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -394,6 +394,49 @@ export function PiloPanel({ open, onOpenChange, context }: PiloPanelProps) {
                         {listening ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
                       </Button>
                     )}
+                    <label className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-muted cursor-pointer" aria-label="Upload an image to analyse">
+                      <ImagePlus className="h-3.5 w-3.5" />
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          if (file.size > 5 * 1024 * 1024) { toast.error('Image too large (max 5MB)'); return; }
+                          const reader = new FileReader();
+                          reader.onload = async () => {
+                            const dataUrl = reader.result as string;
+                            const base64 = dataUrl.split(',')[1];
+                            const userMsg: Message = { id: crypto.randomUUID(), role: 'user', content: `📎 Uploaded ${file.name}`, ts: Date.now() };
+                            setMessages((prev) => [...prev, userMsg]);
+                            setLoading(true);
+                            try {
+                              const res = await api.aiDocument({
+                                imageBase64: base64,
+                                mimeType: file.type,
+                                question: input.trim() || 'Analyse this document for a stokvel admin.',
+                                groupId: context.groupId,
+                                language,
+                              });
+                              setMessages((prev) => [...prev, {
+                                id: crypto.randomUUID(),
+                                role: 'assistant',
+                                content: res.text || 'I couldn\'t read that document. Try a clearer photo?',
+                                ts: Date.now(),
+                              }]);
+                            } catch (err) {
+                              toast.error(err instanceof Error ? err.message : 'Document analysis failed');
+                            } finally {
+                              setLoading(false);
+                              setInput('');
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
                     {messages.length > 0 && (
                       <Button size="sm" variant="ghost" className="h-7 text-[10px] text-muted-foreground px-2" onClick={clearHistory}>
                         Clear

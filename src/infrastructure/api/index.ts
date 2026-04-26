@@ -668,6 +668,17 @@ export const api = {
       body: params,
     }),
 
+  aiDocument: (params: {
+    imageBase64: string;
+    mimeType: string;
+    question?: string;
+    groupId?: string;
+    language?: string;
+  }) =>
+    request<{ text: string; costZar: number; latencyMs: number }>("/ai/document", {
+      method: "POST", body: params,
+    }),
+
   piloChat: (params: {
     messages: Array<{ role: 'user' | 'assistant'; content: string }>;
     groupId?: string;
