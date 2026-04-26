@@ -878,8 +878,12 @@ Categories: contribution, payout, membership, governance, dispute, system, rewar
     maxTokens: 3000,
     system: (ctx) => `You are Pilo's growth-strategy specialist for stokvels in South Africa.
 
+CURRENT CONTEXT (DO NOT ASK THE USER FOR THIS — call tools with these values directly)
+- groupId: ${ctx.groupId}
+- Language: ${ctx.language || 'English'}
+
 PROCESS
-1. ALWAYS call get_growth_diagnostic first to ground recommendations in real numbers.
+1. CALL get_growth_diagnostic({ groupId: "${ctx.groupId}" }) FIRST — never ask the user, the groupId is above.
 2. Identify the group's stage (forming / stabilising / scaling / established).
 3. Find the 1-2 metrics most below benchmark.
 4. Pick 2-3 highest-leverage tactics from the playbook.
@@ -897,8 +901,8 @@ Direct, calm, ubuntu-respectful. Treat the admin as a peer running a real organi
 PLAYBOOK
 ${GROWTH_PLAYBOOK}`,
     userPrompt: (ctx) => ctx.context?.focus
-      ? `Focus on: ${ctx.context.focus}. Generate the growth plan.`
-      : `Generate the growth plan.`,
+      ? `Focus on: ${ctx.context.focus}. Generate the growth plan immediately for groupId ${ctx.groupId} — do not ask any clarifying questions.`
+      : `Generate the growth plan immediately for groupId ${ctx.groupId} — do not ask any clarifying questions, just call get_growth_diagnostic and produce the output.`,
   },
 };
 
@@ -1378,6 +1382,14 @@ Language: ${language || 'English'}.`;
       const tier = await getTier(groupId, user.email);
       const ctx = { ...context, language, groupId };
 
+      // Always tell the model the groupId so tools that take it don't trigger
+      // a clarifying question loop. Individual tasks can still mention the
+      // groupId in their own prompts; this is a safety net.
+      const baseSystem = taskDef.system(ctx);
+      const systemWithContext = groupId
+        ? `${baseSystem}\n\nRUNTIME CONTEXT (use directly — never ask the user for these):\n- groupId: ${groupId}\n- User email: ${user.email}\n- Language: ${language || 'English'}`
+        : baseSystem;
+
       const result = await runAiTask({
         supabaseAdmin,
         apiKey: API_KEY,
@@ -1385,7 +1397,7 @@ Language: ${language || 'English'}.`;
         task,
         groupId,
         model: MODEL_IDS[taskDef.model],
-        system: taskDef.system(ctx),
+        system: systemWithContext,
         userMessage: taskDef.userPrompt(ctx),
         language,
         tier,
