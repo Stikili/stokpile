@@ -192,25 +192,25 @@ export function Dashboard({ groupId, groupType, annualTarget, isAdmin = false, u
   }
 
   return (
-    <div className="space-y-3">
-      {/* HERO: Group Balance — the most important number */}
-      <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-primary/[0.02]">
-        <CardContent className="p-5">
+    <div className="space-y-4">
+      {/* HERO: Group Balance — the most important number on the screen */}
+      <Card className="border-0 bg-gradient-to-br from-primary/10 to-primary/[0.03] shadow-none">
+        <CardContent className="p-6">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-2">
                 <Wallet className="h-4 w-4 text-primary" />
-                <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Group Balance</span>
+                <span className="text-[11px] uppercase tracking-[0.1em] text-muted-foreground font-semibold">Group balance</span>
               </div>
-              <div className="text-3xl md:text-4xl font-bold text-primary tracking-tight">
+              <div className="text-4xl md:text-5xl font-bold text-primary tracking-tight leading-none">
                 {formatCurrency(stats.netBalance)}
               </div>
-              <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
+              <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1.5">
                   <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />
                   In: {formatCurrency(stats.totalContributions)}
                 </span>
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1.5">
                   <span className="inline-block h-1.5 w-1.5 rounded-full bg-orange-500" />
                   Out: {formatCurrency(stats.totalPayouts)}
                 </span>

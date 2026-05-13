@@ -71,7 +71,7 @@ import {
   TooltipTrigger,
 } from "@/presentation/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/presentation/ui/tabs";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel, DropdownMenuTrigger } from "@/presentation/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/presentation/ui/dropdown-menu";
 import {
   PieChart,
   DollarSign,
@@ -487,130 +487,101 @@ export default function App() {
                       const groupType = selectedGroup.groupType;
                       const hasRotation = groupType === 'rotating' || groupType === 'susu' || groupType === 'tontine' || groupType === 'chama';
 
-                      // Overflow items (non-core)
-                      const overflowItems = [
-                        ...(hasRotation ? [{ id: 'rotation', icon: RefreshCw, label: 'Rotation', feature: 'rotation' as const }] : []),
-                        ...(groupType === 'grocery' ? [{ id: 'grocery', icon: ShoppingCart, label: 'Grocery List', feature: 'grocery' as const }] : []),
-                        ...(groupType === 'burial'  ? [{ id: 'burial',  icon: HeartHandshake, label: 'Burial', feature: 'burial' as const }] : []),
-                      ];
-                      // Admin overflow: Insights merges old Reports+Analytics, Audit moves here from top-level
-                      const adminItems = isAdmin ? [
-                        { id: 'insights',  icon: FileBarChart,  label: 'Insights',  feature: 'reports' as const },
-                        { id: 'penalties', icon: Gavel,         label: 'Penalties', feature: 'penalties' as const },
-                        { id: 'audit',     icon: ClipboardList, label: 'Audit Log', feature: 'audit' as const },
-                      ] : [];
+                      // 4-section IA: Home · Money · People · More.
+                      // All existing tab IDs preserved for deep-link compat
+                      // and so the existing TabsContent below keeps working.
+                      type Item = {
+                        id: string;
+                        icon: any;
+                        label: string;
+                        feature: import('@/domain/types').SubscriptionFeature;
+                        badge?: number;
+                      };
 
-                      // Settings always in More
-                      const manageItems = [
-                        { id: 'info', icon: Settings, label: 'Group Settings', feature: 'announcements' as const },
+                      const moneyItems: Item[] = [
+                        { id: 'contributions', icon: DollarSign,    label: 'Contributions', feature: 'announcements' },
+                        ...(selectedGroup.payoutsAllowed
+                          ? [{ id: 'payouts', icon: TrendingUp, label: 'Payouts', feature: 'announcements' as const } as Item]
+                          : []),
+                        ...(isAdmin
+                          ? [
+                              { id: 'insights',  icon: FileBarChart, label: 'Insights',  feature: 'reports' as const } as Item,
+                              { id: 'penalties', icon: Gavel,        label: 'Penalties', feature: 'penalties' as const } as Item,
+                            ]
+                          : []),
                       ];
 
-                      const allOverflow = [...overflowItems, ...manageItems, ...adminItems];
-                      const activeInOverflow = allOverflow.some(i => i.id === activeTab);
+                      const peopleItems: Item[] = [
+                        { id: 'meetings',      icon: Calendar,  label: 'Meetings',       feature: 'announcements' },
+                        { id: 'announcements', icon: Megaphone, label: 'Announcements',  feature: 'announcements', badge: unreadAnnouncements },
+                        { id: 'info',          icon: Settings,  label: 'Group settings', feature: 'announcements', badge: pendingCounts.joinRequests },
+                      ];
+
+                      const moreItems: Item[] = [
+                        ...(hasRotation ? [{ id: 'rotation', icon: RefreshCw,      label: 'Rotation',     feature: 'rotation' as const } as Item] : []),
+                        ...(groupType === 'grocery' ? [{ id: 'grocery', icon: ShoppingCart, label: 'Grocery list', feature: 'grocery' as const } as Item] : []),
+                        ...(groupType === 'burial'  ? [{ id: 'burial',  icon: HeartHandshake, label: 'Burial',     feature: 'burial' as const  } as Item] : []),
+                        ...(isAdmin ? [{ id: 'audit', icon: ClipboardList, label: 'Audit log', feature: 'audit' as const } as Item] : []),
+                      ];
+
+                      const renderSectionDropdown = (label: string, items: Item[]) => {
+                        if (items.length === 0) return null;
+                        const active = items.some(i => i.id === activeTab);
+                        const badgeSum = items.reduce((s, i) => s + (i.badge || 0), 0);
+                        return (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-sm transition-colors relative
+                                ${active
+                                  ? 'text-primary font-medium bg-primary/10'
+                                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}>
+                                {label} <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                                {active && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-primary inline-block" />}
+                                {badgeSum > 0 && !active && (
+                                  <span className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold leading-none">
+                                    {badgeSum > 9 ? '9+' : badgeSum}
+                                  </span>
+                                )}
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-56">
+                              {items.map(item => (
+                                <DropdownMenuItem
+                                  key={item.id}
+                                  onClick={() => setActiveTab(item.id)}
+                                  className={activeTab === item.id ? 'text-primary font-medium bg-primary/5' : ''}
+                                >
+                                  <item.icon className="h-4 w-4 mr-2" />
+                                  <FeatureGate feature={item.feature} mode="badge">{item.label}</FeatureGate>
+                                  {item.badge && item.badge > 0 ? (
+                                    <span className="ml-auto inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold leading-none">
+                                      {item.badge > 9 ? '9+' : item.badge}
+                                    </span>
+                                  ) : null}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        );
+                      };
 
                       return (
                         <TabsList className="bg-white dark:bg-card mb-3 hidden lg:flex border border-border h-9 w-full justify-start">
-                          {/* Core tabs — always visible */}
                           <TabsTrigger value="dashboard" className="text-sm">
-                            <PieChart className="h-3.5 w-3.5 mr-1.5" />Dashboard
+                            <PieChart className="h-3.5 w-3.5 mr-1.5" />Home
                           </TabsTrigger>
-                          <TabsTrigger value="contributions" className="text-sm">
-                            <DollarSign className="h-3.5 w-3.5 mr-1.5" />Contributions
-                          </TabsTrigger>
-                          {selectedGroup.payoutsAllowed ? (
-                            <TabsTrigger value="payouts" className="text-sm">
-                              <TrendingUp className="h-3.5 w-3.5 mr-1.5" />Payouts
-                            </TabsTrigger>
-                          ) : isAdmin && (
+                          {renderSectionDropdown('Money', moneyItems)}
+                          {renderSectionDropdown('People', peopleItems)}
+                          {renderSectionDropdown('More', moreItems)}
+                          {isAdmin && !selectedGroup.payoutsAllowed && (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground cursor-default select-none opacity-50">
-                                  <Lock className="h-3.5 w-3.5" />Payouts
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground cursor-default select-none opacity-50 ml-auto">
+                                  <Lock className="h-3.5 w-3.5" />Payouts off
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent>Payouts are disabled. Enable in Group Settings.</TooltipContent>
                             </Tooltip>
-                          )}
-                          <TabsTrigger value="meetings" className="text-sm">
-                            <Calendar className="h-3.5 w-3.5 mr-1.5" />Meetings
-                          </TabsTrigger>
-                          <TabsTrigger value="announcements" className="text-sm relative">
-                            <Megaphone className="h-3.5 w-3.5 mr-1.5" />
-                            Announcements
-                            {unreadAnnouncements > 0 && (
-                              <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold leading-none">
-                                {unreadAnnouncements > 9 ? '9+' : unreadAnnouncements}
-                              </span>
-                            )}
-                          </TabsTrigger>
-
-                          {/* Overflow "More ▾" dropdown */}
-                          {allOverflow.length > 0 && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <button className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-sm transition-colors ml-auto relative
-                                  ${activeInOverflow
-                                    ? 'text-primary font-medium bg-primary/10'
-                                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}>
-                                  More <ChevronDown className="h-3.5 w-3.5" />
-                                  {activeInOverflow && <span className="ml-1 h-1.5 w-1.5 rounded-full bg-primary inline-block" />}
-                                  {pendingCounts.joinRequests > 0 && !activeInOverflow && (
-                                    <span className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-semibold leading-none">
-                                      {pendingCounts.joinRequests > 9 ? '9+' : pendingCounts.joinRequests}
-                                    </span>
-                                  )}
-                                </button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-52">
-                                {overflowItems.length > 0 && (
-                                  <>
-                                    {overflowItems.map(item => (
-                                      <DropdownMenuItem
-                                        key={item.id}
-                                        onClick={() => setActiveTab(item.id)}
-                                        className={activeTab === item.id ? 'text-primary font-medium bg-primary/5' : ''}
-                                      >
-                                        <item.icon className="h-4 w-4 mr-2" />
-                                        <FeatureGate feature={item.feature} mode="badge">{item.label}</FeatureGate>
-                                      </DropdownMenuItem>
-                                    ))}
-                                    <DropdownMenuSeparator />
-                                  </>
-                                )}
-                                <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Manage</DropdownMenuLabel>
-                                {manageItems.map(item => (
-                                  <DropdownMenuItem
-                                    key={item.id}
-                                    onClick={() => setActiveTab(item.id)}
-                                    className={activeTab === item.id ? 'text-primary font-medium bg-primary/5' : ''}
-                                  >
-                                    <item.icon className="h-4 w-4 mr-2" />
-                                    {item.label}
-                                    {item.id === 'info' && pendingCounts.joinRequests > 0 && (
-                                      <span className="ml-auto inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-semibold leading-none">
-                                        {pendingCounts.joinRequests}
-                                      </span>
-                                    )}
-                                  </DropdownMenuItem>
-                                ))}
-                                {adminItems.length > 0 && (
-                                  <>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Admin</DropdownMenuLabel>
-                                    {adminItems.map(item => (
-                                      <DropdownMenuItem
-                                        key={item.id}
-                                        onClick={() => setActiveTab(item.id)}
-                                        className={activeTab === item.id ? 'text-primary font-medium bg-primary/5' : ''}
-                                      >
-                                        <item.icon className="h-4 w-4 mr-2" />
-                                        <FeatureGate feature={item.feature} mode="badge">{item.label}</FeatureGate>
-                                      </DropdownMenuItem>
-                                    ))}
-                                  </>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
                           )}
                         </TabsList>
                       );
