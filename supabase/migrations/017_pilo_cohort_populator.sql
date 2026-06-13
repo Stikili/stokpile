@@ -10,7 +10,7 @@
 -- ────────────────────────────────────────────────────────────
 -- Helper: member-count band for a group of N approved+managed members
 -- ────────────────────────────────────────────────────────────
-CREATE OR REPLACE FUNCTION pilo_member_count_band(n integer)
+CREATE OR REPLACE FUNCTION pilo_member_count_band(n bigint)
 RETURNS text LANGUAGE sql IMMUTABLE AS $$
   SELECT CASE
     WHEN n < 10  THEN 'lt_10'
