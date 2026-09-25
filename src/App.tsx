@@ -607,14 +607,15 @@ export default function App() {
                             onDismiss={() => localStorage.setItem(`onboarding-dismissed-${selectedGroup.id}`, 'true')}
                           />
                         )}
-                        <ContextualTips context="dashboard" isAdmin={isAdmin} hasData onAction={handleQuickAction} />
                         <Dashboard
                           groupId={selectedGroup.id}
                           groupName={selectedGroup.name}
                           groupType={selectedGroup.groupType}
+                          contributionTarget={selectedGroup.contributionTarget}
                           annualTarget={selectedGroup.contributionTargetAnnual}
                           isAdmin={isAdmin}
                           userEmail={session.user.email}
+                          onNavigate={setActiveTab}
                         />
                         {isAdmin && <JoinRequestsView groupId={selectedGroup.id} />}
                         <details className="rounded-xl border bg-card group">

@@ -16,6 +16,9 @@ interface EditTotalContributionsDialogProps {
   calculatedTotal: number;
   currentAdjustment: number;
   onSuccess: () => void;
+  /** Controlled mode: when given, the built-in trigger button is hidden. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function EditTotalContributionsDialog({
@@ -23,9 +26,14 @@ export function EditTotalContributionsDialog({
   currentTotal,
   calculatedTotal,
   currentAdjustment,
-  onSuccess
+  onSuccess,
+  open: openProp,
+  onOpenChange,
 }: EditTotalContributionsDialogProps) {
-  const [open, setOpen] = useState(false);
+  const [openState, setOpenState] = useState(false);
+  const controlled = openProp !== undefined;
+  const open = controlled ? openProp : openState;
+  const setOpen = (next: boolean) => (controlled ? onOpenChange?.(next) : setOpenState(next));
   const [adjustment, setAdjustment] = useState(currentAdjustment.toString());
   const [submitting, setSubmitting] = useState(false);
 
@@ -51,16 +59,18 @@ export function EditTotalContributionsDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-6 w-6">
-              <Edit className="h-3.5 w-3.5" />
-            </Button>
-          </DialogTrigger>
-        </TooltipTrigger>
-        <TooltipContent>Adjust total contributions</TooltipContent>
-      </Tooltip>
+      {!controlled && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-6 w-6">
+                <Edit className="h-3.5 w-3.5" />
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent>Adjust total contributions</TooltipContent>
+        </Tooltip>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit Total Contributions</DialogTitle>

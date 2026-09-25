@@ -44,9 +44,9 @@ export function RotationOrderView({ groupId, isAdmin, groupType }: RotationOrder
   const load = async () => {
     try {
       setLoading(true);
-      const result = await api.getRotationOrder(groupId);
-      setData(result);
-      setLocalSlots(result.slots);
+      const { rotation } = await api.getRotationOrder(groupId);
+      setData(rotation);
+      setLocalSlots(rotation?.slots ?? []);
       setIsDirty(false);
     } catch {
       toast.error('Failed to load rotation order');

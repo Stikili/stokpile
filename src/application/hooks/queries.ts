@@ -203,7 +203,7 @@ export function useAnnouncements(groupId: string | undefined) {
 export function useNotifications(groupId: string | undefined, userEmail: string | undefined) {
   return useQuery({
     queryKey: queryKeys.notifications(),
-    queryFn: () => api.getNotifications(groupId!, userEmail!),
+    queryFn: () => api.getNotifications(),
     enabled: !!groupId && !!userEmail,
     staleTime: 30_000,           // 30s — want to see new ones quickly
     refetchInterval: 60_000,     // poll every 60s

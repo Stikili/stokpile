@@ -65,6 +65,9 @@ export function JoinRequestsView({ groupId }: JoinRequestsViewProps) {
   };
 
 
+  // Nothing to act on: stay out of the way.
+  if (!loading && requests.length === 0) return null;
+
   return (
     <Card>
       <CardHeader className="pb-3 pt-4 px-4">

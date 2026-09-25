@@ -218,10 +218,10 @@ export function MobileNav({
               <Button
                 variant="ghost"
                 className="w-full justify-start text-sm"
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                onClick={() => setTheme(theme === 'navy' ? 'light' : 'navy')}
               >
-                {theme === 'dark' ? <Sun className="h-4 w-4 mr-2" /> : <Moon className="h-4 w-4 mr-2" />}
-                {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                {theme === 'navy' ? <Sun className="h-4 w-4 mr-2" /> : <Moon className="h-4 w-4 mr-2" />}
+                {theme === 'navy' ? 'Light Mode' : 'Dark Mode'}
               </Button>
               <Button
                 variant="ghost"
