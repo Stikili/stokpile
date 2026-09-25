@@ -53,10 +53,3 @@ export function money(amount: number, opts: MoneyOptions = {}): string {
   const gap = symbol.length > 1 || decimals ? NBSP : '';
   return `${prefix}${symbol}${gap}${body}`;
 }
-
-/** Receipt reference: STK-MMYY-NNNN. Stable, short, quotable over the phone. */
-export function receiptRef(seq: number, on: Date = new Date()): string {
-  const mm = String(on.getMonth() + 1).padStart(2, '0');
-  const yy = String(on.getFullYear()).slice(-2);
-  return `STK-${mm}${yy}-${String(seq).padStart(4, '0')}`;
-}

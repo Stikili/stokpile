@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { money, toCents, receiptRef } from '@/lib/money';
+import { money, toCents } from '@/lib/money';
+import { receiptRef, receiptRefFromId } from '@/domain/receipt';
 import { setGroupCurrency } from '@/lib/export';
 
 const NNBSP = ' ';
@@ -45,5 +46,9 @@ describe('money', () => {
 describe('receiptRef', () => {
   it('is STK-MMYY-NNNN', () => {
     expect(receiptRef(147, new Date(2026, 8, 18))).toBe('STK-0926-0147');
+  });
+
+  it('derives an interim code from a record id', () => {
+    expect(receiptRefFromId('a3f2-9b1c-uuid', new Date(2026, 8, 18))).toBe('STK-0926-A3F2');
   });
 });

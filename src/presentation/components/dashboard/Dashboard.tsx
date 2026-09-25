@@ -1,6 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
-import type { Contribution, Payout, Meeting, Member, OverdueMember, RotationOrder } from '@/domain/types';
-import { hasRotation } from '@/domain/types';
+import { useState } from 'react';
 import { Button } from '@/presentation/ui/button';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -15,7 +13,9 @@ import { AnnualProgressCard } from '@/presentation/components/dashboard/AnnualPr
 import { EditTotalContributionsDialog } from '@/presentation/components/groups/EditTotalContributionsDialog';
 import { SharePayoutImage } from '@/presentation/components/reports/SharePayoutImage';
 import { AiDrawer } from '@/presentation/components/ai/AiDrawer';
-import { api } from '@/infrastructure/api';
+import { useDashboard } from '@/application/hooks/useDashboard';
+import { useContributions } from '@/application/hooks/queries';
+import { displayName, type RoundSummary } from '@/domain/round';
 import { money } from '@/lib/money';
 import { formatDate } from '@/lib/export';
 
@@ -32,154 +32,35 @@ interface DashboardProps {
   onNavigate?: (tab: string) => void;
 }
 
-type RowState = 'paid' | 'late' | 'due';
-
-interface RoundRow {
-  email: string;
-  name: string;
-  state: RowState;
-  paid: number;
-  paidOn?: string;
-}
-
 const LEDGER_PREVIEW = 6;
 
-const fullName = (first?: string, last?: string, fallback = '') =>
-  `${first ?? ''} ${last ?? ''}`.trim() || fallback;
+const STATUS_CHIP: Record<RoundSummary['status'], (r: RoundSummary) => { tone: ChipTone; label: string }> = {
+  empty:    () => ({ tone: 'due', label: 'No members yet' }),
+  all_paid: () => ({ tone: 'paid', label: 'All paid' }),
+  late:     (r) => ({ tone: 'late', label: `${r.lateCount} late` }),
+  due:      (r) => ({ tone: 'due', label: `${r.outstanding} to pay` }),
+};
 
 export function Dashboard({
   groupId, groupName, groupType, contributionTarget, annualTarget,
   isAdmin = false, userEmail, onNavigate,
 }: DashboardProps) {
-  const [contributions, setContributions] = useState<Contribution[]>([]);
-  const [payouts, setPayouts] = useState<Payout[]>([]);
-  const [meetings, setMeetings] = useState<Meeting[]>([]);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [overdue, setOverdue] = useState<OverdueMember[]>([]);
-  const [adjustment, setAdjustment] = useState(0);
-  const [rotation, setRotation] = useState<RotationOrder | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const d = useDashboard({ groupId, groupType, contributionTarget, isAdmin, userEmail });
+  const contributions = useContributions(groupId).data?.contributions ?? [];
   const [showAll, setShowAll] = useState(false);
   const [dialog, setDialog] = useState<null | 'share' | 'adjust' | 'growth' | 'bank'>(null);
 
-  const rotating = hasRotation(groupType);
+  if (d.loading) return <DashboardSkeleton />;
 
-  const load = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const [c, p, adj, m, mem, od, rot] = await Promise.all([
-        api.getContributions(groupId),
-        api.getPayouts(groupId),
-        api.getContributionAdjustment(groupId).catch(() => ({ adjustment: 0 })),
-        api.getMeetings(groupId).catch(() => ({ meetings: [] })),
-        api.getMembers(groupId).catch(() => ({ members: [] })),
-        isAdmin ? api.getOverdueMembers(groupId).catch(() => ({ members: [], target: 0 })) : Promise.resolve({ members: [], target: 0 }),
-        rotating ? api.getRotationOrder(groupId).catch(() => ({ rotation: null })) : Promise.resolve({ rotation: null }),
-      ]);
-      setContributions(c.contributions || []);
-      setPayouts(p.payouts || []);
-      setAdjustment(adj.adjustment || 0);
-      setMeetings(m.meetings || []);
-      setMembers(mem.members || []);
-      setOverdue(od.members || []);
-      setRotation(rot.rotation);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (groupId) load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupId, groupType, isAdmin]);
-
-  const view = useMemo(() => {
-    const now = new Date();
-    const inThisPeriod = (iso: string) => {
-      const d = new Date(iso);
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    };
-    const periodLabel = now.toLocaleDateString(undefined, { month: 'long' });
-
-    // ── Totals ──
-    const totalIn = contributions.filter((c) => c.paid).reduce((s, c) => s + c.amount, 0) + adjustment;
-    const totalOut = payouts.filter((p) => p.status === 'completed').reduce((s, p) => s + p.amount, 0);
-
-    // ── This round / month, per member ──
-    const lateEmails = new Set(overdue.map((o) => o.email));
-    const paidBy = new Map<string, { amount: number; on: string }>();
-    for (const c of contributions) {
-      if (!c.paid || !inThisPeriod(c.date)) continue;
-      const prev = paidBy.get(c.userEmail);
-      paidBy.set(c.userEmail, { amount: (prev?.amount ?? 0) + c.amount, on: c.date });
-    }
-    const target = contributionTarget && contributionTarget > 0 ? contributionTarget : 0;
-    const rank: Record<RowState, number> = { late: 0, due: 1, paid: 2 };
-    const rows: RoundRow[] = members
-      .filter((m) => m.status === 'approved')
-      .map((m) => {
-        const p = paidBy.get(m.email);
-        const paid = p?.amount ?? 0;
-        const met = target ? paid >= target : paid > 0;
-        const state: RowState = met ? 'paid' : lateEmails.has(m.email) ? 'late' : 'due';
-        return { email: m.email, name: fullName(m.fullName, m.surname, m.email), state, paid, paidOn: p?.on };
-      })
-      .sort((a, b) => rank[a.state] - rank[b.state] || a.name.localeCompare(b.name));
-
-    const collected = [...paidBy.values()].reduce((s, p) => s + p.amount, 0);
-    const expected = target * rows.length;
-    const paidCount = rows.filter((r) => r.state === 'paid').length;
-    const lateCount = rows.filter((r) => r.state === 'late').length;
-    const outstanding = rows.length - paidCount;
-
-    // ── Rotation ──
-    const slots = rotation?.slots ?? [];
-    const round = slots.length ? Math.min(rotation!.currentPosition + 1, slots.length) : 0;
-    const current = slots[rotation?.currentPosition ?? -1];
-    const next = slots.length > 1 ? slots[((rotation?.currentPosition ?? 0) + 1) % slots.length] : undefined;
-
-    // ── Coming up ──
-    const nextMeeting = meetings
-      .filter((m) => new Date(`${m.date}T${m.time || '00:00'}`) >= now)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
-    const nextPayout = payouts
-      .filter((p) => p.status === 'scheduled')
-      .sort((a, b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime())[0];
-
-    // ── Me ──
-    const mine = contributions.filter((c) => c.userEmail === userEmail);
-    const myRow = rows.find((r) => r.email === userEmail);
-    const me = {
-      paidIn: mine.filter((c) => c.paid).reduce((s, c) => s + c.amount, 0),
-      owing: mine.filter((c) => !c.paid).reduce((s, c) => s + c.amount, 0),
-      received: payouts.filter((p) => p.recipientEmail === userEmail && p.status === 'completed').reduce((s, p) => s + p.amount, 0),
-      paidThisPeriod: myRow?.state === 'paid',
-      isMember: !!myRow,
-    };
-
-    return {
-      periodLabel, totalIn, totalOut, balance: totalIn - totalOut,
-      rows, collected, expected, paidCount, lateCount, outstanding,
-      round, roundsTotal: slots.length, cycle: rotation?.currentCycle ?? 1, current, next,
-      nextMeeting, nextPayout, me,
-    };
-  }, [contributions, payouts, meetings, members, overdue, adjustment, rotation, contributionTarget, userEmail]);
-
-  if (loading) return <DashboardSkeleton />;
-
-  if (error) {
+  if (d.error) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
         <AlertTriangle className="h-10 w-10 text-destructive" />
         <div>
           <p className="font-medium">Couldn’t load your group</p>
-          <p className="text-sm text-muted-foreground mt-1">{error}</p>
+          <p className="text-sm text-muted-foreground mt-1">{d.error}</p>
         </div>
-        <Button variant="outline" onClick={load}>
+        <Button variant="outline" onClick={d.refresh}>
           <RefreshCw className="h-4 w-4 mr-2" />
           Try again
         </Button>
@@ -187,21 +68,17 @@ export function Dashboard({
     );
   }
 
-  const v = view;
-  const hasRound = rotating && v.roundsTotal > 0;
-  const status: { tone: ChipTone; label: string } =
-    v.rows.length === 0 ? { tone: 'due', label: 'No members yet' }
-    : v.outstanding === 0 ? { tone: 'paid', label: 'All paid' }
-    : v.lateCount > 0 ? { tone: 'late', label: `${v.lateCount} late` }
-    : { tone: 'due', label: `${v.outstanding} to pay` };
-  const total = Math.max(v.rows.length, 1);
-  const paidPct = (v.paidCount / total) * 100;
-  const latePct = (v.lateCount / total) * 100;
-  const visibleRows = showAll ? v.rows : v.rows.slice(0, LEDGER_PREVIEW);
+  const r = d.round;
+  const hasRound = d.rotating && d.position.total > 0;
+  const status = STATUS_CHIP[r.status](r);
+  const total = Math.max(r.rows.length, 1);
+  const paidPct = (r.paidCount / total) * 100;
+  const latePct = (r.lateCount / total) * 100;
+  const visibleRows = showAll ? r.rows : r.rows.slice(0, LEDGER_PREVIEW);
 
   const primary = isAdmin
     ? { label: 'Record a payment', tab: 'contributions' }
-    : v.me.isMember && !v.me.paidThisPeriod
+    : d.me.isMember && !d.me.paidThisPeriod
       ? { label: 'Pay my contribution', tab: 'contributions' }
       : null;
 
@@ -212,7 +89,7 @@ export function Dashboard({
       <section className="card space-y-4" aria-label="This round">
         <div className="flex items-center justify-between gap-3">
           <span className="t-label">
-            {hasRound ? `Round ${v.round} of ${v.roundsTotal} · ${v.periodLabel}` : `${v.periodLabel} · ${groupName ?? 'Your group'}`}
+            {hasRound ? `Round ${d.position.round} of ${d.position.total} · ${d.periodLabel}` : `${d.periodLabel} · ${groupName ?? 'Your group'}`}
           </span>
           <div className="flex items-center gap-1">
             <StatusChip tone={status.tone} label={status.label} />
@@ -234,25 +111,25 @@ export function Dashboard({
           </div>
         </div>
 
-        {hasRound && <CycleRail members={v.roundsTotal} round={v.round} />}
+        {hasRound && <CycleRail members={d.position.total} round={d.position.round} />}
 
         <div>
           <span className="t-label">{hasRound ? 'Collected this round' : 'Group funds'}</span>
           <div className="mt-1 flex items-baseline gap-2 flex-wrap">
             <span className="t-figure text-[length:var(--t-display-size)] leading-none">
-              {money(hasRound ? v.collected : v.balance)}
+              {money(hasRound ? r.collected : d.totals.balance)}
             </span>
-            {hasRound && v.expected > 0 && (
-              <span className="t-figure text-sm text-muted-foreground">/ {money(v.expected)}</span>
+            {hasRound && r.expected > 0 && (
+              <span className="t-figure text-sm text-muted-foreground">/ {money(r.expected)}</span>
             )}
           </div>
           <p className="text-sm text-muted-foreground mt-2">
-            {!hasRound && <>Collected in {v.periodLabel}: {money(v.collected)} · </>}
-            {v.paidCount} of {v.rows.length} paid
+            {!hasRound && <>Collected in {d.periodLabel}: {money(r.collected)} · </>}
+            {r.paidCount} of {r.rows.length} paid
           </p>
         </div>
 
-        {v.rows.length > 0 && (
+        {r.rows.length > 0 && (
           <div className="meter" aria-hidden="true">
             <i className="meter__fill" style={{ width: `${paidPct}%` }} />
             {latePct > 0 && <i className="meter__fill meter__fill--late" style={{ width: `${latePct}%` }} />}
@@ -261,8 +138,8 @@ export function Dashboard({
 
         {primary ? (
           <Button className="w-full h-11" onClick={() => onNavigate?.(primary.tab)}>{primary.label}</Button>
-        ) : v.me.paidThisPeriod ? (
-          <p className="text-sm text-muted-foreground">You’re paid up for {v.periodLabel}. Thank you.</p>
+        ) : d.me.paidThisPeriod ? (
+          <p className="text-sm text-muted-foreground">You’re paid up for {d.periodLabel}. Thank you.</p>
         ) : null}
       </section>
 
@@ -272,34 +149,34 @@ export function Dashboard({
       )}
 
       {/* ─── Who has paid ─── */}
-      {v.rows.length > 0 && (
+      {r.rows.length > 0 && (
         <section className="card" aria-label="Who has paid">
           <div className="flex items-center justify-between mb-1">
-            <h2 className="t-heading">{hasRound ? 'This round' : v.periodLabel}</h2>
-            <span className="t-label">{v.paidCount}/{v.rows.length} paid</span>
+            <h2 className="t-heading">{hasRound ? 'This round' : d.periodLabel}</h2>
+            <span className="t-label">{r.paidCount}/{r.rows.length} paid</span>
           </div>
           <div className="ledger">
-            {visibleRows.map((r) => (
-              <div key={r.email} className="ledger-row">
+            {visibleRows.map((row) => (
+              <div key={row.email} className="ledger-row">
                 <div className="min-w-0">
-                  <div className="ledger-row__who truncate">{r.name}</div>
-                  <div className={`ledger-row__meta${r.state === 'late' ? ' ledger-row__meta--late' : ''}`}>
-                    {r.state === 'paid' && r.paidOn ? `Paid ${formatDate(r.paidOn)}`
-                      : r.state === 'late' ? 'Late'
-                      : r.paid > 0 ? `Part paid · ${money(r.paid)}`
+                  <div className="ledger-row__who truncate">{row.name}</div>
+                  <div className={`ledger-row__meta${row.state === 'late' ? ' ledger-row__meta--late' : ''}`}>
+                    {row.state === 'paid' && row.paidOn ? `Paid ${formatDate(row.paidOn)}`
+                      : row.state === 'late' ? 'Late'
+                      : row.paid > 0 ? `Part paid · ${money(row.paid)}`
                       : 'Not yet'}
                   </div>
                 </div>
                 <div className="ledger-row__leader" />
-                {r.state === 'paid'
-                  ? <span className="ledger-row__value">{money(r.paid)}</span>
-                  : <StatusChip tone={r.state} label={r.state === 'late' ? 'Late' : 'Due'} />}
+                {row.state === 'paid'
+                  ? <span className="ledger-row__value">{money(row.paid)}</span>
+                  : <StatusChip tone={row.state} label={row.state === 'late' ? 'Late' : 'Due'} />}
               </div>
             ))}
           </div>
-          {v.rows.length > LEDGER_PREVIEW && (
+          {r.rows.length > LEDGER_PREVIEW && (
             <Button variant="ghost" size="sm" className="w-full mt-2 h-8 text-xs" onClick={() => setShowAll((s) => !s)}>
-              {showAll ? 'Show less' : `Show all ${v.rows.length}`}
+              {showAll ? 'Show less' : `Show all ${r.rows.length}`}
             </Button>
           )}
         </section>
@@ -309,41 +186,41 @@ export function Dashboard({
 
       <div className="space-y-4 min-w-0">
       {/* ─── Coming up ─── */}
-      {(v.current || v.nextPayout || v.nextMeeting) && (
+      {(d.position.current || d.nextPayout || d.nextMeeting) && (
         <section className="card" aria-label="Coming up">
           <h2 className="t-heading mb-1">Coming up</h2>
           <div className="ledger">
-            {hasRound && v.current && (
+            {hasRound && d.position.current && (
               <div className="ledger-row">
                 <div className="min-w-0">
-                  <div className="ledger-row__who truncate">{fullName(v.current.fullName, v.current.surname, v.current.email)}</div>
-                  <div className="ledger-row__meta">Their turn · cycle {v.cycle}</div>
+                  <div className="ledger-row__who truncate">{displayName(d.position.current.fullName, d.position.current.surname, d.position.current.email)}</div>
+                  <div className="ledger-row__meta">Their turn · cycle {d.position.cycle}</div>
                 </div>
                 <div className="ledger-row__leader" />
-                {v.next && v.next.email !== v.current.email
-                  ? <span className="ledger-row__meta">then {fullName(v.next.fullName, v.next.surname, v.next.email)}</span>
+                {d.position.next && d.position.next.email !== d.position.current.email
+                  ? <span className="ledger-row__meta">then {displayName(d.position.next.fullName, d.position.next.surname, d.position.next.email)}</span>
                   : <StatusChip tone="payout" label="Payout" />}
               </div>
             )}
-            {v.nextPayout && (
+            {d.nextPayout && (
               <div className="ledger-row">
                 <div className="min-w-0">
                   <div className="ledger-row__who truncate">
-                    Payout to {v.nextPayout.recipient && v.nextPayout.recipient.fullName !== 'Unknown'
-                      ? fullName(v.nextPayout.recipient.fullName, v.nextPayout.recipient.surname)
-                      : v.nextPayout.recipientEmail}
+                    Payout to {d.nextPayout.recipient && d.nextPayout.recipient.fullName !== 'Unknown'
+                      ? displayName(d.nextPayout.recipient.fullName, d.nextPayout.recipient.surname)
+                      : d.nextPayout.recipientEmail}
                   </div>
-                  <div className="ledger-row__meta">{formatDate(v.nextPayout.scheduledDate)}</div>
+                  <div className="ledger-row__meta">{formatDate(d.nextPayout.scheduledDate)}</div>
                 </div>
                 <div className="ledger-row__leader" />
-                <span className="ledger-row__value ledger-row__value--out">{money(-v.nextPayout.amount)}</span>
+                <span className="ledger-row__value ledger-row__value--out">{money(-d.nextPayout.amount)}</span>
               </div>
             )}
-            {v.nextMeeting && (
+            {d.nextMeeting && (
               <div className="ledger-row">
                 <div className="min-w-0">
-                  <div className="ledger-row__who truncate">Meeting{v.nextMeeting.venue ? ` · ${v.nextMeeting.venue}` : ''}</div>
-                  <div className="ledger-row__meta">{formatDate(v.nextMeeting.date)}{v.nextMeeting.time ? `, ${v.nextMeeting.time}` : ''}</div>
+                  <div className="ledger-row__who truncate">Meeting{d.nextMeeting.venue ? ` · ${d.nextMeeting.venue}` : ''}</div>
+                  <div className="ledger-row__meta">{formatDate(d.nextMeeting.date)}{d.nextMeeting.time ? `, ${d.nextMeeting.time}` : ''}</div>
                 </div>
                 <div className="ledger-row__leader" />
                 <button type="button" className="ledger-row__meta underline underline-offset-2" onClick={() => onNavigate?.('meetings')}>
@@ -356,13 +233,13 @@ export function Dashboard({
       )}
 
       {/* ─── Me ─── */}
-      {v.me.isMember && (
+      {d.me.isMember && (
         <section className="card card--quiet" aria-label="My summary">
           <span className="t-label">My summary</span>
           <div className="grid grid-cols-3 gap-3 mt-2">
-            <Figure label="Paid in" value={money(v.me.paidIn)} />
-            <Figure label="Owing" value={money(v.me.owing)} late={v.me.owing > 0} />
-            <Figure label="Received" value={money(v.me.received)} />
+            <Figure label="Paid in" value={money(d.me.paidIn)} />
+            <Figure label="Owing" value={money(d.me.owing)} late={d.me.owing > 0} />
+            <Figure label="Received" value={money(d.me.received)} />
           </div>
         </section>
       )}
@@ -392,18 +269,18 @@ export function Dashboard({
             data={{
               groupName: groupName ?? 'Our group',
               period: String(new Date().getFullYear()),
-              totalContributedZar: v.totalIn,
-              totalPaidOutZar: v.totalOut,
-              memberCount: members.length,
+              totalContributedZar: d.totals.totalIn,
+              totalPaidOutZar: d.totals.totalOut,
+              memberCount: d.memberCount,
               headline: 'A strong year, together.',
             }}
           />
           <EditTotalContributionsDialog
             groupId={groupId}
-            currentTotal={v.totalIn}
-            calculatedTotal={v.totalIn - adjustment}
-            currentAdjustment={adjustment}
-            onSuccess={load}
+            currentTotal={d.totals.totalIn}
+            calculatedTotal={d.totals.totalIn - d.adjustment}
+            currentAdjustment={d.adjustment}
+            onSuccess={d.refresh}
             open={dialog === 'adjust'}
             onOpenChange={(o) => !o && setDialog(null)}
           />
