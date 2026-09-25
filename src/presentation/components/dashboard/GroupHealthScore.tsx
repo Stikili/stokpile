@@ -13,7 +13,7 @@ function ScoreRing({ score }: { score: number }) {
   const radius = 36;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (score / 100) * circumference;
-  const color = score >= 80 ? '#22c55e' : score >= 50 ? '#f59e0b' : '#ef4444';
+  const color = score >= 80 ? 'var(--s-brand)' : score >= 50 ? 'var(--s-chart-2)' : 'var(--s-bad)';
 
   return (
     <div className="relative inline-flex items-center justify-center">
@@ -56,14 +56,14 @@ export function GroupHealthScore({ groupId }: GroupHealthScoreProps) {
   if (!health) return null;
 
   const TrendIcon = health.trend === 'up' ? TrendingUp : health.trend === 'down' ? TrendingDown : Minus;
-  const trendColor = health.trend === 'up' ? 'text-green-600' : health.trend === 'down' ? 'text-red-500' : 'text-muted-foreground';
+  const trendColor = health.trend === 'up' ? 'text-primary' : health.trend === 'down' ? 'text-destructive' : 'text-muted-foreground';
   const scoreLabel = health.score >= 80 ? 'Excellent' : health.score >= 60 ? 'Good' : health.score >= 40 ? 'Fair' : 'Needs attention';
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Heart className="h-5 w-5 text-rose-500" />
+          <Heart className="h-5 w-5 text-destructive" />
           Group Health
         </CardTitle>
       </CardHeader>
@@ -100,7 +100,7 @@ export function GroupHealthScore({ groupId }: GroupHealthScoreProps) {
                         className="absolute bottom-0 left-0 right-0 rounded-t-sm transition-all"
                         style={{
                           height: `${Math.max(pct * 100, m.total > 0 ? 5 : 0)}%`,
-                          background: pct >= 0.8 ? '#22c55e' : pct >= 0.5 ? '#f59e0b' : '#ef4444',
+                          background: pct >= 0.8 ? 'var(--s-brand)' : pct >= 0.5 ? 'var(--s-chart-2)' : 'var(--s-bad)',
                         }}
                       />
                     </div>

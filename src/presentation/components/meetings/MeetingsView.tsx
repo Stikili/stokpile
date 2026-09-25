@@ -384,7 +384,7 @@ export function MeetingsView({ groupId, isAdmin, userEmail }: MeetingsViewProps)
                                       <button
                                         onClick={() => handleRSVP(meeting.id, 'yes')}
                                         disabled={rsvpLoading === meeting.id}
-                                        className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors ${myResponse === 'yes' ? 'bg-green-600 text-white' : 'bg-muted hover:bg-green-100 dark:hover:bg-green-900/20 text-muted-foreground'}`}
+                                        className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors ${myResponse === 'yes' ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-accent dark:hover:bg-accent text-muted-foreground'}`}
                                       >
                                         <Check className="h-3 w-3" />Yes
                                       </button>
@@ -396,7 +396,7 @@ export function MeetingsView({ groupId, isAdmin, userEmail }: MeetingsViewProps)
                                       <button
                                         onClick={() => handleRSVP(meeting.id, 'maybe')}
                                         disabled={rsvpLoading === meeting.id}
-                                        className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors ${myResponse === 'maybe' ? 'bg-amber-500 text-white' : 'bg-muted hover:bg-amber-100 dark:hover:bg-amber-900/20 text-muted-foreground'}`}
+                                        className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors ${myResponse === 'maybe' ? 'bg-warning text-warning-foreground' : 'bg-muted hover:bg-warning/10 dark:hover:bg-warning/10 text-muted-foreground'}`}
                                       >
                                         <HelpCircle className="h-3 w-3" />?
                                       </button>
@@ -408,7 +408,7 @@ export function MeetingsView({ groupId, isAdmin, userEmail }: MeetingsViewProps)
                                       <button
                                         onClick={() => handleRSVP(meeting.id, 'no')}
                                         disabled={rsvpLoading === meeting.id}
-                                        className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors ${myResponse === 'no' ? 'bg-red-500 text-white' : 'bg-muted hover:bg-red-100 dark:hover:bg-red-900/20 text-muted-foreground'}`}
+                                        className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors ${myResponse === 'no' ? 'bg-destructive text-destructive-foreground' : 'bg-muted hover:bg-destructive/10 dark:hover:bg-destructive/10 text-muted-foreground'}`}
                                       >
                                         <X className="h-3 w-3" />No
                                       </button>

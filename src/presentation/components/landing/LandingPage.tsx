@@ -29,12 +29,12 @@ interface LandingPageProps {
 
 const FEATURES = [
   { icon: Users, title: 'Member tracking', desc: 'See who has paid, who owes, and who is on a streak.', color: 'from-blue-500 to-blue-600' },
-  { icon: TrendingUp, title: 'Payouts & rotation', desc: 'Schedule payouts, manage cycle order, track balances.', color: 'from-emerald-500 to-emerald-600' },
+  { icon: TrendingUp, title: 'Payouts & rotation', desc: 'Schedule payouts, manage cycle order, track balances.', color: 'from-primary to-primary' },
   { icon: HeartHandshake, title: 'Burial societies', desc: 'Beneficiaries, dependents, and claims management built-in.', color: 'from-rose-500 to-rose-600' },
   { icon: ShoppingCart, title: 'Grocery stokvels', desc: 'Plan year-end bulk buys with shopping list coordination.', color: 'from-orange-500 to-orange-600' },
   { icon: RefreshCw, title: 'Rotating stokvels', desc: 'Automatic payout order and cycle reminders.', color: 'from-purple-500 to-purple-600' },
   { icon: FileText, title: 'Reports & receipts', desc: 'PDF receipts, financial reports, audit logs.', color: 'from-indigo-500 to-indigo-600' },
-  { icon: MessageCircle, title: 'SMS & WhatsApp', desc: 'Reach members where they actually are.', color: 'from-green-500 to-green-600' },
+  { icon: MessageCircle, title: 'SMS & WhatsApp', desc: 'Reach members where they actually are.', color: 'from-primary to-primary' },
   { icon: Shield, title: 'POPIA compliant', desc: 'Privacy-first with full data export and deletion.', color: 'from-slate-500 to-slate-600' },
 ];
 
@@ -127,12 +127,12 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                   size="icon"
                   variant="ghost"
                   className="tap-none"
-                  aria-label={theme === 'navy' ? 'Switch to light theme' : 'Switch to navy theme'}
+                  aria-label={theme === 'navy' ? 'Switch to light theme' : 'Switch to dark theme'}
                 >
                   {theme === 'navy' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>{theme === 'navy' ? 'Light theme' : 'Navy theme'}</TooltipContent>
+              <TooltipContent>{theme === 'navy' ? 'Light theme' : 'Dark theme'}</TooltipContent>
             </Tooltip>
             <Button
               onClick={onGetStarted}
@@ -254,7 +254,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                 <ul className="space-y-2.5 mb-5">
                   {p.features.map((f) => (
                     <li key={f} className="flex items-start gap-2 text-sm">
-                      <Check className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                      <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                       <span>{f}</span>
                     </li>
                   ))}
@@ -311,7 +311,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
           </div>
         </div>
 
-        <div className="mt-4 rounded-2xl border bg-gradient-to-br from-primary/5 to-emerald-500/5 p-4 flex items-start gap-3">
+        <div className="mt-4 rounded-2xl border bg-gradient-to-br from-primary/5 to-primary/5 p-4 flex items-start gap-3">
           <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
             <Coins className="h-5 w-5 text-primary" />
           </div>
@@ -403,9 +403,9 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                     { name: 'Kagiso T.', paid: false, amt: '—' },
                   ].map((m, i) => (
                     <div key={i} className="flex items-center gap-2 text-[10px]">
-                      <span className={`h-2 w-2 rounded-full ${m.paid ? 'bg-green-500' : 'bg-muted'}`} />
+                      <span className={`h-2 w-2 rounded-full ${m.paid ? 'bg-primary' : 'bg-muted'}`} />
                       <span className="flex-1 truncate">{m.name}</span>
-                      <span className={m.paid ? 'text-green-600 dark:text-green-400 font-semibold' : 'text-muted-foreground'}>{m.amt}</span>
+                      <span className={m.paid ? 'text-primary dark:text-primary font-semibold' : 'text-muted-foreground'}>{m.amt}</span>
                     </div>
                   ))}
                 </div>
@@ -503,8 +503,8 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
 
           <div className="grid grid-cols-3 gap-3">
             <div className="rounded-2xl border bg-card p-4 flex items-start gap-3">
-              <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
-                <Gift className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              <div className="h-10 w-10 rounded-xl bg-accent flex items-center justify-center shrink-0">
+                <Gift className="h-5 w-5 text-primary dark:text-primary" />
               </div>
               <div>
                 <p className="text-sm font-semibold">Earn by using the app</p>
@@ -564,7 +564,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                 <ul className="space-y-2 mb-5 flex-1">
                   {p.features.map((f) => (
                     <li key={f} className="flex items-start gap-2 text-sm">
-                      <Check className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                      <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                       <span>{f}</span>
                     </li>
                   ))}
@@ -606,7 +606,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
       </section>
 
       {/* ─── DESKTOP Final CTA ─── */}
-      <section className="hidden md:block bg-gradient-to-br from-primary via-primary to-emerald-700 text-primary-foreground py-16">
+      <section className="hidden md:block bg-gradient-to-br from-primary via-primary to-primary text-primary-foreground py-16">
         <div className="max-w-2xl mx-auto px-5 text-center">
           <h2 className="text-3xl font-bold mb-3">Start your group in 2 minutes</h2>
           <p className="opacity-90 mb-6 text-base">No credit card. Free forever for small groups.</p>

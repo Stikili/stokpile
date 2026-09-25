@@ -5,11 +5,11 @@ import { Button } from '@/presentation/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/presentation/ui/select';
 import { Label } from '@/presentation/ui/label';
-import { Badge } from '@/presentation/ui/badge';
 import { Printer, FileBarChart, Download } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
 import { formatCurrency, formatDate, exportToCSV } from '@/lib/export';
+import { StatusChip, payoutChip } from '@/presentation/shared/StatusChip';
 
 interface FinancialReportsViewProps {
   groupId: string;
@@ -208,7 +208,7 @@ function ContributionsSummaryReport({ rows, totalContributed, netBalance }: {
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="rounded-lg border p-3 text-center">
             <p className="text-xs text-muted-foreground mb-1">Total Paid In</p>
-            <p className="text-lg font-semibold text-green-600">{formatCurrency(totalContributed)}</p>
+            <p className="text-lg font-semibold text-primary">{formatCurrency(totalContributed)}</p>
           </div>
           <div className="rounded-lg border p-3 text-center">
             <p className="text-xs text-muted-foreground mb-1">Members</p>
@@ -216,7 +216,7 @@ function ContributionsSummaryReport({ rows, totalContributed, netBalance }: {
           </div>
           <div className="rounded-lg border p-3 text-center">
             <p className="text-xs text-muted-foreground mb-1">Net Balance</p>
-            <p className={`text-lg font-semibold ${(netBalance as number) >= 0 ? 'text-green-600' : 'text-red-500'}`}>{formatCurrency(netBalance)}</p>
+            <p className={`text-lg font-semibold ${(netBalance as number) >= 0 ? 'text-primary' : 'text-destructive'}`}>{formatCurrency(netBalance)}</p>
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -238,8 +238,8 @@ function ContributionsSummaryReport({ rows, totalContributed, netBalance }: {
                     <div className="text-xs text-muted-foreground">{row.Email as string}</div>
                   </td>
                   <td className="text-right py-2">{row['Total Contributions'] as number}</td>
-                  <td className="text-right py-2 text-green-600">{formatCurrency(row['Amount Paid'] as number)}</td>
-                  <td className="text-right py-2 text-orange-600">
+                  <td className="text-right py-2 text-primary">{formatCurrency(row['Amount Paid'] as number)}</td>
+                  <td className="text-right py-2 text-warning">
                     {(row['Amount Unpaid'] as number) > 0 ? formatCurrency(row['Amount Unpaid'] as number) : '—'}
                   </td>
                   <td className="text-right py-2 font-medium">{formatCurrency(row['Total Amount'] as number)}</td>
@@ -268,15 +268,15 @@ function MonthlyStatementReport({ rows, totalContributed, totalPayouts, netBalan
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="rounded-lg border p-3 text-center">
             <p className="text-xs text-muted-foreground mb-1">Total In</p>
-            <p className="text-lg font-semibold text-green-600">{formatCurrency(totalContributed)}</p>
+            <p className="text-lg font-semibold text-primary">{formatCurrency(totalContributed)}</p>
           </div>
           <div className="rounded-lg border p-3 text-center">
             <p className="text-xs text-muted-foreground mb-1">Total Out</p>
-            <p className="text-lg font-semibold text-red-500">{formatCurrency(totalPayouts)}</p>
+            <p className="text-lg font-semibold text-destructive">{formatCurrency(totalPayouts)}</p>
           </div>
           <div className="rounded-lg border p-3 text-center">
             <p className="text-xs text-muted-foreground mb-1">Net Balance</p>
-            <p className={`text-lg font-semibold ${(netBalance as number) >= 0 ? 'text-green-600' : 'text-red-500'}`}>{formatCurrency(netBalance)}</p>
+            <p className={`text-lg font-semibold ${(netBalance as number) >= 0 ? 'text-primary' : 'text-destructive'}`}>{formatCurrency(netBalance)}</p>
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -294,14 +294,14 @@ function MonthlyStatementReport({ rows, totalContributed, totalPayouts, netBalan
               {rows.map((row, i) => (
                 <tr key={i} className="border-b last:border-0">
                   <td className="py-2 font-medium">{row.Month as string}</td>
-                  <td className="text-right py-2 text-green-600">{formatCurrency(row['Contributions Paid'] as number)}</td>
-                  <td className="text-right py-2 text-orange-600">
+                  <td className="text-right py-2 text-primary">{formatCurrency(row['Contributions Paid'] as number)}</td>
+                  <td className="text-right py-2 text-warning">
                     {(row['Contributions Unpaid'] as number) > 0 ? formatCurrency(row['Contributions Unpaid'] as number) : '—'}
                   </td>
-                  <td className="text-right py-2 text-red-500">
+                  <td className="text-right py-2 text-destructive">
                     {(row['Payouts Made'] as number) > 0 ? formatCurrency(row['Payouts Made'] as number) : '—'}
                   </td>
-                  <td className={`text-right py-2 font-medium ${(row.Net as number) >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                  <td className={`text-right py-2 font-medium ${(row.Net as number) >= 0 ? 'text-primary' : 'text-destructive'}`}>
                     {formatCurrency(row.Net as number)}
                   </td>
                 </tr>
@@ -315,12 +315,6 @@ function MonthlyStatementReport({ rows, totalContributed, totalPayouts, netBalan
 }
 
 function PayoutHistoryReport({ payouts }: { payouts: Payout[] }) {
-  const statusColor: Record<string, string> = {
-    completed: 'text-green-600',
-    scheduled: 'text-blue-600',
-    cancelled: 'text-muted-foreground line-through',
-  };
-
   return (
     <Card>
       <CardHeader>
@@ -351,12 +345,7 @@ function PayoutHistoryReport({ payouts }: { payouts: Payout[] }) {
                     <td className="text-right py-2 font-medium">{formatCurrency(p.amount)}</td>
                     <td className="py-2">{formatDate(p.scheduledDate)}</td>
                     <td className="py-2">
-                      <Badge
-                        variant="outline"
-                        className={`text-xs ${statusColor[p.status] || ''}`}
-                      >
-                        {p.status}
-                      </Badge>
+                      <StatusChip tone={payoutChip(p.status).tone} label={payoutChip(p.status).label} />
                     </td>
                     <td className="py-2 text-xs font-mono text-muted-foreground">{p.referenceNumber || '—'}</td>
                   </tr>

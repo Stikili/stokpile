@@ -23,7 +23,7 @@ export function SubscriptionBanner({ onUpgradeClick }: SubscriptionBannerProps) 
       <div className={`flex items-center gap-3 px-4 py-2.5 rounded-xl mb-3 text-sm
         ${urgency
           ? 'bg-destructive/10 border border-destructive/20 text-destructive'
-          : 'bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400'}`}>
+          : 'bg-warning/10 border border-warning/40 text-warning dark:text-warning'}`}>
         <AlertTriangle className="h-4 w-4 shrink-0" />
         <span className="flex-1">
           {daysLeftInTrial === 0

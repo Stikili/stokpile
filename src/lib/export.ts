@@ -64,6 +64,9 @@ export const formatCurrency = (amount: number, country?: string | null) => {
   return localeCurrency(amount, country ?? CURRENT_COUNTRY);
 };
 
+/** ISO code for the active currency: the selected group's, else the user's country's. */
+export const activeCurrencyCode = (): string => GROUP_CURRENCY ?? getLocale(CURRENT_COUNTRY).currency;
+
 /** Symbol for the active currency (group first, then user country), e.g. "R", "KSh". */
 export const currencySymbol = (): string => {
   if (GROUP_CURRENCY) {

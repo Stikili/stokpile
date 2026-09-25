@@ -1,12 +1,20 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import * as Sentry from '@sentry/react'
-import '@fontsource/inter/400.css'
-import '@fontsource/inter/500.css'
-import '@fontsource/inter/600.css'
-import '@fontsource/inter/700.css'
-import '@fontsource/jetbrains-mono/400.css'
+// Design kit v2 type: Archivo (display, variable width), Public Sans (body),
+// IBM Plex Mono (labels and every figure). Self-hosted, no Google Fonts.
+import '@fontsource-variable/archivo/wdth.css'
+import '@fontsource/public-sans/400.css'
+import '@fontsource/public-sans/500.css'
+import '@fontsource/public-sans/600.css'
+import '@fontsource/public-sans/700.css'
+import '@fontsource/ibm-plex-mono/400.css'
+import '@fontsource/ibm-plex-mono/500.css'
+import '@fontsource/ibm-plex-mono/600.css'
 import App from './App.tsx'
+// Order matters: tokens → components → app (Tailwind + shadcn mapping)
+import './styles/tokens.css'
+import './styles/components.css'
 import './styles/globals.css'
 import { supabaseConfigMissing } from './infrastructure/supabase/config'
 

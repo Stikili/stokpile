@@ -71,7 +71,7 @@ export function PublicJoinView({ inviteToken, isAuthenticated, onJoinSuccess, on
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50/80 to-blue-50/30 dark:bg-transparent dark:bg-none dark:from-transparent dark:to-transparent p-4">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="text-center">
@@ -86,7 +86,7 @@ export function PublicJoinView({ inviteToken, isAuthenticated, onJoinSuccess, on
 
   if (error || !group) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50/80 to-blue-50/30 dark:bg-transparent dark:bg-none dark:from-transparent dark:to-transparent p-4">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md border-destructive">
           <CardHeader>
             <CardTitle className="text-destructive">Invalid Invite</CardTitle>
@@ -106,11 +106,11 @@ export function PublicJoinView({ inviteToken, isAuthenticated, onJoinSuccess, on
 
   if (alreadyMember) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50/80 to-blue-50/30 dark:bg-transparent dark:bg-none dark:from-transparent dark:to-transparent p-4">
-        <Card className="w-full max-w-md border-green-600">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md border-primary/30">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <CheckCircle className="h-6 w-6 text-green-600" />
+              <CheckCircle className="h-6 w-6 text-primary" />
               <CardTitle>Already a Member</CardTitle>
             </div>
           </CardHeader>
@@ -128,7 +128,7 @@ export function PublicJoinView({ inviteToken, isAuthenticated, onJoinSuccess, on
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50/80 to-blue-50/30 dark:bg-transparent dark:bg-none dark:from-transparent dark:to-transparent p-4">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">

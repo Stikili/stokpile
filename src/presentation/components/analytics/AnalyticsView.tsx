@@ -16,7 +16,7 @@ interface AnalyticsViewProps {
   groupId: string;
 }
 
-const COLORS = ['#22c55e', '#f97316', '#3b82f6', '#a855f7', '#ec4899'];
+const COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'];
 
 export function AnalyticsView({ groupId }: AnalyticsViewProps) {
   const [health, setHealth] = useState<GroupHealth | null>(null);
@@ -54,9 +54,9 @@ export function AnalyticsView({ groupId }: AnalyticsViewProps) {
   if (!health) return null;
 
   const TrendIcon = health.trend === 'up' ? TrendingUp : health.trend === 'down' ? TrendingDown : Minus;
-  const trendColor = health.trend === 'up' ? 'text-green-600' : health.trend === 'down' ? 'text-red-500' : 'text-muted-foreground';
+  const trendColor = health.trend === 'up' ? 'text-primary' : health.trend === 'down' ? 'text-destructive' : 'text-muted-foreground';
 
-  const scoreColor = health.score >= 80 ? 'text-green-600' : health.score >= 60 ? 'text-yellow-600' : 'text-red-500';
+  const scoreColor = health.score >= 80 ? 'text-primary' : health.score >= 60 ? 'text-warning' : 'text-destructive';
   const scoreLabel = health.score >= 80 ? 'Excellent' : health.score >= 60 ? 'Good' : health.score >= 40 ? 'Fair' : 'Needs Attention';
 
   const paidVsUnpaid = [
@@ -146,8 +146,8 @@ export function AnalyticsView({ groupId }: AnalyticsViewProps) {
                   formatter={(value: number, name: string) => [formatCurrency(value), name === 'paid' ? 'Paid' : 'Total']}
                   contentStyle={{ fontSize: 12 }}
                 />
-                <Bar dataKey="total" name="Total" fill="#e2e8f0" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="paid" name="Paid" fill="#22c55e" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="total" name="Total" fill="var(--chart-5)" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="paid" name="Paid" fill="var(--chart-1)" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -173,7 +173,7 @@ export function AnalyticsView({ groupId }: AnalyticsViewProps) {
                   dataKey="value"
                 >
                   {paidVsUnpaid.map((_, index) => (
-                    <Cell key={index} fill={index === 0 ? '#22c55e' : '#f97316'} />
+                    <Cell key={index} fill={index === 0 ? 'var(--chart-1)' : 'var(--chart-2)'} />
                   ))}
                 </Pie>
                 <Legend formatter={(value) => <span className="text-xs">{value}</span>} />
@@ -208,7 +208,7 @@ export function AnalyticsView({ groupId }: AnalyticsViewProps) {
                     formatter={(value: number) => [`${value}%`, 'Payment Rate']}
                     contentStyle={{ fontSize: 12 }}
                   />
-                  <Line type="monotone" dataKey="rate" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="rate" stroke="var(--chart-4)" strokeWidth={2} dot={{ r: 3 }} />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>

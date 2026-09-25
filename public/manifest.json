@@ -1,24 +1,30 @@
 {
   "name": "Stokpile - Group Savings & Payouts",
   "short_name": "Stokpile",
-  "description": "Transparent group savings management. Track contributions, schedule payouts, and organise meetings for your stokvel or savings group.",
+  "description": "Transparent group savings. Who paid, whose turn it is, where every rand went.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#007a38",
+  "background_color": "#F7F1E6",
+  "theme_color": "#5B1E44",
   "orientation": "portrait-primary",
   "icons": [
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/icon.svg",
@@ -26,21 +32,34 @@
       "type": "image/svg+xml"
     }
   ],
-  "categories": ["finance", "productivity"],
+  "categories": [
+    "finance",
+    "productivity"
+  ],
   "shortcuts": [
     {
       "name": "Dashboard",
       "short_name": "Dashboard",
       "description": "View your group dashboard",
       "url": "/?view=dashboard",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Contributions",
       "short_name": "Contributions",
       "description": "Record a new contribution",
       "url": "/?view=contributions",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }

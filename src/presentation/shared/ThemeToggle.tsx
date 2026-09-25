@@ -5,7 +5,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/toolt
 
 const THEMES: { id: AppTheme; icon: LucideIcon; label: string }[] = [
   { id: 'light', icon: Sun,  label: 'Light' },
-  { id: 'navy',  icon: Moon, label: 'Navy'  },
+  { id: 'navy',  icon: Moon, label: 'Dark'  },
 ];
 
 interface ThemeToggleProps {

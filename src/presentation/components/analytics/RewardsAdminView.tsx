@@ -32,10 +32,10 @@ type Summary = {
 };
 
 const TIER_META: Record<string, { label: string; color: string }> = {
-  bronze:   { label: 'Bronze',   color: 'bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-700/30' },
+  bronze:   { label: 'Bronze',   color: 'bg-warning/10 text-warning dark:text-warning border-warning/40' },
   silver:   { label: 'Silver',   color: 'bg-slate-500/20 text-slate-600 dark:text-slate-300 border-slate-500/30' },
-  gold:     { label: 'Gold',     color: 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/30' },
-  platinum: { label: 'Platinum', color: 'bg-cyan-500/20 text-cyan-700 dark:text-cyan-400 border-cyan-500/30' },
+  gold:     { label: 'Gold',     color: 'bg-warning/10 text-warning dark:text-warning border-warning/40' },
+  platinum: { label: 'Platinum', color: 'bg-muted text-primary dark:text-primary border-border' },
 };
 
 const ZAR = (n: number) => `R${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -60,7 +60,7 @@ export function RewardsAdminView() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Trophy className="h-5 w-5 text-amber-500" />
+          <Trophy className="h-5 w-5 text-warning" />
           Rewards — Platform Overview
           <Badge variant="outline" className="text-[10px] ml-2">Admin only</Badge>
         </CardTitle>
@@ -109,7 +109,7 @@ export function RewardsAdminView() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="rounded-xl border bg-muted/20 p-3">
             <p className="text-xs font-semibold mb-2 flex items-center gap-1.5">
-              <TrendingUp className="h-3.5 w-3.5 text-emerald-600" />
+              <TrendingUp className="h-3.5 w-3.5 text-primary" />
               This month (accruing)
             </p>
             <div className="space-y-1 text-xs">
@@ -134,7 +134,7 @@ export function RewardsAdminView() {
 
           <div className="rounded-xl border bg-muted/20 p-3">
             <p className="text-xs font-semibold mb-2 flex items-center gap-1.5">
-              <Coins className="h-3.5 w-3.5 text-amber-500" />
+              <Coins className="h-3.5 w-3.5 text-warning" />
               Last closed month
             </p>
             <div className="space-y-1 text-xs">
@@ -176,7 +176,7 @@ export function RewardsAdminView() {
                   <Badge variant="outline" className={`text-[10px] ${TIER_META[r.tier]?.color || ''}`}>
                     {TIER_META[r.tier]?.label || r.tier}
                   </Badge>
-                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                  <span className="font-semibold text-primary dark:text-primary">
                     {ZAR(r.lifetimeEarningsZar)}
                   </span>
                 </div>

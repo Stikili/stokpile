@@ -25,22 +25,29 @@ function applyTheme(theme: AppTheme) {
   }
 }
 
-function getStoredTheme(defaultTheme: AppTheme): AppTheme {
-  if (typeof window === 'undefined') return defaultTheme;
-  const stored = localStorage.getItem('stokpile-theme');
+// 'navy' is the stored value for the dark theme (kept for existing users'
+// saved preference). With no saved choice, follow the device setting.
+function systemTheme(): AppTheme {
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'navy' : 'light';
+}
+
+function getStoredTheme(defaultTheme?: AppTheme): AppTheme {
+  if (typeof window === 'undefined') return defaultTheme ?? 'light';
+  let stored: string | null = null;
+  try { stored = localStorage.getItem('stokpile-theme'); } catch { /* storage blocked */ }
   if (stored === 'aurora') return 'navy';
   if (stored === 'navy' || stored === 'light') return stored;
-  return defaultTheme;
+  return defaultTheme ?? systemTheme();
 }
 
 // Apply theme BEFORE first render to prevent flash
 if (typeof window !== 'undefined') {
-  applyTheme(getStoredTheme('navy'));
+  applyTheme(getStoredTheme());
 }
 
 export function ThemeProvider({
   children,
-  defaultTheme = 'navy',
+  defaultTheme,
 }: ThemeProviderProps) {
   const [theme, setThemeState] = useState<AppTheme>(() => getStoredTheme(defaultTheme));
 

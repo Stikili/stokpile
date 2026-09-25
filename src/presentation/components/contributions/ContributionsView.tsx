@@ -259,10 +259,10 @@ export function ContributionsView({ groupId, groupName, userEmail, isAdmin = fal
           <div className="flex gap-2">
             {isAdmin && selectedIds.size > 0 && (
               <>
-                <Button variant="outline" size="sm" onClick={() => handleBulkMark(true)} disabled={bulkMarking} className="text-green-700 border-green-300">
+                <Button variant="outline" size="sm" onClick={() => handleBulkMark(true)} disabled={bulkMarking} className="text-primary border-primary/30">
                   {bulkMarking ? 'Marking...' : `Mark ${selectedIds.size} Paid`}
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => handleBulkMark(false)} disabled={bulkMarking} className="text-orange-700 border-orange-300">
+                <Button variant="outline" size="sm" onClick={() => handleBulkMark(false)} disabled={bulkMarking} className="text-warning border-warning/40">
                   Mark Unpaid
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())} disabled={bulkMarking}>
@@ -414,13 +414,13 @@ export function ContributionsView({ groupId, groupName, userEmail, isAdmin = fal
               </Card>
               <Card>
                 <CardContent className="pt-6">
-                  <div className="text-2xl text-green-600 dark:text-green-400">{formatCurrency(paidContributions)}</div>
+                  <div className="text-2xl text-primary dark:text-primary">{formatCurrency(paidContributions)}</div>
                   <p className="text-xs text-muted-foreground">Paid</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="pt-6">
-                  <div className="text-2xl text-orange-600 dark:text-orange-400">{formatCurrency(unpaidContributions)}</div>
+                  <div className="text-2xl text-warning dark:text-warning">{formatCurrency(unpaidContributions)}</div>
                   <p className="text-xs text-muted-foreground">Unpaid</p>
                 </CardContent>
               </Card>
@@ -541,8 +541,8 @@ export function ContributionsView({ groupId, groupName, userEmail, isAdmin = fal
                           <Badge
                             variant={contribution.paid ? 'default' : 'secondary'}
                             className={contribution.paid
-                              ? 'bg-green-600 dark:bg-green-700 text-white'
-                              : 'bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-400 border border-orange-300 dark:border-orange-800'}
+                              ? 'bg-primary dark:bg-primary text-white'
+                              : 'bg-warning/10 dark:bg-warning/10 text-warning dark:text-warning border border-warning/40 dark:border-warning/40'}
                           >
                             {contribution.paid ? 'Paid' : 'Unpaid'}
                           </Badge>
@@ -576,7 +576,7 @@ export function ContributionsView({ groupId, groupName, userEmail, isAdmin = fal
                                     size="sm"
                                     onClick={() => handleFlutterwavePay(contribution)}
                                     disabled={flutterwaveId === contribution.id}
-                                    className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/20 h-8 px-2"
+                                    className="text-warning border-warning/40 hover:bg-warning/10 dark:hover:bg-warning/10 h-8 px-2"
                                   >
                                     {flutterwaveId === contribution.id
                                       ? <Loader2 className="h-3 w-3 animate-spin" />

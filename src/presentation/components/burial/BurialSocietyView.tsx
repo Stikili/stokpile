@@ -15,6 +15,7 @@ import { DependentsView } from './DependentsView';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
 import { formatDate, formatCurrency } from '@/lib/export';
+import { StatusChip, type ChipTone } from '@/presentation/shared/StatusChip';
 
 interface BurialSocietyViewProps {
   groupId: string;
@@ -33,11 +34,11 @@ const CLAIM_STATUS_LABELS: Record<ClaimStatus, string> = {
   paid: 'Paid',
 };
 
-const CLAIM_STATUS_CLASS: Record<ClaimStatus, string> = {
-  pending: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800',
-  approved: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
-  rejected: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800',
-  paid: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800',
+const CLAIM_STATUS_TONE: Record<ClaimStatus, ChipTone> = {
+  pending: 'due',
+  approved: 'paid',
+  rejected: 'bad',
+  paid: 'payout',
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -244,7 +245,7 @@ export function BurialSocietyView({ groupId, isAdmin, userEmail }: BurialSociety
               <FileText className="h-4 w-4" />
               Claims
               {claims.filter((c) => c.status === 'pending').length > 0 && (
-                <Badge className="h-5 min-w-5 px-1 text-xs bg-yellow-500 text-white ml-1">
+                <Badge className="h-5 min-w-5 px-1 text-xs bg-warning text-warning-foreground ml-1">
                   {claims.filter((c) => c.status === 'pending').length}
                 </Badge>
               )}
@@ -524,12 +525,7 @@ export function BurialSocietyView({ groupId, isAdmin, userEmail }: BurialSociety
                           </p>
                         </div>
                         <div className="flex items-center gap-2 flex-wrap shrink-0">
-                          <Badge
-                            variant="outline"
-                            className={`text-xs ${CLAIM_STATUS_CLASS[claim.status]}`}
-                          >
-                            {CLAIM_STATUS_LABELS[claim.status]}
-                          </Badge>
+                          <StatusChip tone={CLAIM_STATUS_TONE[claim.status]} label={CLAIM_STATUS_LABELS[claim.status]} />
                           <span className="text-sm font-bold">{formatCurrency(claim.amount)}</span>
                         </div>
                       </div>
@@ -560,7 +556,7 @@ export function BurialSocietyView({ groupId, isAdmin, userEmail }: BurialSociety
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      className="h-7 text-xs text-green-700 border-green-300 hover:bg-green-50 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-950/30"
+                                      className="h-7 text-xs text-primary border-primary/30 hover:bg-accent dark:text-primary dark:border-primary/30 dark:hover:bg-accent"
                                       onClick={() => openActionConfirm(claim.id, 'approved')}
                                     >
                                       <CheckCircle className="h-3.5 w-3.5 mr-1" />
@@ -574,7 +570,7 @@ export function BurialSocietyView({ groupId, isAdmin, userEmail }: BurialSociety
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      className="h-7 text-xs text-red-700 border-red-300 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950/30"
+                                      className="h-7 text-xs text-destructive border-destructive/40 hover:bg-destructive/10 dark:text-destructive dark:border-destructive/40 dark:hover:bg-destructive/10"
                                       onClick={() => openActionConfirm(claim.id, 'rejected')}
                                     >
                                       <XCircle className="h-3.5 w-3.5 mr-1" />
@@ -591,7 +587,7 @@ export function BurialSocietyView({ groupId, isAdmin, userEmail }: BurialSociety
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    className="h-7 text-xs text-green-700 border-green-300 hover:bg-green-50 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-950/30"
+                                    className="h-7 text-xs text-primary border-primary/30 hover:bg-accent dark:text-primary dark:border-primary/30 dark:hover:bg-accent"
                                     onClick={() => openActionConfirm(claim.id, 'paid')}
                                   >
                                     <DollarSign className="h-3.5 w-3.5 mr-1" />

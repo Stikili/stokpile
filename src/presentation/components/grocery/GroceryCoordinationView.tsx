@@ -15,6 +15,7 @@ import { Plus, ShoppingCart, Pencil, Trash2, ChevronRight } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/export';
+import { StatusChip, type ChipTone } from '@/presentation/shared/StatusChip';
 
 interface GroceryCoordinationViewProps {
   groupId: string;
@@ -37,10 +38,10 @@ const STATUS_LABELS: Record<GroceryStatus, string> = {
   purchased: 'Purchased',
 };
 
-const STATUS_BADGE_CLASS: Record<GroceryStatus, string> = {
-  needed: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800',
-  sourced: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
-  purchased: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800',
+const STATUS_TONE: Record<GroceryStatus, ChipTone> = {
+  needed: 'due',
+  sourced: 'paid',
+  purchased: 'payout',
 };
 
 const UNITS = ['kg', 'g', 'L', 'ml', 'units', 'packs', 'boxes', 'bottles', 'cans', 'loaves'];
@@ -375,13 +376,13 @@ export function GroceryCoordinationView({ groupId, isAdmin, userEmail }: Grocery
                             className="focus:outline-none"
                             aria-label={`Status: ${STATUS_LABELS[item.status]}. Click to advance`}
                           >
-                            <Badge
-                              variant="outline"
-                              className={`text-xs cursor-pointer gap-1 transition-opacity ${STATUS_BADGE_CLASS[item.status]} ${togglingId === item.id ? 'opacity-50' : 'hover:opacity-80'}`}
+                            <StatusChip
+                              tone={STATUS_TONE[item.status]}
+                              label={STATUS_LABELS[item.status]}
+                              className={`cursor-pointer transition-opacity ${togglingId === item.id ? 'opacity-50' : 'hover:opacity-80'}`}
                             >
-                              {STATUS_LABELS[item.status]}
                               <ChevronRight className="h-3 w-3 opacity-60" />
-                            </Badge>
+                            </StatusChip>
                           </button>
                         </TooltipTrigger>
                         <TooltipContent>Click to advance to "{STATUS_LABELS[STATUS_CYCLE[item.status]]}"</TooltipContent>

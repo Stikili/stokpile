@@ -21,16 +21,16 @@ export function UserAvatar({ name, email, profilePictureUrl, className, size = '
   // Generate consistent color from email/name
   const getAvatarColor = (seed: string) => {
     const colors = [
-      'bg-blue-500',
-      'bg-green-500',
-      'bg-yellow-500',
-      'bg-purple-500',
-      'bg-pink-500',
-      'bg-indigo-500',
-      'bg-red-500',
-      'bg-orange-500',
-      'bg-teal-500',
-      'bg-cyan-500',
+      'bg-primary',
+      'bg-primary',
+      'bg-warning',
+      'bg-primary',
+      'bg-primary',
+      'bg-primary',
+      'bg-destructive',
+      'bg-warning',
+      'bg-primary',
+      'bg-primary',
     ];
     
     let hash = 0;

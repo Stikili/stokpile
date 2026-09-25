@@ -177,7 +177,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50/80 to-blue-50/30 dark:bg-transparent dark:bg-none dark:from-transparent dark:to-transparent p-4">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
@@ -316,7 +316,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
                         (/[0-9]/.test(password) ? 1 : 0) +
                         (/[^A-Za-z0-9]/.test(password) ? 1 : 0)
                       ));
-                      const colors = ['bg-destructive','bg-orange-400','bg-yellow-400','bg-green-500'];
+                      const colors = ['bg-destructive','bg-warning/10','bg-warning/10','bg-primary'];
                       return <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${i <= strength ? colors[strength-1] : 'bg-muted'}`} />;
                     })}
                   </div>

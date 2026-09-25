@@ -21,7 +21,7 @@ export function LiteModeToggle({ className }: LiteModeToggleProps) {
           aria-label={liteMode ? 'Disable Lite Mode' : 'Enable Lite Mode'}
           aria-pressed={liteMode}
         >
-          <Gauge className={`h-5 w-5 ${liteMode ? 'text-green-500' : ''}`} aria-hidden="true" />
+          <Gauge className={`h-5 w-5 ${liteMode ? 'text-primary' : ''}`} aria-hidden="true" />
         </Button>
       </TooltipTrigger>
       <TooltipContent>

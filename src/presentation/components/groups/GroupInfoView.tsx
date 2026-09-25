@@ -358,7 +358,7 @@ export function GroupInfoView({ group, onGroupUpdate, userEmail }: GroupInfoView
                 </code>
                 <button
                   onClick={() => copyToClipboard(group.id, 'Group ID', 'groupId')}
-                  className={`p-2 rounded transition-colors ${copiedField === 'groupId' ? 'bg-green-100 dark:bg-green-900/30 text-green-600' : 'hover:bg-muted'}`}
+                  className={`p-2 rounded transition-colors ${copiedField === 'groupId' ? 'bg-accent dark:bg-accent text-primary' : 'hover:bg-muted'}`}
                   title="Copy Group ID"
                 >
                   {copiedField === 'groupId' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
@@ -374,7 +374,7 @@ export function GroupInfoView({ group, onGroupUpdate, userEmail }: GroupInfoView
                 </code>
                 <button
                   onClick={() => copyToClipboard(group.groupCode, 'Group Code', 'groupCode')}
-                  className={`p-2 rounded transition-colors ${copiedField === 'groupCode' ? 'bg-green-100 dark:bg-green-900/30 text-green-600' : 'hover:bg-muted'}`}
+                  className={`p-2 rounded transition-colors ${copiedField === 'groupCode' ? 'bg-accent dark:bg-accent text-primary' : 'hover:bg-muted'}`}
                   title="Copy Group Code"
                 >
                   {copiedField === 'groupCode' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
@@ -682,7 +682,7 @@ export function GroupInfoView({ group, onGroupUpdate, userEmail }: GroupInfoView
                         </TableCell>
                         <TableCell>
                           {member.managed || member.status === 'managed' ? (
-                            <Badge variant="outline" className="border-amber-500/40 text-amber-600 dark:text-amber-400">
+                            <Badge variant="outline" className="border-warning/40 text-warning dark:text-warning">
                               Managed
                             </Badge>
                           ) : (
@@ -731,7 +731,7 @@ export function GroupInfoView({ group, onGroupUpdate, userEmail }: GroupInfoView
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button variant="ghost" size="sm" onClick={() => handleReactivate(member.email, memberName)} disabled={reactivatingEmail === member.email}>
-                                    {reactivatingEmail === member.email ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4 text-green-600" />}
+                                    {reactivatingEmail === member.email ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4 text-primary" />}
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>Reactivate member</TooltipContent>
@@ -741,7 +741,7 @@ export function GroupInfoView({ group, onGroupUpdate, userEmail }: GroupInfoView
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button variant="ghost" size="sm" disabled={deactivatingEmail === member.email} onClick={() => setDeactivateConfirm({ open: true, email: member.email, name: memberName })}>
-                                    {deactivatingEmail === member.email ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserX className="h-4 w-4 text-orange-600" />}
+                                    {deactivatingEmail === member.email ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserX className="h-4 w-4 text-warning" />}
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>Deactivate — pauses membership, preserves history</TooltipContent>
@@ -783,12 +783,12 @@ export function GroupInfoView({ group, onGroupUpdate, userEmail }: GroupInfoView
                                 )}
                                 {canReactivate && (
                                   <DropdownMenuItem onClick={() => handleReactivate(member.email, memberName)}>
-                                    <UserCheck className="h-4 w-4 mr-2 text-green-600" />Reactivate
+                                    <UserCheck className="h-4 w-4 mr-2 text-primary" />Reactivate
                                   </DropdownMenuItem>
                                 )}
                                 {canDeactivate && (
                                   <DropdownMenuItem onClick={() => setDeactivateConfirm({ open: true, email: member.email, name: memberName })}>
-                                    <UserX className="h-4 w-4 mr-2 text-orange-600" />Deactivate (pause)
+                                    <UserX className="h-4 w-4 mr-2 text-warning" />Deactivate (pause)
                                   </DropdownMenuItem>
                                 )}
                                 {canRemove && (

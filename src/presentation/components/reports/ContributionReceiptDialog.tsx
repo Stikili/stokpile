@@ -33,7 +33,7 @@ export function ContributionReceiptDialog({ open, onOpenChange, receipt }: Contr
     if (!w) return;
     w.document.write(`<!doctype html><html><head><title>Receipt ${receipt.receiptNumber}</title>
       <style>
-        body { font-family: Inter, system-ui, sans-serif; color: #0a0a0a; margin: 48px; }
+        body { font-family: "Public Sans", system-ui, sans-serif; color: #0a0a0a; margin: 48px; }
         h1 { font-size: 20px; margin: 0 0 4px; }
         .muted { color: #666; font-size: 12px; }
         .receipt { max-width: 640px; margin: 0 auto; border: 1px solid #ddd; padding: 36px; border-radius: 16px; }

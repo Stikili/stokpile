@@ -14,15 +14,15 @@ interface NotificationBellProps {
 }
 
 function typeIcon(type: AppNotification['type']) {
-  if (type === 'success') return <TrendingUp className="h-4 w-4 text-green-500" />;
-  if (type === 'warning') return <AlertTriangle className="h-4 w-4 text-orange-500" />;
-  return <Info className="h-4 w-4 text-blue-500" />;
+  if (type === 'success') return <TrendingUp className="h-4 w-4 text-primary" />;
+  if (type === 'warning') return <AlertTriangle className="h-4 w-4 text-warning" />;
+  return <Info className="h-4 w-4 text-primary" />;
 }
 
 function typeBg(type: AppNotification['type']) {
-  if (type === 'success') return 'bg-green-50 dark:bg-green-950/20';
-  if (type === 'warning') return 'bg-orange-50 dark:bg-orange-950/20';
-  return 'bg-blue-50 dark:bg-blue-950/20';
+  if (type === 'success') return 'bg-accent dark:bg-accent';
+  if (type === 'warning') return 'bg-warning/10 dark:bg-warning/10';
+  return 'bg-muted dark:bg-muted';
 }
 
 function timeAgo(iso: string) {

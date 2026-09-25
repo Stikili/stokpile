@@ -259,15 +259,15 @@ export function MeetingDetailView({ meeting, groupId, isAdmin, userEmail, onBack
             <div className="space-y-4 pt-4">
               {/* Attendance Stats */}
               <div className="flex gap-4">
-                <div className="flex-1 p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900">
-                  <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                <div className="flex-1 p-3 rounded-lg bg-accent dark:bg-accent border border-primary/30 dark:border-primary/30">
+                  <div className="flex items-center gap-2 text-primary dark:text-primary">
                     <CheckCircle2 className="h-4 w-4" />
                     <span className="text-sm">Present</span>
                   </div>
                   <p className="text-2xl mt-1">{stats.present}</p>
                 </div>
-                <div className="flex-1 p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900">
-                  <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
+                <div className="flex-1 p-3 rounded-lg bg-destructive/10 dark:bg-destructive/10 border border-destructive/40 dark:border-destructive/40">
+                  <div className="flex items-center gap-2 text-destructive dark:text-destructive">
                     <XCircle className="h-4 w-4" />
                     <span className="text-sm">Absent</span>
                   </div>
@@ -313,7 +313,7 @@ export function MeetingDetailView({ meeting, groupId, isAdmin, userEmail, onBack
                           <Button
                             size="sm"
                             variant={isPresent ? "default" : "outline"}
-                            className={isPresent ? "bg-green-600 hover:bg-green-700" : ""}
+                            className={isPresent ? "bg-primary hover:bg-primary" : ""}
                             onClick={() => handleAttendanceToggle(member.email, true)}
                           >
                             <CheckCircle2 className="h-4 w-4" />
@@ -471,23 +471,23 @@ function MeetingDetailsTab({ meeting, groupId, members, userEmail, isAdmin }: Me
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-900">
-              <div className="flex items-center gap-2 text-green-700 dark:text-green-400 mb-2">
+            <div className="p-4 bg-accent dark:bg-accent rounded-lg border border-primary/30 dark:border-primary/30">
+              <div className="flex items-center gap-2 text-primary dark:text-primary mb-2">
                 <CheckCircle2 className="h-5 w-5" />
                 <span>Present</span>
               </div>
               <p className="text-3xl mb-2">{present.length}</p>
-              <div className="text-sm text-green-600 dark:text-green-500">
+              <div className="text-sm text-primary dark:text-primary">
                 {members.length > 0 ? Math.round((present.length / members.length) * 100) : 0}% attendance
               </div>
             </div>
-            <div className="p-4 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-900">
-              <div className="flex items-center gap-2 text-red-700 dark:text-red-400 mb-2">
+            <div className="p-4 bg-destructive/10 dark:bg-destructive/10 rounded-lg border border-destructive/40 dark:border-destructive/40">
+              <div className="flex items-center gap-2 text-destructive dark:text-destructive mb-2">
                 <XCircle className="h-5 w-5" />
                 <span>Absent</span>
               </div>
               <p className="text-3xl mb-2">{absent.length}</p>
-              <div className="text-sm text-red-600 dark:text-red-500">
+              <div className="text-sm text-destructive dark:text-destructive">
                 {members.length - present.length} members
               </div>
             </div>
@@ -498,10 +498,10 @@ function MeetingDetailsTab({ meeting, groupId, members, userEmail, isAdmin }: Me
           <div className="space-y-3">
             {present.length > 0 && (
               <div>
-                <h4 className="text-sm mb-2 text-green-700 dark:text-green-400">Present Members</h4>
+                <h4 className="text-sm mb-2 text-primary dark:text-primary">Present Members</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   {present.map((member) => (
-                    <div key={member.email} className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-950/10 rounded">
+                    <div key={member.email} className="flex items-center gap-2 p-2 bg-accent dark:bg-accent rounded">
                       <UserAvatar
                         name={`${member.fullName} ${member.surname}`}
                         email={member.email}
@@ -516,10 +516,10 @@ function MeetingDetailsTab({ meeting, groupId, members, userEmail, isAdmin }: Me
             
             {absent.length > 0 && (
               <div>
-                <h4 className="text-sm mb-2 text-red-700 dark:text-red-400">Absent Members</h4>
+                <h4 className="text-sm mb-2 text-destructive dark:text-destructive">Absent Members</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   {absent.map((member) => (
-                    <div key={member.email} className="flex items-center gap-2 p-2 bg-red-50 dark:bg-red-950/10 rounded opacity-60">
+                    <div key={member.email} className="flex items-center gap-2 p-2 bg-destructive/10 dark:bg-destructive/10 rounded opacity-60">
                       <UserAvatar
                         name={`${member.fullName} ${member.surname}`}
                         email={member.email}
@@ -573,7 +573,7 @@ function MeetingDetailsTab({ meeting, groupId, members, userEmail, isAdmin }: Me
                       <div>
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2">
-                            <ThumbsUp className="h-4 w-4 text-green-600" />
+                            <ThumbsUp className="h-4 w-4 text-primary" />
                             <span className="text-sm">Yes</span>
                           </div>
                           <span className="text-sm">{vote.yesVotes.length} ({Math.round(yesPercentage)}%)</span>
@@ -584,7 +584,7 @@ function MeetingDetailsTab({ meeting, groupId, members, userEmail, isAdmin }: Me
                       <div>
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2">
-                            <ThumbsDown className="h-4 w-4 text-red-600" />
+                            <ThumbsDown className="h-4 w-4 text-destructive" />
                             <span className="text-sm">No</span>
                           </div>
                           <span className="text-sm">{vote.noVotes.length} ({Math.round(noPercentage)}%)</span>

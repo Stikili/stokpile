@@ -208,11 +208,11 @@ export function Dashboard({ groupId, groupName, groupType, annualTarget, isAdmin
               </div>
               <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary" />
                   In: {formatCurrency(stats.totalContributions)}
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-orange-500" />
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-warning" />
                   Out: {formatCurrency(stats.totalPayouts)}
                 </span>
               </div>
@@ -326,18 +326,18 @@ export function Dashboard({ groupId, groupName, groupType, annualTarget, isAdmin
                 <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">My Summary</span>
               </div>
               {insights.myPaidThisMonth ? (
-                <Badge className="bg-green-600 text-white text-[10px] h-5">Paid this month</Badge>
+                <Badge className="bg-primary text-primary-foreground text-[10px] h-5">Paid this month</Badge>
               ) : (
-                <Badge variant="outline" className="text-[10px] h-5 text-orange-600 border-orange-400">Not paid yet</Badge>
+                <Badge variant="outline" className="text-[10px] h-5 text-warning border-warning/40">Not paid yet</Badge>
               )}
             </div>
             <div className="grid grid-cols-3 gap-2">
               <div>
-                <div className="text-base font-semibold text-green-600 dark:text-green-400">{formatCurrency(insights.myPaid)}</div>
+                <div className="text-base font-semibold text-primary dark:text-primary">{formatCurrency(insights.myPaid)}</div>
                 <p className="text-[10px] text-muted-foreground">Paid in</p>
               </div>
               <div>
-                <div className={`text-base font-semibold ${insights.myUnpaid > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-muted-foreground'}`}>
+                <div className={`text-base font-semibold ${insights.myUnpaid > 0 ? 'text-warning dark:text-warning' : 'text-muted-foreground'}`}>
                   {formatCurrency(insights.myUnpaid)}
                 </div>
                 <p className="text-[10px] text-muted-foreground">Outstanding</p>
@@ -415,14 +415,14 @@ function OverdueMembersCard({
   const visible = expanded ? overdueMembers : overdueMembers.slice(0, 3);
 
   return (
-    <Card className="border-orange-300 dark:border-orange-800">
+    <Card className="border-warning/40 dark:border-warning/40">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-orange-500" />
+            <AlertTriangle className="h-4 w-4 text-warning" />
             {overdueMembers.length} Overdue Member{overdueMembers.length !== 1 ? 's' : ''}
           </CardTitle>
-          <Badge variant="outline" className="text-[10px] text-orange-600 border-orange-400">
+          <Badge variant="outline" className="text-[10px] text-warning border-warning/40">
             Target: {formatCurrency(contributionTarget)}
           </Badge>
         </div>
@@ -435,7 +435,7 @@ function OverdueMembersCard({
                 {m.fullName !== 'Unknown' ? `${m.fullName} ${m.surname}` : m.email}
               </span>
               <div className="flex items-center gap-1.5">
-                <span className="text-green-600 dark:text-green-400 text-xs">{formatCurrency(m.totalPaid)}</span>
+                <span className="text-primary dark:text-primary text-xs">{formatCurrency(m.totalPaid)}</span>
                 <span className="text-muted-foreground text-[10px]">/ {formatCurrency(contributionTarget)}</span>
               </div>
             </div>

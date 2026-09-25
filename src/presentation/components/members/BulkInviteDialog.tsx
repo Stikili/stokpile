@@ -147,7 +147,7 @@ export function BulkInviteDialog({ groupId, open, onOpenChange, onSuccess }: Bul
             {results.map((r) => (
               <div key={r.email} className="flex items-center gap-2 text-sm p-2 rounded border bg-card">
                 {r.status === 'success' ? (
-                  <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                  <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
                 ) : (
                   <XCircle className="h-4 w-4 text-destructive shrink-0" />
                 )}

@@ -264,7 +264,7 @@ export default function App() {
     return (
       <ThemeProvider>
         <LanguageProvider>
-          <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-50 to-blue-50/40 dark:bg-transparent dark:bg-none dark:from-transparent dark:to-transparent">
+          <div className="min-h-screen flex items-center justify-center p-4 bg-background">
             <LoadingProgress message="Loading Stokpile..." />
           </div>
         </LanguageProvider>
@@ -331,7 +331,7 @@ export default function App() {
         <PiloProvider>
         <UpgradePromptProvider fallbackGroupId={selectedGroup?.id}>
           <PullToRefresh>
-          <div className="min-h-screen bg-gradient-to-br from-slate-50/80 to-blue-50/30 dark:bg-transparent dark:bg-none dark:from-transparent dark:to-transparent">
+          <div className="min-h-screen bg-background">
             {/* Skip to main content for accessibility */}
             <a
               href="#main-content"
@@ -401,7 +401,7 @@ export default function App() {
             />
           
             {/* Header */}
-            <header role="banner" className="bg-white/70 dark:bg-[#050e1c]/80 border-b border-border dark:border-white/[0.06] sticky top-0 z-50 backdrop-blur-xl backdrop-saturate-150">
+            <header role="banner" className="bg-card/90 border-b border-border sticky top-0 z-50 backdrop-blur-xl backdrop-saturate-150">
               <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {/* Mobile: Hamburger menu on the left */}

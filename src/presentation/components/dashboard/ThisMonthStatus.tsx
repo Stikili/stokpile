@@ -80,7 +80,7 @@ export function ThisMonthStatus({ members, contributions, contributionTarget }: 
           </CardTitle>
           <Badge
             variant={allPaid ? 'default' : 'secondary'}
-            className={allPaid ? 'bg-green-600 text-white' : ''}
+            className={allPaid ? 'bg-primary text-white' : ''}
           >
             {paidCount}/{totalCount} paid
           </Badge>
@@ -94,9 +94,9 @@ export function ThisMonthStatus({ members, contributions, contributionTarget }: 
               className="flex items-center gap-2 py-1.5 px-2 -mx-2 rounded hover:bg-muted/50 transition-colors"
             >
               {s.metTarget ? (
-                <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
               ) : s.hasPaid ? (
-                <Circle className="h-4 w-4 text-amber-500 shrink-0 fill-amber-500/20" />
+                <Circle className="h-4 w-4 text-warning shrink-0 fill-warning/20" />
               ) : (
                 <Circle className="h-4 w-4 text-muted-foreground shrink-0" />
               )}
@@ -104,7 +104,7 @@ export function ThisMonthStatus({ members, contributions, contributionTarget }: 
                 {s.fullName ? `${s.fullName} ${s.surname}`.trim() : s.email}
               </span>
               {s.hasPaid && (
-                <span className={`text-xs ${s.metTarget ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                <span className={`text-xs ${s.metTarget ? 'text-primary dark:text-primary' : 'text-warning dark:text-warning'}`}>
                   {formatCurrency(s.paid)}
                 </span>
               )}

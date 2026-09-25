@@ -46,8 +46,10 @@ function drawCard(canvas: HTMLCanvasElement, data: SharePayoutImageProps['data']
 
   // Background — warm gradient
   const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, '#0b5b3f');
-  bg.addColorStop(1, '#062f20');
+  // Colours come from the tokens so the image matches the brand.
+  const token = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  bg.addColorStop(0, token('--s-pay-bg'));
+  bg.addColorStop(1, token('--s-brand-ink'));
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
@@ -59,7 +61,7 @@ function drawCard(canvas: HTMLCanvasElement, data: SharePayoutImageProps['data']
 
   // Brand mark
   ctx.fillStyle = 'rgba(255,255,255,0.85)';
-  ctx.font = 'bold 34px "Inter", system-ui, sans-serif';
+  ctx.font = 'bold 34px "Public Sans", system-ui, sans-serif';
   ctx.fillText('Stokpile', 72, 110);
 
   // Period pill
@@ -68,13 +70,13 @@ function drawCard(canvas: HTMLCanvasElement, data: SharePayoutImageProps['data']
   ctx.beginPath();
   ctx.roundRect(72, 150, pillW, 48, 24);
   ctx.fill();
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '20px "Inter", system-ui, sans-serif';
+  ctx.fillStyle = token('--s-pay-ink');
+  ctx.font = '20px "Public Sans", system-ui, sans-serif';
   ctx.fillText(data.period, 92, 182);
 
   // Group name
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 58px "Inter", system-ui, sans-serif';
+  ctx.fillStyle = token('--s-pay-ink');
+  ctx.font = 'bold 58px "Public Sans", system-ui, sans-serif';
   const nameLines = wrap(ctx, data.groupName, W - 144);
   nameLines.forEach((line, i) => ctx.fillText(line, 72, 280 + i * 68));
 
@@ -83,7 +85,7 @@ function drawCard(canvas: HTMLCanvasElement, data: SharePayoutImageProps['data']
   // Headline
   if (data.headline) {
     ctx.fillStyle = 'rgba(255,255,255,0.8)';
-    ctx.font = '24px "Inter", system-ui, sans-serif';
+    ctx.font = '24px "Public Sans", system-ui, sans-serif';
     const headlineLines = wrap(ctx, data.headline, W - 144);
     headlineLines.forEach((line, i) => ctx.fillText(line, 72, y + i * 36));
     y += headlineLines.length * 36 + 40;
@@ -110,11 +112,11 @@ function drawCard(canvas: HTMLCanvasElement, data: SharePayoutImageProps['data']
     ctx.stroke();
 
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.font = '20px "Inter", system-ui, sans-serif';
+    ctx.font = '20px "Public Sans", system-ui, sans-serif';
     ctx.fillText(s.label.toUpperCase(), 72, yy + 44);
 
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 40px "Inter", system-ui, sans-serif';
+    ctx.fillStyle = token('--s-pay-ink');
+    ctx.font = 'bold 40px "Public Sans", system-ui, sans-serif';
     ctx.textAlign = 'right';
     ctx.fillText(s.value, W - 72, yy + 56);
     ctx.textAlign = 'left';
@@ -122,7 +124,7 @@ function drawCard(canvas: HTMLCanvasElement, data: SharePayoutImageProps['data']
 
   // Footer
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
-  ctx.font = '18px "Inter", system-ui, sans-serif';
+  ctx.font = '18px "Public Sans", system-ui, sans-serif';
   ctx.fillText('stokpile.app', 72, H - 60);
   ctx.textAlign = 'right';
   ctx.fillText(new Date().toLocaleDateString('en-ZA', { year: 'numeric', month: 'long' }), W - 72, H - 60);

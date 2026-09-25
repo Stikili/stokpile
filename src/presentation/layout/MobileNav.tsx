@@ -115,9 +115,9 @@ export function MobileNav({
           {/* Ask Pilo — hero shortcut */}
           <button
             onClick={() => { setOpen(false); openPilo(); }}
-            className="w-full flex items-center gap-3 p-3 rounded-xl border bg-gradient-to-r from-primary/10 to-emerald-500/10 hover:from-primary/15 hover:to-emerald-500/15 transition-colors mb-2"
+            className="w-full flex items-center gap-3 p-3 rounded-xl border bg-gradient-to-r from-primary/10 to-primary/10 hover:from-primary/15 hover:to-primary/15 transition-colors mb-2"
           >
-            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary via-primary to-emerald-500 flex items-center justify-center shadow-md shadow-primary/30 shrink-0">
+            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary via-primary to-primary flex items-center justify-center shadow-md shadow-primary/30 shrink-0">
               <Sparkles className="h-4 w-4 text-white" />
             </div>
             <div className="flex-1 min-w-0 text-left">
@@ -228,7 +228,7 @@ export function MobileNav({
                 className="w-full justify-start text-sm"
                 onClick={toggleLiteMode}
               >
-                <Gauge className={`h-4 w-4 mr-2 ${liteMode ? 'text-green-500' : ''}`} />
+                <Gauge className={`h-4 w-4 mr-2 ${liteMode ? 'text-primary' : ''}`} />
                 Lite Mode {liteMode ? '(ON)' : '(OFF)'}
               </Button>
             </div>
@@ -256,7 +256,7 @@ export function MobileNav({
   const leftTabs = mainTabs.slice(0, 2);
   const rightTabs = mainTabs.slice(2, 4);
   return (
-    <div className="bg-white/95 dark:bg-[#0f0f14]/95 border-t border-border backdrop-blur-sm">
+    <div className="bg-card/95 border-t border-border backdrop-blur-sm">
       <div className="flex items-center justify-around px-2 py-2 max-w-lg mx-auto">
         {selectedGroup ? (
           <>
@@ -281,7 +281,7 @@ export function MobileNav({
               <button
                 onClick={openPilo}
                 aria-label="Ask Pilo"
-                className="relative -mt-6 h-14 w-14 rounded-full bg-gradient-to-br from-primary via-primary to-emerald-500 shadow-xl shadow-primary/30 ring-4 ring-background flex items-center justify-center active:scale-95 transition-transform"
+                className="relative -mt-6 h-14 w-14 rounded-full bg-gradient-to-br from-primary via-primary to-primary shadow-xl shadow-primary/30 ring-4 ring-background flex items-center justify-center active:scale-95 transition-transform"
               >
                 <Sparkles className="h-6 w-6 text-white" />
                 <span className="absolute inset-0 rounded-full bg-primary/40 animate-ping opacity-20 pointer-events-none" />
@@ -306,7 +306,7 @@ export function MobileNav({
           </>
         ) : (
           <div className="flex-1 flex justify-center">
-            <button onClick={openPilo} aria-label="Ask Pilo" className="relative -mt-6 h-14 w-14 rounded-full bg-gradient-to-br from-primary via-primary to-emerald-500 shadow-xl shadow-primary/30 ring-4 ring-background flex items-center justify-center active:scale-95 transition-transform">
+            <button onClick={openPilo} aria-label="Ask Pilo" className="relative -mt-6 h-14 w-14 rounded-full bg-gradient-to-br from-primary via-primary to-primary shadow-xl shadow-primary/30 ring-4 ring-background flex items-center justify-center active:scale-95 transition-transform">
               <Sparkles className="h-6 w-6 text-white" />
             </button>
           </div>

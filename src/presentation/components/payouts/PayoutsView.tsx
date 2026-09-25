@@ -15,12 +15,13 @@ import { UserAvatar } from '@/presentation/components/profile/UserAvatar';
 import { Alert, AlertDescription } from '@/presentation/ui/alert';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
 import { ConfirmationDialog } from '@/presentation/shared/ConfirmationDialog';
-import { Plus, Download, TrendingUp, Info, Search, CheckCircle2, Clock, XCircle, AlertTriangle, Loader2, Upload } from 'lucide-react';
+import { Plus, Download, TrendingUp, Info, Search, CheckCircle2, Clock, Upload } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
 import { exportToCSV, formatCurrency, formatDate, currencySymbol } from '@/lib/export';
 import { sanitizeAmount } from '@/lib/sanitize';
 import { PaymentProofButton } from '@/presentation/components/shared/PaymentProofButton';
+import { StatusChip, payoutChip } from '@/presentation/shared/StatusChip';
 
 interface PayoutsViewProps {
   groupId: string;
@@ -151,14 +152,8 @@ export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
   }, [payouts]);
 
   const getStatusBadge = (status: string) => {
-    const badges: Record<string, JSX.Element> = {
-      completed: <Badge className="bg-green-600 dark:bg-green-700 text-white"><CheckCircle2 className="h-3 w-3 mr-1" />Completed</Badge>,
-      cancelled: <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Cancelled</Badge>,
-      processing: <Badge className="bg-amber-500 text-white"><Loader2 className="h-3 w-3 mr-1 animate-spin" />Processing</Badge>,
-      awaiting_confirmation: <Badge className="bg-purple-600 text-white"><Clock className="h-3 w-3 mr-1" />Awaiting Confirmation</Badge>,
-      disputed: <Badge variant="destructive"><AlertTriangle className="h-3 w-3 mr-1" />Disputed</Badge>,
-    };
-    return badges[status] || <Badge className="bg-blue-600 dark:bg-blue-700 text-white"><Clock className="h-3 w-3 mr-1" />Scheduled</Badge>;
+    const chip = payoutChip(status);
+    return <StatusChip tone={chip.tone} label={chip.label} />;
   };
 
   return (
@@ -283,9 +278,9 @@ export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
             <>
               {/* Summary stats */}
               <div className="grid grid-cols-2 gap-3 mb-4">
-                <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
+                <Card className="bg-muted dark:bg-muted border-border dark:border-border">
                   <CardContent className="pt-4 pb-4">
-                    <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400 mb-1">
+                    <div className="flex items-center gap-2 text-primary dark:text-primary mb-1">
                       <Clock className="h-3.5 w-3.5" />
                       <span className="text-xs">Scheduled</span>
                     </div>
@@ -293,9 +288,9 @@ export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
                     <p className="text-xs text-muted-foreground">{stats.scheduledCount} payout{stats.scheduledCount !== 1 ? 's' : ''}</p>
                   </CardContent>
                 </Card>
-                <Card className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900">
+                <Card className="bg-accent dark:bg-accent border-primary/30 dark:border-primary/30">
                   <CardContent className="pt-4 pb-4">
-                    <div className="flex items-center gap-2 text-green-700 dark:text-green-400 mb-1">
+                    <div className="flex items-center gap-2 text-primary dark:text-primary mb-1">
                       <CheckCircle2 className="h-3.5 w-3.5" />
                       <span className="text-xs">Paid Out</span>
                     </div>
@@ -453,7 +448,7 @@ export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
                           {/* Recipient flow: awaiting_confirmation → completed or disputed */}
                           {payout.status === 'awaiting_confirmation' && userEmail === payout.recipientEmail && (
                             <>
-                              <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleUpdateStatus(payout.id, 'completed')}>
+                              <Button size="sm" className="bg-primary hover:bg-primary" onClick={() => handleUpdateStatus(payout.id, 'completed')}>
                                 <CheckCircle2 className="h-3 w-3 mr-1.5" />Confirm Received
                               </Button>
                               <Button size="sm" variant="outline" className="text-destructive" onClick={() => {

@@ -157,10 +157,10 @@ function renderFormatted(text: string) {
 
 // ─── Tiny task icons for suggested action pills ────────────────────────
 const TASK_META: Record<string, { icon: any; color: string }> = {
-  nudge_writer:           { icon: Bell,          color: 'text-rose-500' },
-  announcement_drafter:   { icon: MessageCircle, color: 'text-blue-500' },
-  agenda_generator:       { icon: CalendarDays,  color: 'text-emerald-500' },
-  penalty_advisor:        { icon: Wand2,         color: 'text-purple-500' },
+  nudge_writer:           { icon: Bell,          color: 'text-destructive' },
+  announcement_drafter:   { icon: MessageCircle, color: 'text-primary' },
+  agenda_generator:       { icon: CalendarDays,  color: 'text-primary' },
+  penalty_advisor:        { icon: Wand2,         color: 'text-primary' },
 };
 
 // ─── Main panel ─────────────────────────────────────────────────────────
@@ -270,7 +270,7 @@ export function PiloPanel({ open, onOpenChange, context }: PiloPanelProps) {
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b bg-card/80 backdrop-blur-xl">
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary via-primary to-emerald-500 flex items-center justify-center shadow-md shadow-primary/30">
+            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary via-primary to-primary flex items-center justify-center shadow-md shadow-primary/30">
               <Sparkles className="h-4 w-4 text-white" />
             </div>
             <div className="min-w-0">
@@ -299,7 +299,7 @@ export function PiloPanel({ open, onOpenChange, context }: PiloPanelProps) {
         {/* Consent gate */}
         {optedIn === false && (
           <div className="p-5 flex-1 flex items-center">
-            <div className="rounded-2xl border bg-amber-50/50 dark:bg-amber-950/20 p-5 space-y-3">
+            <div className="rounded-2xl border bg-warning/10 dark:bg-warning/10 p-5 space-y-3">
               <p className="text-sm font-semibold">Enable Pilo?</p>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Pilo sends your prompts and the group data needed to answer them to Anthropic for processing.
@@ -352,7 +352,7 @@ export function PiloPanel({ open, onOpenChange, context }: PiloPanelProps) {
 
               {loading && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <div className="h-6 w-6 rounded-full bg-gradient-to-br from-primary to-emerald-500 flex items-center justify-center">
+                  <div className="h-6 w-6 rounded-full bg-gradient-to-br from-primary to-primary flex items-center justify-center">
                     <Sparkles className="h-3 w-3 text-white animate-pulse" />
                   </div>
                   <TypingDots />
@@ -501,7 +501,7 @@ function MessageBubble({
 
   return (
     <div className="flex gap-2">
-      <div className="h-6 w-6 rounded-full bg-gradient-to-br from-primary to-emerald-500 flex items-center justify-center shrink-0 mt-0.5">
+      <div className="h-6 w-6 rounded-full bg-gradient-to-br from-primary to-primary flex items-center justify-center shrink-0 mt-0.5">
         <Sparkles className="h-3 w-3 text-white" />
       </div>
       <div className="flex-1 min-w-0 group">

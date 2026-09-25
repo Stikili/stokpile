@@ -118,7 +118,7 @@ export function ShareInviteDialog({ groupId, groupName }: ShareInviteDialogProps
                   <TooltipTrigger asChild>
                     <Button onClick={copyToClipboard} variant="outline" size="icon">
                       {copied ? (
-                        <Check className="h-4 w-4 text-green-600" />
+                        <Check className="h-4 w-4 text-primary" />
                       ) : (
                         <Copy className="h-4 w-4" />
                       )}
