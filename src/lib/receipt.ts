@@ -1,7 +1,8 @@
 // Generate a printable HTML receipt and trigger window.print().
 // Avoids external PDF libraries — relies on browser print-to-PDF.
 
-import { formatCurrency, formatDate } from './locale';
+// Via export.ts so the selected group's currency wins over the user's country.
+import { formatCurrency, formatDate } from './export';
 
 export interface ReceiptData {
   receiptNumber: string;

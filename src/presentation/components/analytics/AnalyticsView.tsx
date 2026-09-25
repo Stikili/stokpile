@@ -10,7 +10,7 @@ import {
 import { TrendingUp, TrendingDown, Minus, Activity, Users, DollarSign, Award } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
-import { formatCurrency } from '@/lib/export';
+import { formatCurrency, formatCompactCurrency } from '@/lib/export';
 
 interface AnalyticsViewProps {
   groupId: string;
@@ -141,7 +141,7 @@ export function AnalyticsView({ groupId }: AnalyticsViewProps) {
               <BarChart data={health.monthlyBreakdown} margin={{ top: 0, right: 4, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                 <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `R${v}`} />
+                <YAxis tick={{ fontSize: 11 }} tickFormatter={formatCompactCurrency} />
                 <RechartsTooltip
                   formatter={(value: number, name: string) => [formatCurrency(value), name === 'paid' ? 'Paid' : 'Total']}
                   contentStyle={{ fontSize: 12 }}

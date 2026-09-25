@@ -102,6 +102,8 @@ import { api } from "@/infrastructure/api";
 import { exportToCSV, setUserCountry, setGroupCurrency } from "@/lib/export";
 import "@/lib/offlineQueue"; // registers online listener
 import { initAnalytics, track } from "@/lib/analytics";
+import { hasRotation } from '@/domain/types';
+import { PaymentReturnDialog, readPaymentReturn, type PaymentReturn } from '@/presentation/components/contributions/PaymentReturnDialog';
 
 export default function App() {
   const { session, loading: sessionLoading, checkSession, signOut } = useSession();
@@ -117,6 +119,13 @@ export default function App() {
     useInviteToken();
 
   const [activeTab, setActiveTab] = useState("dashboard");
+  // Contribution payment return from the provider (?payment=...). Read once,
+  // then strip from the URL so a refresh doesn't show it again.
+  const [paymentReturn, setPaymentReturn] = useState<PaymentReturn | null>(() => {
+    const result = readPaymentReturn(window.location.search);
+    if (result) window.history.replaceState({}, '', window.location.pathname);
+    return result;
+  });
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showAuthFromLanding, setShowAuthFromLanding] = useState(() => {
@@ -485,7 +494,7 @@ export default function App() {
                   <Tabs value={activeTab} onValueChange={setActiveTab}>
                     {(() => {
                       const groupType = selectedGroup.groupType;
-                      const hasRotation = groupType === 'rotating' || groupType === 'susu' || groupType === 'tontine' || groupType === 'chama';
+                      const showRotation = hasRotation(groupType);
 
                       // 4-section IA: Home · Money · People · More.
                       // All existing tab IDs preserved for deep-link compat
@@ -518,7 +527,7 @@ export default function App() {
                       ];
 
                       const moreItems: Item[] = [
-                        ...(hasRotation ? [{ id: 'rotation', icon: RefreshCw,      label: 'Rotation',     feature: 'rotation' as const } as Item] : []),
+                        ...(showRotation ? [{ id: 'rotation', icon: RefreshCw,      label: 'Rotation',     feature: 'rotation' as const } as Item] : []),
                         ...(groupType === 'grocery' ? [{ id: 'grocery', icon: ShoppingCart, label: 'Grocery list', feature: 'grocery' as const } as Item] : []),
                         ...(groupType === 'burial'  ? [{ id: 'burial',  icon: HeartHandshake, label: 'Burial',     feature: 'burial' as const  } as Item] : []),
                         ...(isAdmin ? [{ id: 'audit', icon: ClipboardList, label: 'Audit log', feature: 'audit' as const } as Item] : []),
@@ -601,6 +610,7 @@ export default function App() {
                         <ContextualTips context="dashboard" isAdmin={isAdmin} hasData onAction={handleQuickAction} />
                         <Dashboard
                           groupId={selectedGroup.id}
+                          groupName={selectedGroup.name}
                           groupType={selectedGroup.groupType}
                           annualTarget={selectedGroup.contributionTargetAnnual}
                           isAdmin={isAdmin}
@@ -625,6 +635,7 @@ export default function App() {
                         <ContextualTips context="contributions" isAdmin={isAdmin} hasData onAction={handleQuickAction} />
                         <ContributionsView
                           groupId={selectedGroup.id}
+                          groupName={selectedGroup.name}
                           userEmail={session.user.email}
                           isAdmin={isAdmin}
                         />
@@ -655,7 +666,7 @@ export default function App() {
                         <AnnouncementsView groupId={selectedGroup.id} isAdmin={isAdmin} />
                       </TabsContent>
 
-                      {(selectedGroup.groupType === 'rotating' || selectedGroup.groupType === 'susu' || selectedGroup.groupType === 'tontine' || selectedGroup.groupType === 'chama') && (
+                      {hasRotation(selectedGroup.groupType) && (
                         <TabsContent value="rotation" className="space-y-3">
                           <FeatureGate feature="rotation" onUpgradeClick={() => setShowUpgradeDialog(true)}>
                             <RotationOrderView groupId={selectedGroup.id} isAdmin={isAdmin} groupType={selectedGroup.groupType || 'rotating'} />
@@ -731,6 +742,11 @@ export default function App() {
               groupId={selectedGroup?.id}
               groupName={selectedGroup?.name}
               isAdmin={isAdmin}
+            />
+            <PaymentReturnDialog
+              result={paymentReturn}
+              onClose={() => setPaymentReturn(null)}
+              onOpenContributions={() => setActiveTab('contributions')}
             />
           </div>
           </PullToRefresh>

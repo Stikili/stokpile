@@ -18,7 +18,7 @@ import { ConfirmationDialog } from '@/presentation/shared/ConfirmationDialog';
 import { Plus, Download, TrendingUp, Info, Search, CheckCircle2, Clock, XCircle, AlertTriangle, Loader2, Upload } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
-import { exportToCSV, formatCurrency, formatDate } from '@/lib/export';
+import { exportToCSV, formatCurrency, formatDate, currencySymbol } from '@/lib/export';
 import { sanitizeAmount } from '@/lib/sanitize';
 import { PaymentProofButton } from '@/presentation/components/shared/PaymentProofButton';
 
@@ -239,7 +239,7 @@ export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="amount">Amount (ZAR)</Label>
+                          <Label htmlFor="amount">Amount ({currencySymbol()})</Label>
                           <Input
                             id="amount"
                             type="number"

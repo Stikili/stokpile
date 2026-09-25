@@ -27,6 +27,10 @@ export interface Profile {
 // === Groups ===
 export type GroupType = 'rotating' | 'burial' | 'grocery' | 'investment' | 'chama' | 'susu' | 'tontine' | 'vsla' | 'goal';
 
+/** Group types that pay out in a fixed member order (chama = merry-go-round). */
+const ROTATING_TYPES: readonly string[] = ['rotating', 'susu', 'tontine', 'chama'];
+export const hasRotation = (type?: string | null): boolean => ROTATING_TYPES.includes(type ?? '');
+
 export interface Group {
   id: string;
   name: string;

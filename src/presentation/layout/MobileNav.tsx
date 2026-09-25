@@ -17,6 +17,7 @@ import { UserAvatar } from '@/presentation/components/profile/UserAvatar';
 import { useTheme } from '@/presentation/shared/ThemeProvider';
 import { useLiteMode } from '@/application/context/LiteModeContext';
 import type { Session, Group } from '@/domain/types';
+import { hasRotation } from '@/domain/types';
 
 interface MobileNavProps {
   session: Session;
@@ -35,7 +36,7 @@ interface MobileNavProps {
 const ALL_TABS = (group: Group | null, isAdmin: boolean) => {
   if (!group) return [];
   const groupType = group.groupType;
-  const hasRotation = groupType === 'rotating' || groupType === 'susu' || groupType === 'tontine' || groupType === 'chama';
+  const showRotation = hasRotation(groupType);
 
   return [
     { id: 'dashboard',      icon: Home,           label: 'Home',         section: 'main' },
@@ -43,7 +44,7 @@ const ALL_TABS = (group: Group | null, isAdmin: boolean) => {
     ...(group.payoutsAllowed ? [{ id: 'payouts', icon: TrendingUp, label: 'Payouts', section: 'main' }] : []),
     { id: 'meetings',       icon: Calendar,       label: 'Meetings',     section: 'main' },
     { id: 'announcements',  icon: Megaphone,      label: 'Announcements',section: 'more' },
-    ...(hasRotation        ? [{ id: 'rotation',   icon: RefreshCw,       label: 'Rotation',     section: 'more' }] : []),
+    ...(showRotation       ? [{ id: 'rotation',   icon: RefreshCw,       label: 'Rotation',     section: 'more' }] : []),
     ...(groupType === 'grocery' ? [{ id: 'grocery', icon: ShoppingCart,  label: 'Grocery',      section: 'more' }] : []),
     ...(groupType === 'burial'  ? [{ id: 'burial',  icon: HeartHandshake, label: 'Burial',      section: 'more' }] : []),
     { id: 'info',           icon: Settings,       label: 'Settings',     section: 'more' },

@@ -4,20 +4,20 @@ import { Badge } from '@/presentation/ui/badge';
 import { RefreshCw, Crown } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import type { RotationOrder } from '@/domain/types';
+import { hasRotation } from '@/domain/types';
 
 interface NextTurnCardProps {
   groupId: string;
   groupType?: string;
 }
 
-const ROTATING_TYPES = new Set(['rotating', 'susu', 'tontine', 'chama']);
 
 export function NextTurnCard({ groupId, groupType }: NextTurnCardProps) {
   const [rotation, setRotation] = useState<RotationOrder | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!groupType || !ROTATING_TYPES.has(groupType)) {
+    if (!hasRotation(groupType)) {
       setLoading(false);
       return;
     }

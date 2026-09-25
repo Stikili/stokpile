@@ -9,6 +9,7 @@ import { UserAvatar } from '@/presentation/components/profile/UserAvatar';
 import { RefreshCw, ArrowUp, ArrowDown, RotateCcw, ChevronRight, Shuffle } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
+import { hasRotation } from '@/domain/types';
 
 interface RotationOrderViewProps {
   groupId: string;
@@ -34,7 +35,7 @@ export function RotationOrderView({ groupId, isAdmin, groupType }: RotationOrder
   const [initing, setIniting] = useState(false);
   const [advancing, setAdvancing] = useState(false);
 
-  const isRotatingGroup = groupType === 'rotating' || groupType === 'susu';
+  const isRotatingGroup = hasRotation(groupType);
 
   useEffect(() => {
     if (isRotatingGroup) load();
@@ -87,8 +88,8 @@ export function RotationOrderView({ groupId, isAdmin, groupType }: RotationOrder
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= newSlots.length) return;
     [newSlots[index], newSlots[targetIndex]] = [newSlots[targetIndex], newSlots[index]];
-    // Reassign positions
-    const reindexed = newSlots.map((slot, i) => ({ ...slot, position: i + 1 }));
+    // Positions are 0-based array indices, matching current_position on the server
+    const reindexed = newSlots.map((slot, i) => ({ ...slot, position: i }));
     setLocalSlots(reindexed);
     setIsDirty(true);
   };
@@ -217,7 +218,7 @@ export function RotationOrderView({ groupId, isAdmin, groupType }: RotationOrder
         ) : (
           <div className="space-y-2">
             {localSlots.map((slot, index) => {
-              const isNext = slot.position === data.currentPosition;
+              const isNext = index === data.currentPosition;
               const displayName = getMemberDisplayName(slot);
 
               return (
@@ -237,7 +238,7 @@ export function RotationOrderView({ groupId, isAdmin, groupType }: RotationOrder
                         : 'bg-muted text-muted-foreground'
                     }`}
                   >
-                    {slot.position}
+                    {index + 1}
                   </span>
 
                   {/* Avatar */}

@@ -8,6 +8,7 @@ import { Edit, Info } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
 import { toast } from 'sonner';
+import { currencySymbol } from '@/lib/export';
 
 interface EditTotalContributionsDialogProps {
   groupId: string;
@@ -82,7 +83,7 @@ export function EditTotalContributionsDialog({
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-2">
             <Label htmlFor="adjustment">
-              Adjustment Amount (ZAR)
+              Adjustment Amount ({currencySymbol()})
               <span className="text-xs text-muted-foreground ml-2">
                 Can be positive or negative
               </span>

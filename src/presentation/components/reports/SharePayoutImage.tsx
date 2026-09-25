@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/presentation/ui/button';
 import { Download, Share2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatCurrency } from '@/lib/export';
 
 interface SharePayoutImageProps {
   open: boolean;
@@ -89,7 +90,7 @@ function drawCard(canvas: HTMLCanvasElement, data: SharePayoutImageProps['data']
   }
 
   // Stats grid
-  const fmt = (n: number) => 'R ' + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmt = (n: number) => formatCurrency(n);
   const stats = [
     { label: 'Contributed', value: fmt(data.totalContributedZar) },
     { label: 'Paid out',    value: fmt(data.totalPaidOutZar) },

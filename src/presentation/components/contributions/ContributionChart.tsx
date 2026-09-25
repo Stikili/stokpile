@@ -2,23 +2,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/pre
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Area, AreaChart } from 'recharts';
 import { BarChart3, Wallet, Info } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/presentation/ui/tabs';
+import { formatCurrency, formatCompactCurrency as formatAxisCurrency } from '@/lib/export';
 
-// Helper function for currency formatting
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-ZA', {
-    style: 'currency',
-    currency: 'ZAR'
-  }).format(amount);
-};
-
-// Simplified formatter for Y-axis
-const formatAxisCurrency = (value: number) => {
-  if (value === 0) return 'R0';
-  if (Math.abs(value) >= 1000) {
-    return `R${(value / 1000).toFixed(1)}k`;
-  }
-  return `R${value.toFixed(0)}`;
-};
 
 interface ContributionData {
   month: string;

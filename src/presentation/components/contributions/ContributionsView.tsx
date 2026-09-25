@@ -20,17 +20,18 @@ import { ConfirmationDialog } from '@/presentation/shared/ConfirmationDialog';
 import { Plus, Download, DollarSign, Trash2, Search, Info, CreditCard, Loader2, Zap, Receipt } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
-import { exportToCSV, formatCurrency, formatDate } from '@/lib/export';
+import { exportToCSV, formatCurrency, formatDate, currencySymbol } from '@/lib/export';
 import { PaymentProofButton } from '@/presentation/components/shared/PaymentProofButton';
 import { printReceipt } from '@/lib/receipt';
 
 interface ContributionsViewProps {
   groupId: string;
+  groupName?: string;
   userEmail: string;
   isAdmin?: boolean;
 }
 
-export function ContributionsView({ groupId, userEmail, isAdmin = false }: ContributionsViewProps) {
+export function ContributionsView({ groupId, groupName, userEmail, isAdmin = false }: ContributionsViewProps) {
   const [contributions, setContributions] = useState<Contribution[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
@@ -349,7 +350,7 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
                     )}
 
                     <div className="space-y-2">
-                      <Label htmlFor="amount">Amount (ZAR)</Label>
+                      <Label htmlFor="amount">Amount ({currencySymbol()})</Label>
                       <Input
                         id="amount"
                         type="number"
@@ -604,7 +605,7 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
                                     const member = members.find(m => m.email === contribution.userEmail);
                                     printReceipt({
                                       receiptNumber: contribution.id.slice(0, 8).toUpperCase(),
-                                      groupName: 'Stokpile Group',
+                                      groupName: groupName ?? 'Stokpile',
                                       memberName: member ? `${member.fullName || ''} ${member.surname || ''}`.trim() || contribution.userEmail : contribution.userEmail,
                                       memberEmail: contribution.userEmail,
                                       amount: contribution.amount,

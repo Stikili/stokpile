@@ -18,13 +18,14 @@ import { formatCurrency, formatDate } from '@/lib/export';
 
 interface DashboardProps {
   groupId: string;
+  groupName?: string;
   groupType?: string;
   annualTarget?: number | null;
   isAdmin?: boolean;
   userEmail?: string;
 }
 
-export function Dashboard({ groupId, groupType, annualTarget, isAdmin = false, userEmail }: DashboardProps) {
+export function Dashboard({ groupId, groupName, groupType, annualTarget, isAdmin = false, userEmail }: DashboardProps) {
   const [stats, setStats] = useState<DashboardStats>({
     totalContributions: 0,
     calculatedContributions: 0,
@@ -220,7 +221,7 @@ export function Dashboard({ groupId, groupType, annualTarget, isAdmin = false, u
               <div className="flex flex-col gap-1 shrink-0">
                 <ShareCycleButton
                   groupId={groupId}
-                  groupName={members[0] ? 'this group' : 'this group'}
+                  groupName={groupName ?? 'this group'}
                   totalContributed={stats.totalContributions}
                   totalPaidOut={stats.totalPayouts}
                   memberCount={members.length}
