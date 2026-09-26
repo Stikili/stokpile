@@ -28,6 +28,8 @@ export const queryKeys = {
   subscription: (groupId: string) => ['subscription', groupId] as const,
   health: (groupId: string) => ['health', groupId] as const,
   overdue: (groupId: string) => ['overdue', groupId] as const,
+  contributionAdjustment: (groupId: string) => ['contributionAdjustment', groupId] as const,
+  loans: (groupId: string) => ['loans', groupId] as const,
   leaderboard: (groupId: string) => ['leaderboard', groupId] as const,
   auditLog: (groupId: string) => ['auditLog', groupId] as const,
   notifications: () => ['notifications'] as const,
@@ -203,7 +205,7 @@ export function useAnnouncements(groupId: string | undefined) {
 export function useNotifications(groupId: string | undefined, userEmail: string | undefined) {
   return useQuery({
     queryKey: queryKeys.notifications(),
-    queryFn: () => api.getNotifications(groupId!, userEmail!),
+    queryFn: () => api.getNotifications(),
     enabled: !!groupId && !!userEmail,
     staleTime: 30_000,           // 30s — want to see new ones quickly
     refetchInterval: 60_000,     // poll every 60s
@@ -212,6 +214,26 @@ export function useNotifications(groupId: string | undefined, userEmail: string 
 
 // ─── Mutation helpers ────────────────────────────────────────────────────
 // These invalidate the relevant cache after a successful write.
+
+/** Admin-only: members behind on contributions, per the server's rule. */
+export function useOverdueMembers(groupId: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.overdue(groupId!),
+    queryFn: () => api.getOverdueMembers(groupId!),
+    enabled: !!groupId && enabled,
+    staleTime: 30_000,
+  });
+}
+
+/** Manual correction admins add to the contributions total. */
+export function useContributionAdjustment(groupId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.contributionAdjustment(groupId!),
+    queryFn: () => api.getContributionAdjustment(groupId!),
+    enabled: !!groupId,
+    staleTime: 5 * 60_000,
+  });
+}
 
 export function useInvalidate() {
   const qc = useQueryClient();

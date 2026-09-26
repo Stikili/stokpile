@@ -225,7 +225,7 @@ export function TierExplainerButton({ tier, lifetimePoints }: { tier: string; li
   return (
     <>
       <Button size="sm" variant="outline" onClick={() => setOpen(true)} className="gap-1.5">
-        <Trophy className="h-3.5 w-3.5 text-amber-500" />
+        <Trophy className="h-3.5 w-3.5 text-warning" />
         Explain my tier
       </Button>
       <AiDrawer
@@ -502,7 +502,7 @@ export function GrowthAuditButton({ groupId }: { groupId: string }) {
   return (
     <>
       <Button size="sm" variant="outline" onClick={() => setOpen(true)} className="gap-1.5">
-        <Rocket className="h-3.5 w-3.5 text-emerald-500" />
+        <Rocket className="h-3.5 w-3.5 text-primary" />
         Growth audit
       </Button>
       <AiDrawer
@@ -523,7 +523,7 @@ export function BankAccountAdvisorButton({ groupId, groupType }: { groupId: stri
   return (
     <>
       <Button size="sm" variant="outline" onClick={() => setOpen(true)} className="gap-1.5">
-        <Landmark className="h-3.5 w-3.5 text-blue-500" />
+        <Landmark className="h-3.5 w-3.5 text-primary" />
         Bank account advisor
       </Button>
       <AiDrawer

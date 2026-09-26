@@ -7,6 +7,7 @@ import { Label } from '@/presentation/ui/label';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
+import { trackInviteSent } from '@/application/analytics';
 
 interface ShareInviteDialogProps {
   groupId: string;
@@ -42,6 +43,7 @@ export function ShareInviteDialog({ groupId, groupName }: ShareInviteDialogProps
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(inviteLink);
+      trackInviteSent('link');
       setCopied(true);
       toast.success('Link copied to clipboard!');
       setTimeout(() => setCopied(false), 2000);
@@ -54,6 +56,7 @@ export function ShareInviteDialog({ groupId, groupName }: ShareInviteDialogProps
     const message = encodeURIComponent(
       `Join our group "${groupName}" on Stokpile!\n\nClick this link to join:\n${inviteLink}`
     );
+    trackInviteSent('whatsapp');
     window.open(`https://wa.me/?text=${message}`, '_blank');
   };
 
@@ -61,6 +64,7 @@ export function ShareInviteDialog({ groupId, groupName }: ShareInviteDialogProps
     const message = encodeURIComponent(
       `Join our group "${groupName}" on Stokpile! Click: ${inviteLink}`
     );
+    trackInviteSent('sms');
     window.location.href = `sms:?body=${message}`;
   };
 
@@ -69,6 +73,7 @@ export function ShareInviteDialog({ groupId, groupName }: ShareInviteDialogProps
     const body = encodeURIComponent(
       `You've been invited to join "${groupName}" on Stokpile!\n\nClick this link to join:\n${inviteLink}\n\nSee you there!`
     );
+    trackInviteSent('email');
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
   };
 
@@ -80,6 +85,7 @@ export function ShareInviteDialog({ groupId, groupName }: ShareInviteDialogProps
           text: `Join our group "${groupName}" on Stokpile!`,
           url: inviteLink
         });
+        trackInviteSent('share');
       } catch {
         // User cancelled or share not supported — silent
       }
@@ -118,7 +124,7 @@ export function ShareInviteDialog({ groupId, groupName }: ShareInviteDialogProps
                   <TooltipTrigger asChild>
                     <Button onClick={copyToClipboard} variant="outline" size="icon">
                       {copied ? (
-                        <Check className="h-4 w-4 text-green-600" />
+                        <Check className="h-4 w-4 text-primary" />
                       ) : (
                         <Copy className="h-4 w-4" />
                       )}

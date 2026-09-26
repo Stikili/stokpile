@@ -15,12 +15,15 @@ import { UserAvatar } from '@/presentation/components/profile/UserAvatar';
 import { Alert, AlertDescription } from '@/presentation/ui/alert';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
 import { ConfirmationDialog } from '@/presentation/shared/ConfirmationDialog';
-import { Plus, Download, TrendingUp, Info, Search, CheckCircle2, Clock, XCircle, AlertTriangle, Loader2, Upload } from 'lucide-react';
+import { Plus, Download, TrendingUp, Info, Search, CheckCircle2, Clock, Upload } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
-import { exportToCSV, formatCurrency, formatDate } from '@/lib/export';
+import { exportToCSV, formatCurrency, formatDate, currencySymbol } from '@/lib/export';
 import { sanitizeAmount } from '@/lib/sanitize';
 import { PaymentProofButton } from '@/presentation/components/shared/PaymentProofButton';
+import { StatusChip, payoutChip } from '@/presentation/shared/StatusChip';
+import { isActiveMember } from '@/domain/round';
+import { signatureState, requiredApprovals as requiredApprovalsFor } from '@/domain/payouts';
 
 interface PayoutsViewProps {
   groupId: string;
@@ -41,6 +44,7 @@ export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [updateConfirm, setUpdateConfirm] = useState<{ open: boolean; payoutId: string; status: string; label: string } | null>(null);
   const [referenceNumber, setReferenceNumber] = useState('');
+  const [requiredApprovals, setRequiredApprovals] = useState(requiredApprovalsFor(1));
 
   useEffect(() => {
     loadData();
@@ -60,6 +64,7 @@ export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
 
       setPayouts(sortedPayouts);
       setMembers(membersData.members || []);
+      if (payoutsData.requiredApprovals) setRequiredApprovals(payoutsData.requiredApprovals);
     } catch (error) {
       console.error('Failed to load data:', error);
       toast.error('Failed to load payouts');
@@ -94,11 +99,21 @@ export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
     }
   };
 
+  const handleApprove = async (payoutId: string) => {
+    try {
+      await api.approvePayout(payoutId);
+      toast.success('Signed. The payout can now be released.');
+      loadData();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to approve payout');
+    }
+  };
+
   const handleUpdateStatus = async (payoutId: string, status: string, extra?: Record<string, any>) => {
     try {
       await api.updatePayout(payoutId, { status, ...extra });
       const labels: Record<string, string> = {
-        processing: 'marked as processing',
+        processing: 'released',
         awaiting_confirmation: 'proof uploaded — awaiting member confirmation',
         completed: 'confirmed as received',
         disputed: 'marked as disputed',
@@ -151,14 +166,8 @@ export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
   }, [payouts]);
 
   const getStatusBadge = (status: string) => {
-    const badges: Record<string, JSX.Element> = {
-      completed: <Badge className="bg-green-600 dark:bg-green-700 text-white"><CheckCircle2 className="h-3 w-3 mr-1" />Completed</Badge>,
-      cancelled: <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Cancelled</Badge>,
-      processing: <Badge className="bg-amber-500 text-white"><Loader2 className="h-3 w-3 mr-1 animate-spin" />Processing</Badge>,
-      awaiting_confirmation: <Badge className="bg-purple-600 text-white"><Clock className="h-3 w-3 mr-1" />Awaiting Confirmation</Badge>,
-      disputed: <Badge variant="destructive"><AlertTriangle className="h-3 w-3 mr-1" />Disputed</Badge>,
-    };
-    return badges[status] || <Badge className="bg-blue-600 dark:bg-blue-700 text-white"><Clock className="h-3 w-3 mr-1" />Scheduled</Badge>;
+    const chip = payoutChip(status);
+    return <StatusChip tone={chip.tone} label={chip.label} />;
   };
 
   return (
@@ -202,7 +211,7 @@ export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
                           Set up a new payout for approved group members
                         </DialogDescription>
                       </DialogHeader>
-                      {members.filter(m => m.status === 'approved').length === 0 && (
+                      {members.filter(isActiveMember).length === 0 && (
                         <Alert variant="destructive" className="mt-4">
                           <Info className="h-4 w-4" />
                           <AlertDescription>
@@ -219,7 +228,7 @@ export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
                             </SelectTrigger>
                             <SelectContent>
                               {members
-                                .filter(member => member.status === 'approved')
+                                .filter(isActiveMember)
                                 .sort((a, b) => `${a.fullName} ${a.surname}`.localeCompare(`${b.fullName} ${b.surname}`))
                                 .map(member => (
                                   <SelectItem key={member.email} value={member.email}>
@@ -234,12 +243,12 @@ export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
                             </SelectContent>
                           </Select>
                           <p className="text-sm text-muted-foreground">
-                            {members.filter(m => m.status === 'approved').length} approved member{members.filter(m => m.status === 'approved').length !== 1 ? 's' : ''} available
+                            {members.filter(isActiveMember).length} member{members.filter(isActiveMember).length !== 1 ? 's' : ''} available
                           </p>
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="amount">Amount (ZAR)</Label>
+                          <Label htmlFor="amount">Amount ({currencySymbol()})</Label>
                           <Input
                             id="amount"
                             type="number"
@@ -266,7 +275,7 @@ export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
                         <Button
                           type="submit"
                           className="w-full"
-                          disabled={submitting || members.filter(m => m.status === 'approved').length === 0}
+                          disabled={submitting || members.filter(isActiveMember).length === 0}
                         >
                           {submitting ? 'Scheduling...' : 'Schedule Payout'}
                         </Button>
@@ -283,9 +292,9 @@ export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
             <>
               {/* Summary stats */}
               <div className="grid grid-cols-2 gap-3 mb-4">
-                <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
+                <Card className="bg-muted dark:bg-muted border-border dark:border-border">
                   <CardContent className="pt-4 pb-4">
-                    <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400 mb-1">
+                    <div className="flex items-center gap-2 text-primary dark:text-primary mb-1">
                       <Clock className="h-3.5 w-3.5" />
                       <span className="text-xs">Scheduled</span>
                     </div>
@@ -293,9 +302,9 @@ export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
                     <p className="text-xs text-muted-foreground">{stats.scheduledCount} payout{stats.scheduledCount !== 1 ? 's' : ''}</p>
                   </CardContent>
                 </Card>
-                <Card className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900">
+                <Card className="bg-accent dark:bg-accent border-primary/30 dark:border-primary/30">
                   <CardContent className="pt-4 pb-4">
-                    <div className="flex items-center gap-2 text-green-700 dark:text-green-400 mb-1">
+                    <div className="flex items-center gap-2 text-primary dark:text-primary mb-1">
                       <CheckCircle2 className="h-3.5 w-3.5" />
                       <span className="text-xs">Paid Out</span>
                     </div>
@@ -425,11 +434,25 @@ export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
                       <TableCell>
                         <div className="flex flex-wrap gap-1.5">
                           {/* Admin flow: scheduled → processing → awaiting_confirmation */}
+                          {payout.status === 'scheduled' && (() => {
+                            const sig = signatureState(payout.approvals, requiredApprovals, { email: userEmail, isAdmin });
+                            return (
+                              <>
+                                <StatusChip tone={sig.complete ? 'paid' : 'due'} label={`${sig.have} of ${sig.required} signed`} />
+                                {sig.canSign && (
+                                  <Button size="sm" onClick={() => handleApprove(payout.id)}>Approve</Button>
+                                )}
+                                {isAdmin && sig.complete && (
+                                  <Button size="sm" onClick={() => handleUpdateStatus(payout.id, 'processing')}>Release</Button>
+                                )}
+                                {isAdmin && !sig.complete && !sig.canSign && (
+                                  <span className="text-xs text-muted-foreground self-center">Waiting for another admin to approve</span>
+                                )}
+                              </>
+                            );
+                          })()}
                           {isAdmin && payout.status === 'scheduled' && (
                             <>
-                              <Button size="sm" onClick={() => handleUpdateStatus(payout.id, 'processing')}>
-                                Mark Processing
-                              </Button>
                               <Button size="sm" variant="outline" onClick={() => setUpdateConfirm({ open: true, payoutId: payout.id, status: 'cancelled', label: 'cancel' })}>
                                 Cancel
                               </Button>
@@ -453,7 +476,7 @@ export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
                           {/* Recipient flow: awaiting_confirmation → completed or disputed */}
                           {payout.status === 'awaiting_confirmation' && userEmail === payout.recipientEmail && (
                             <>
-                              <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleUpdateStatus(payout.id, 'completed')}>
+                              <Button size="sm" className="bg-primary hover:bg-primary" onClick={() => handleUpdateStatus(payout.id, 'completed')}>
                                 <CheckCircle2 className="h-3 w-3 mr-1.5" />Confirm Received
                               </Button>
                               <Button size="sm" variant="outline" className="text-destructive" onClick={() => {
@@ -463,6 +486,12 @@ export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
                                 Dispute
                               </Button>
                             </>
+                          )}
+                          {payout.status === 'awaiting_confirmation' && isAdmin && userEmail !== payout.recipientEmail
+                            && members.find(m => m.email === payout.recipientEmail)?.status === 'managed' && (
+                            <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(payout.id, 'completed')}>
+                              <CheckCircle2 className="h-3 w-3 mr-1.5" />Confirm for them
+                            </Button>
                           )}
                           {payout.status === 'awaiting_confirmation' && userEmail !== payout.recipientEmail && !isAdmin && (
                             <span className="text-xs text-muted-foreground">Waiting for {payout.recipient?.fullName || payout.recipientEmail}</span>

@@ -61,8 +61,8 @@ export function ActivityFeed({ groupId, limit = 20 }: ActivityFeedProps) {
         badge: {
           label: c.paid ? 'Paid' : 'Unpaid',
           color: c.paid
-            ? 'bg-green-600 text-white'
-            : 'bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-400 border border-orange-300 dark:border-orange-800',
+            ? 'bg-primary text-white'
+            : 'bg-warning/10 dark:bg-warning/10 text-warning dark:text-warning border border-warning/40 dark:border-warning/40',
         },
       });
     });
@@ -80,10 +80,10 @@ export function ActivityFeed({ groupId, limit = 20 }: ActivityFeedProps) {
         badge: {
           label: p.status.charAt(0).toUpperCase() + p.status.slice(1),
           color: p.status === 'completed'
-            ? 'bg-green-600 text-white'
+            ? 'bg-primary text-white'
             : p.status === 'cancelled'
             ? 'bg-destructive text-destructive-foreground'
-            : 'bg-blue-600 text-white',
+            : 'bg-primary text-white',
         },
       });
     });
@@ -110,9 +110,9 @@ export function ActivityFeed({ groupId, limit = 20 }: ActivityFeedProps) {
   }, [contributions, payouts, meetings, limit]);
 
   const iconFor = (type: ActivityEvent['type']) => {
-    if (type === 'contribution') return <DollarSign className="h-4 w-4 text-green-500" />;
-    if (type === 'payout') return <TrendingUp className="h-4 w-4 text-blue-500" />;
-    return <Calendar className="h-4 w-4 text-purple-500" />;
+    if (type === 'contribution') return <DollarSign className="h-4 w-4 text-primary" />;
+    if (type === 'payout') return <TrendingUp className="h-4 w-4 text-primary" />;
+    return <Calendar className="h-4 w-4 text-primary" />;
   };
 
   const formatTime = (date: Date) => {

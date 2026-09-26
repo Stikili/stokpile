@@ -20,7 +20,7 @@ export function TrialBadge({ onClick }: TrialBadgeProps) {
   const colorClass = urgent
     ? 'bg-destructive/10 text-destructive border-destructive/30 hover:bg-destructive/15'
     : warning
-    ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/15'
+    ? 'bg-warning/10 text-warning dark:text-warning border-warning/40 hover:bg-warning/10'
     : 'bg-primary/10 text-primary border-primary/30 hover:bg-primary/15';
 
   return (

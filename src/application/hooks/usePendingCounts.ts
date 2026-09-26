@@ -20,7 +20,8 @@ export function usePendingCounts(groupId: string | undefined, isAdmin: boolean) 
       try {
         const { requests } = await api.getJoinRequests(groupId);
         if (cancelled) return;
-        const pending = requests.filter((r) => r.status === 'pending').length;
+        // The endpoint returns pending requests only.
+        const pending = requests.length;
         setCounts({ joinRequests: pending });
       } catch {
         // ignore

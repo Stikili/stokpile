@@ -129,14 +129,14 @@ export function AnnouncementsView({ groupId, isAdmin }: AnnouncementsViewProps) 
         <div className="flex items-center gap-2">
           <Switch id="ann-urgent" checked={urgent} onCheckedChange={setUrgent} disabled={submitting} />
           <Label htmlFor="ann-urgent" className="flex items-center gap-1 cursor-pointer">
-            <AlertTriangle className="h-3.5 w-3.5 text-orange-500" />
+            <AlertTriangle className="h-3.5 w-3.5 text-warning" />
             Urgent
           </Label>
         </div>
         <div className="flex items-center gap-2">
           <Switch id="ann-pinned" checked={pinned} onCheckedChange={setPinned} disabled={submitting} />
           <Label htmlFor="ann-pinned" className="flex items-center gap-1 cursor-pointer">
-            <Pin className="h-3.5 w-3.5 text-blue-500" />
+            <Pin className="h-3.5 w-3.5 text-primary" />
             Pin to top
           </Label>
         </div>
@@ -210,7 +210,7 @@ export function AnnouncementsView({ groupId, isAdmin }: AnnouncementsViewProps) 
             {announcements.map((ann) => (
               <div
                 key={ann.id}
-                className={`rounded-lg border p-4 ${ann.urgent ? 'border-orange-300 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/30' : ann.pinned ? 'border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/20' : 'border-border bg-card'}`}
+                className={`rounded-lg border p-4 ${ann.urgent ? 'border-warning/40 bg-warning/10 dark:border-warning/40 dark:bg-warning/10' : ann.pinned ? 'border-border bg-muted dark:border-border dark:bg-muted' : 'border-border bg-card'}`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
@@ -222,7 +222,7 @@ export function AnnouncementsView({ groupId, isAdmin }: AnnouncementsViewProps) 
                         </Badge>
                       )}
                       {ann.urgent && (
-                        <Badge variant="destructive" className="text-xs gap-1 bg-orange-500">
+                        <Badge variant="destructive" className="text-xs gap-1 bg-warning">
                           <AlertTriangle className="h-3 w-3" />
                           Urgent
                         </Badge>

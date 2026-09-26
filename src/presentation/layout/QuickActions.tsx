@@ -8,6 +8,7 @@ import {
   ShoppingCart, HeartHandshake, RefreshCw, Megaphone,
 } from 'lucide-react';
 import type { GroupType } from '@/domain/types';
+import { hasRotation } from '@/domain/types';
 
 interface QuickActionsProps {
   onAction: (action: string) => void;
@@ -21,7 +22,7 @@ export function QuickActions({ onAction, isAdmin, payoutsAllowed, groupType }: Q
 
   const run = (id: string) => { onAction(id); setOpen(false); };
 
-  const hasRotation = groupType === 'rotating' || groupType === 'susu' || groupType === 'tontine' || groupType === 'chama';
+  const showRotation = hasRotation(groupType);
 
   // Build the context-aware action list
   const memberActions = [
@@ -35,7 +36,7 @@ export function QuickActions({ onAction, isAdmin, payoutsAllowed, groupType }: Q
       : [{ id: 'payout', icon: TrendingUp, label: 'Schedule Payout', enabled: false, disabledReason: 'Payouts are disabled — enable in Group Settings' }]),
     { id: 'meeting',     icon: Calendar,      label: 'Schedule Meeting',   enabled: true,  disabledReason: '' },
     { id: 'members',     icon: Users,         label: 'Manage Members',     enabled: true,  disabledReason: '' },
-    ...(hasRotation ? [{ id: 'rotation', icon: RefreshCw, label: 'Advance Rotation', enabled: true, disabledReason: '' }] : []),
+    ...(showRotation ? [{ id: 'rotation', icon: RefreshCw, label: 'Advance Rotation', enabled: true, disabledReason: '' }] : []),
     { id: 'announcements', icon: Megaphone,   label: 'New Announcement',   enabled: true,  disabledReason: '' },
     { id: 'info',        icon: Settings,      label: 'Group Settings',     enabled: true,  disabledReason: '' },
   ] : [];

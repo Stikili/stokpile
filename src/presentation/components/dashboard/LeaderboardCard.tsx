@@ -19,9 +19,9 @@ interface Row {
 }
 
 const RANK_BADGE: Record<number, string> = {
-  1: 'bg-amber-400 text-amber-950',
+  1: 'bg-warning/10 text-warning',
   2: 'bg-slate-300 text-slate-800',
-  3: 'bg-orange-400 text-orange-950',
+  3: 'bg-warning/10 text-warning',
 };
 
 export function LeaderboardCard({ groupId }: LeaderboardCardProps) {
@@ -52,7 +52,7 @@ export function LeaderboardCard({ groupId }: LeaderboardCardProps) {
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm flex items-center gap-2">
-          <Trophy className="h-4 w-4 text-amber-500" />
+          <Trophy className="h-4 w-4 text-warning" />
           Top Contributors
         </CardTitle>
       </CardHeader>
@@ -74,11 +74,11 @@ export function LeaderboardCard({ groupId }: LeaderboardCardProps) {
               </div>
               {r.streak > 1 && (
                 <Badge variant="outline" className="text-[10px] h-5 gap-0.5">
-                  <Flame className="h-2.5 w-2.5 text-orange-500" />
+                  <Flame className="h-2.5 w-2.5 text-warning" />
                   {r.streak}
                 </Badge>
               )}
-              <span className="text-xs font-semibold text-green-600 dark:text-green-400 tabular-nums">
+              <span className="text-xs font-semibold text-primary dark:text-primary tabular-nums">
                 {formatCurrency(r.totalPaid)}
               </span>
             </div>

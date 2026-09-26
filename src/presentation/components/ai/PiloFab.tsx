@@ -39,7 +39,7 @@ export function PiloFab(props: PiloFabProps) {
         aria-label="Open Pilo AI assistant"
         className="group hidden lg:flex fixed bottom-6 right-6 z-40
                    h-14 w-14 rounded-full
-                   bg-gradient-to-br from-primary via-primary to-emerald-500
+                   bg-gradient-to-br from-primary via-primary to-primary
                    shadow-xl shadow-primary/30
                    items-center justify-center
                    transition-transform hover:scale-105 active:scale-95

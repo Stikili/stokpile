@@ -9,6 +9,7 @@ import {
   RefreshCw, ShoppingCart, HeartHandshake, Gavel, FileBarChart,
   Activity, ClipboardList, Plus, Users, Search, LogOut, User, Gauge,
 } from 'lucide-react';
+import { hasRotation } from '@/domain/types';
 
 interface CommandPaletteProps {
   open: boolean;
@@ -37,7 +38,7 @@ export function CommandPalette({
   }, [open]);
 
   const groupType = selectedGroup?.groupType;
-  const hasRotation = groupType === 'rotating' || groupType === 'susu' || groupType === 'tontine' || groupType === 'chama';
+  const showRotation = hasRotation(groupType);
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange} title="Command Palette" description="Type a command or search">
@@ -73,7 +74,7 @@ export function CommandPalette({
               <CommandItem onSelect={() => run(() => onTabChange('announcements'))}>
                 <Megaphone /> Announcements
               </CommandItem>
-              {hasRotation && (
+              {showRotation && (
                 <CommandItem onSelect={() => run(() => onTabChange('rotation'))}>
                   <RefreshCw /> Rotation Order
                 </CommandItem>
@@ -124,7 +125,7 @@ export function CommandPalette({
                   <HeartHandshake /> Submit Burial Claim
                 </CommandItem>
               )}
-              {hasRotation && isAdmin && (
+              {showRotation && isAdmin && (
                 <CommandItem onSelect={() => run(() => onTabChange('rotation'))}>
                   <RefreshCw /> Advance Rotation
                 </CommandItem>
@@ -138,10 +139,10 @@ export function CommandPalette({
                   <CommandItem onSelect={() => run(() => onTabChange('penalties'))}>
                     <Gavel /> Penalties &amp; Fines
                   </CommandItem>
-                  <CommandItem onSelect={() => run(() => onTabChange('reports'))}>
+                  <CommandItem onSelect={() => run(() => onTabChange('insights'))}>
                     <FileBarChart /> Financial Reports
                   </CommandItem>
-                  <CommandItem onSelect={() => run(() => onTabChange('analytics'))}>
+                  <CommandItem onSelect={() => run(() => onTabChange('insights'))}>
                     <Activity /> Analytics
                   </CommandItem>
                   <CommandItem onSelect={() => run(() => onTabChange('audit'))}>

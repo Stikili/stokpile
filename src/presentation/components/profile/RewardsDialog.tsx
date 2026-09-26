@@ -25,10 +25,10 @@ interface RewardsDialogProps {
 }
 
 const TIER_META: Record<string, { label: string; gradient: string; ring: string; glow: string }> = {
-  bronze:   { label: 'Bronze',   gradient: 'from-amber-700 to-amber-900',               ring: 'ring-amber-700/30',  glow: '' },
+  bronze:   { label: 'Bronze',   gradient: 'from-warning to-warning',               ring: 'ring-warning/30',  glow: '' },
   silver:   { label: 'Silver',   gradient: 'from-slate-400 to-slate-600',               ring: 'ring-slate-400/30',  glow: '' },
-  gold:     { label: 'Gold',     gradient: 'from-yellow-400 to-amber-500',              ring: 'ring-yellow-400/40', glow: 'shadow-yellow-500/20' },
-  platinum: { label: 'Platinum', gradient: 'from-cyan-300 via-sky-400 to-indigo-500',   ring: 'ring-cyan-400/50',   glow: 'shadow-cyan-500/30' },
+  gold:     { label: 'Gold',     gradient: 'from-warning to-warning',              ring: 'ring-warning/40', glow: 'shadow-warning/20' },
+  platinum: { label: 'Platinum', gradient: 'from-primary via-primary to-primary',   ring: 'ring-primary/50',   glow: 'shadow-primary/30' },
 };
 
 const EVENT_LABELS: Record<string, string> = {
@@ -100,7 +100,7 @@ export function RewardsDialog({ open, onOpenChange, onShowReferral, groups }: Re
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-amber-500" />
+            <Trophy className="h-5 w-5 text-warning" />
             Rewards
           </DialogTitle>
           <DialogDescription>
@@ -159,7 +159,7 @@ export function RewardsDialog({ open, onOpenChange, onShowReferral, groups }: Re
                     </div>
                   )}
                   {!account.nextTierAt && (
-                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 font-medium">
+                    <p className="text-xs text-warning dark:text-warning mt-2 font-medium">
                       You've reached the top tier
                     </p>
                   )}
@@ -194,7 +194,7 @@ export function RewardsDialog({ open, onOpenChange, onShowReferral, groups }: Re
             </div>
 
             {/* Redeem */}
-            <div className="rounded-2xl border bg-gradient-to-br from-primary/5 to-emerald-500/5 p-4">
+            <div className="rounded-2xl border bg-gradient-to-br from-primary/5 to-primary/5 p-4">
               <div className="flex items-center gap-2 mb-3">
                 <Coins className="h-4 w-4 text-primary" />
                 <h4 className="font-semibold text-sm">Redeem for subscription credit</h4>
@@ -294,12 +294,12 @@ export function RewardsDialog({ open, onOpenChange, onShowReferral, groups }: Re
                         </div>
                         <div className="text-right shrink-0">
                           {entry.pointsDelta !== 0 && (
-                            <p className={`font-semibold ${entry.pointsDelta > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
+                            <p className={`font-semibold ${entry.pointsDelta > 0 ? 'text-primary dark:text-primary' : 'text-muted-foreground'}`}>
                               {entry.pointsDelta > 0 ? '+' : ''}{entry.pointsDelta} pts
                             </p>
                           )}
                           {entry.zarDelta !== 0 && (
-                            <p className="text-[10px] text-amber-600 dark:text-amber-400">
+                            <p className="text-[10px] text-warning dark:text-warning">
                               +{ZAR(Number(entry.zarDelta))}
                             </p>
                           )}
@@ -335,7 +335,7 @@ export function RewardsDialog({ open, onOpenChange, onShowReferral, groups }: Re
                           </p>
                         </div>
                         <div className="text-right shrink-0">
-                          <p className="font-semibold text-emerald-600 dark:text-emerald-400">
+                          <p className="font-semibold text-primary dark:text-primary">
                             +{ZAR(c.commissionZar)}
                           </p>
                           {c.paidOut && (

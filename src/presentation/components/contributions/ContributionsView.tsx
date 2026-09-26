@@ -20,17 +20,21 @@ import { ConfirmationDialog } from '@/presentation/shared/ConfirmationDialog';
 import { Plus, Download, DollarSign, Trash2, Search, Info, CreditCard, Loader2, Zap, Receipt } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
-import { exportToCSV, formatCurrency, formatDate } from '@/lib/export';
+import { exportToCSV, formatCurrency, formatDate, currencySymbol } from '@/lib/export';
 import { PaymentProofButton } from '@/presentation/components/shared/PaymentProofButton';
-import { printReceipt } from '@/lib/receipt';
+import { ReceiptDialog } from '@/presentation/components/receipts/ReceiptDialog';
+import { isActiveMember } from '@/domain/round';
+import { trackContributionRecorded } from '@/application/analytics';
 
 interface ContributionsViewProps {
   groupId: string;
+  groupName?: string;
+  groupType?: string;
   userEmail: string;
   isAdmin?: boolean;
 }
 
-export function ContributionsView({ groupId, userEmail, isAdmin = false }: ContributionsViewProps) {
+export function ContributionsView({ groupId, groupName, groupType, userEmail, isAdmin = false }: ContributionsViewProps) {
   const [contributions, setContributions] = useState<Contribution[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,6 +43,7 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
   const [date, setDate] = useState<Date>(new Date());
   const [selectedMemberEmail, setSelectedMemberEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [receiptFor, setReceiptFor] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
   const [payingId, setPayingId] = useState<string | null>(null);
   const [flutterwaveId, setFlutterwaveId] = useState<string | null>(null);
@@ -105,6 +110,7 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
         paid: false,
         userEmail: targetEmail
       });
+      trackContributionRecorded();
 
       if (targetEmail) {
         const member = members.find(m => m.email === targetEmail);
@@ -258,10 +264,10 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
           <div className="flex gap-2">
             {isAdmin && selectedIds.size > 0 && (
               <>
-                <Button variant="outline" size="sm" onClick={() => handleBulkMark(true)} disabled={bulkMarking} className="text-green-700 border-green-300">
+                <Button variant="outline" size="sm" onClick={() => handleBulkMark(true)} disabled={bulkMarking} className="text-primary border-primary/30">
                   {bulkMarking ? 'Marking...' : `Mark ${selectedIds.size} Paid`}
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => handleBulkMark(false)} disabled={bulkMarking} className="text-orange-700 border-orange-300">
+                <Button variant="outline" size="sm" onClick={() => handleBulkMark(false)} disabled={bulkMarking} className="text-warning border-warning/40">
                   Mark Unpaid
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())} disabled={bulkMarking}>
@@ -324,7 +330,7 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
                             <SelectContent>
                               <SelectItem value="self">Myself ({userEmail})</SelectItem>
                               {members
-                                .filter(member => member.status === 'approved' && member.email !== userEmail)
+                                .filter(member => isActiveMember(member) && member.email !== userEmail)
                                 .map(member => (
                                   <SelectItem key={member.email} value={member.email}>
                                     {member.fullName} {member.surname}
@@ -349,7 +355,7 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
                     )}
 
                     <div className="space-y-2">
-                      <Label htmlFor="amount">Amount (ZAR)</Label>
+                      <Label htmlFor="amount">Amount ({currencySymbol()})</Label>
                       <Input
                         id="amount"
                         type="number"
@@ -413,13 +419,13 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
               </Card>
               <Card>
                 <CardContent className="pt-6">
-                  <div className="text-2xl text-green-600 dark:text-green-400">{formatCurrency(paidContributions)}</div>
+                  <div className="text-2xl text-primary dark:text-primary">{formatCurrency(paidContributions)}</div>
                   <p className="text-xs text-muted-foreground">Paid</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="pt-6">
-                  <div className="text-2xl text-orange-600 dark:text-orange-400">{formatCurrency(unpaidContributions)}</div>
+                  <div className="text-2xl text-warning dark:text-warning">{formatCurrency(unpaidContributions)}</div>
                   <p className="text-xs text-muted-foreground">Unpaid</p>
                 </CardContent>
               </Card>
@@ -540,8 +546,8 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
                           <Badge
                             variant={contribution.paid ? 'default' : 'secondary'}
                             className={contribution.paid
-                              ? 'bg-green-600 dark:bg-green-700 text-white'
-                              : 'bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-400 border border-orange-300 dark:border-orange-800'}
+                              ? 'bg-primary dark:bg-primary text-white'
+                              : 'bg-warning/10 dark:bg-warning/10 text-warning dark:text-warning border border-warning/40 dark:border-warning/40'}
                           >
                             {contribution.paid ? 'Paid' : 'Unpaid'}
                           </Badge>
@@ -575,7 +581,7 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
                                     size="sm"
                                     onClick={() => handleFlutterwavePay(contribution)}
                                     disabled={flutterwaveId === contribution.id}
-                                    className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/20 h-8 px-2"
+                                    className="text-warning border-warning/40 hover:bg-warning/10 dark:hover:bg-warning/10 h-8 px-2"
                                   >
                                     {flutterwaveId === contribution.id
                                       ? <Loader2 className="h-3 w-3 animate-spin" />
@@ -600,22 +606,13 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8"
-                                  onClick={() => {
-                                    const member = members.find(m => m.email === contribution.userEmail);
-                                    printReceipt({
-                                      receiptNumber: contribution.id.slice(0, 8).toUpperCase(),
-                                      groupName: 'Stokpile Group',
-                                      memberName: member ? `${member.fullName || ''} ${member.surname || ''}`.trim() || contribution.userEmail : contribution.userEmail,
-                                      memberEmail: contribution.userEmail,
-                                      amount: contribution.amount,
-                                      date: contribution.date,
-                                    });
-                                  }}
+                                  onClick={() => setReceiptFor(contribution.id)}
+                                  aria-label="Receipt"
                                 >
                                   <Receipt className="h-3.5 w-3.5" />
                                 </Button>
                               </TooltipTrigger>
-                              <TooltipContent>Print receipt</TooltipContent>
+                              <TooltipContent>Receipt</TooltipContent>
                             </Tooltip>
                           )}
                           {(contribution.userEmail === userEmail || isAdmin) && (
@@ -666,6 +663,13 @@ export function ContributionsView({ groupId, userEmail, isAdmin = false }: Contr
           setDuplicateWarning({ open: false, pendingSubmit: null });
           if (duplicateWarning.pendingSubmit) await duplicateWarning.pendingSubmit();
         }}
+      />
+      <ReceiptDialog
+        groupId={groupId}
+        groupName={groupName ?? 'Stokpile'}
+        groupType={groupType}
+        contributionId={receiptFor}
+        onClose={() => setReceiptFor(null)}
       />
     </>
   );

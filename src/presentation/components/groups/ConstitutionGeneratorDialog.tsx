@@ -198,7 +198,7 @@ export function ConstitutionGeneratorDialog({
           <>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={handleCopy}>
-                {copied ? <Check className="h-4 w-4 mr-2 text-green-500" /> : <Copy className="h-4 w-4 mr-2" />}
+                {copied ? <Check className="h-4 w-4 mr-2 text-primary" /> : <Copy className="h-4 w-4 mr-2" />}
                 Copy
               </Button>
               <Button variant="outline" size="sm" onClick={handleDownload}>

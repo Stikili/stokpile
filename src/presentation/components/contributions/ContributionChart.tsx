@@ -2,23 +2,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/pre
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Area, AreaChart } from 'recharts';
 import { BarChart3, Wallet, Info } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/presentation/ui/tabs';
+import { formatCurrency, formatCompactCurrency as formatAxisCurrency } from '@/lib/export';
 
-// Helper function for currency formatting
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-ZA', {
-    style: 'currency',
-    currency: 'ZAR'
-  }).format(amount);
-};
-
-// Simplified formatter for Y-axis
-const formatAxisCurrency = (value: number) => {
-  if (value === 0) return 'R0';
-  if (Math.abs(value) >= 1000) {
-    return `R${(value / 1000).toFixed(1)}k`;
-  }
-  return `R${value.toFixed(0)}`;
-};
 
 interface ContributionData {
   month: string;
@@ -86,12 +71,12 @@ export function ContributionChart({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
             <div className="p-2.5 rounded-lg border" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
               <p className="text-xs text-muted-foreground mb-0.5">Money In</p>
-              <p className="text-lg" style={{ color: '#10b981' }}>{formatCurrency(totalPaidContributions)}</p>
+              <p className="text-lg" style={{ color: 'var(--chart-1)' }}>{formatCurrency(totalPaidContributions)}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{formatCurrency(averageMonthlyIn)}/mo avg</p>
             </div>
             <div className="p-2.5 rounded-lg border" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)' }}>
               <p className="text-xs text-muted-foreground mb-0.5">Money Out</p>
-              <p className="text-lg" style={{ color: '#ef4444' }}>{formatCurrency(totalPayouts)}</p>
+              <p className="text-lg" style={{ color: 'var(--chart-2)' }}>{formatCurrency(totalPayouts)}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{formatCurrency(averageMonthlyOut)}/mo avg</p>
             </div>
             <div className={`${netFlow >= 0 ? 'bg-primary/10 dark:bg-primary/5 border-primary/20' : 'bg-warning/10 dark:bg-warning/5 border-warning/20'} p-2.5 rounded-lg border`}>
@@ -110,12 +95,12 @@ export function ContributionChart({
             <div className="text-center">
               <p className="text-xs text-muted-foreground">
                 <span className="inline-flex items-center gap-1">
-                  <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#10b981' }}></span>
+                  <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: 'var(--chart-1)' }}></span>
                   Money In
                 </span>
                 <span className="mx-2">•</span>
                 <span className="inline-flex items-center gap-1">
-                  <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: '#ef4444' }}></span>
+                  <span className="inline-block w-2.5 h-2.5 rounded" style={{ backgroundColor: 'var(--chart-2)' }}></span>
                   Money Out
                 </span>
               </p>
@@ -182,14 +167,14 @@ export function ContributionChart({
                 />
                 <Bar 
                   dataKey="paid" 
-                  fill="#10b981"
+                  fill="var(--chart-1)"
                   name="paid"
                   radius={[6, 6, 0, 0]}
                   maxBarSize={40}
                 />
                 <Bar 
                   dataKey="payouts" 
-                  fill="#ef4444"
+                  fill="var(--chart-2)"
                   name="payouts"
                   radius={[6, 6, 0, 0]}
                   maxBarSize={40}
@@ -212,8 +197,8 @@ export function ContributionChart({
               >
                 <defs>
                   <linearGradient id="netFlowGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05}/>
+                    <stop offset="5%" stopColor="var(--chart-4)" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="var(--chart-4)" stopOpacity={0.05}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid 
@@ -268,12 +253,12 @@ export function ContributionChart({
                 <Area
                   type="monotone"
                   dataKey="netFlow"
-                  stroke="#3b82f6"
+                  stroke="var(--chart-4)"
                   strokeWidth={3}
                   fill="url(#netFlowGradient)"
                   name="netFlow"
-                  dot={{ fill: '#3b82f6', r: 4, strokeWidth: 2, stroke: 'hsl(var(--card))' }}
-                  activeDot={{ r: 6, strokeWidth: 2, fill: '#3b82f6', stroke: 'hsl(var(--card))' }}
+                  dot={{ fill: 'var(--chart-4)', r: 4, strokeWidth: 2, stroke: 'var(--card)' }}
+                  activeDot={{ r: 6, strokeWidth: 2, fill: 'var(--chart-4)', stroke: 'var(--card)' }}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -342,21 +327,21 @@ export function ContributionChart({
                 />
                 <Bar 
                   dataKey="paid" 
-                  fill="#10b981"
+                  fill="var(--chart-1)"
                   name="Paid Contributions"
                   radius={[4, 4, 0, 0]}
                   maxBarSize={35}
                 />
                 <Bar 
                   dataKey="unpaid" 
-                  fill="#3b82f6"
+                  fill="var(--chart-4)"
                   name="Unpaid Contributions"
                   radius={[4, 4, 0, 0]}
                   maxBarSize={35}
                 />
                 <Bar 
                   dataKey="payouts" 
-                  fill="#ef4444"
+                  fill="var(--chart-2)"
                   name="Payouts"
                   radius={[4, 4, 0, 0]}
                   maxBarSize={35}

@@ -77,7 +77,7 @@ export function MemberStatsDialog({ groupId, memberEmail, memberName, children }
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-2">
-                    <DollarSign className="h-5 w-5 text-green-500" />
+                    <DollarSign className="h-5 w-5 text-primary" />
                     <span className="text-2xl">{formatCurrency(stats.totalContributions || 0)}</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
@@ -92,7 +92,7 @@ export function MemberStatsDialog({ groupId, memberEmail, memberName, children }
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-blue-500" />
+                    <TrendingUp className="h-5 w-5 text-primary" />
                     <span className="text-2xl">{formatCurrency(stats.totalPayouts || 0)}</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
@@ -107,7 +107,7 @@ export function MemberStatsDialog({ groupId, memberEmail, memberName, children }
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5 text-purple-500" />
+                    <BarChart3 className="h-5 w-5 text-primary" />
                     <span className="text-2xl">
                       {formatCurrency((stats.totalContributions || 0) - (stats.totalPayouts || 0))}
                     </span>

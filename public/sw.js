@@ -135,7 +135,7 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('push', (event) => {
   if (!event.data) return;
 
-  let data = { title: 'Stokpile', body: 'You have a new notification', icon: '/icon-192x192.png' };
+  let data = { title: 'Stokpile', body: 'You have a new notification', icon: '/icon-192.png' };
   try {
     data = { ...data, ...event.data.json() };
   } catch {
@@ -145,8 +145,8 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: data.icon || '/icon-192x192.png',
-      badge: '/icon-192x192.png',
+      icon: data.icon || '/icon-192.png',
+      badge: '/icon-192.png',
       data: data.url ? { url: data.url } : undefined,
     })
   );

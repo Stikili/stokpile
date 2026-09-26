@@ -89,7 +89,7 @@ export function ReferralDialog({ open, onOpenChange }: ReferralDialogProps) {
               </Card>
               <Card>
                 <CardContent className="p-3 text-center">
-                  <p className="text-2xl font-bold text-green-500">{data.rewardedCount}</p>
+                  <p className="text-2xl font-bold text-primary">{data.rewardedCount}</p>
                   <p className="text-xs text-muted-foreground">Months earned</p>
                 </CardContent>
               </Card>
@@ -100,7 +100,7 @@ export function ReferralDialog({ open, onOpenChange }: ReferralDialogProps) {
               <div className="flex gap-2">
                 <Input value={referralUrl} readOnly className="font-mono text-xs" />
                 <Button size="icon" variant="outline" onClick={handleCopy}>
-                  {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                  {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">

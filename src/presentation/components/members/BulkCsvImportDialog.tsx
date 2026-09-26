@@ -186,7 +186,7 @@ export function BulkCsvImportDialog({ groupId, open, onOpenChange, onSuccess }: 
             <div className="rounded-xl border bg-muted/30 p-3 space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-semibold flex items-center gap-1.5">
-                  <Check className="h-3.5 w-3.5 text-emerald-500" />
+                  <Check className="h-3.5 w-3.5 text-primary" />
                   {parsed.members.length} member{parsed.members.length === 1 ? '' : 's'}
                 </span>
                 <span className="text-muted-foreground">
@@ -200,7 +200,7 @@ export function BulkCsvImportDialog({ groupId, open, onOpenChange, onSuccess }: 
                 </div>
               )}
               {parsed.warnings.length > 0 && (
-                <div className="flex items-start gap-1.5 text-[11px] text-amber-600 dark:text-amber-400">
+                <div className="flex items-start gap-1.5 text-[11px] text-warning dark:text-warning">
                   <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
                   <div>{parsed.warnings.slice(0, 3).join('; ')}</div>
                 </div>

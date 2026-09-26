@@ -41,12 +41,15 @@ export function JoinGroupDialog({ onSuccess, open: controlledOpen, onOpenChange 
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" className="w-full justify-start">
-          <UserPlus className="h-4 w-4 mr-2" />
-          Join Group
-        </Button>
-      </DialogTrigger>
+      {/* Controlled by a parent: the parent supplies its own trigger. */}
+      {controlledOpen === undefined && (
+        <DialogTrigger asChild>
+          <Button variant="ghost" className="w-full justify-start">
+            <UserPlus className="h-4 w-4 mr-2" />
+            Join Group
+          </Button>
+        </DialogTrigger>
+      )}
       {open && (
         <DialogContent>
           <DialogHeader>

@@ -283,9 +283,9 @@ export function AttendanceRegister({
       <CardContent className="space-y-6">
         {/* Statistics Cards — admin only */}
         {isAdmin && <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900">
+          <Card className="bg-accent dark:bg-accent border-primary/30 dark:border-primary/30">
             <CardContent className="pt-6">
-              <div className="flex items-center gap-2 text-green-700 dark:text-green-400 mb-1">
+              <div className="flex items-center gap-2 text-primary dark:text-primary mb-1">
                 <CheckCircle2 className="h-4 w-4" />
                 <span className="text-sm">Present</span>
               </div>
@@ -293,9 +293,9 @@ export function AttendanceRegister({
             </CardContent>
           </Card>
 
-          <Card className="bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900">
+          <Card className="bg-destructive/10 dark:bg-destructive/10 border-destructive/40 dark:border-destructive/40">
             <CardContent className="pt-6">
-              <div className="flex items-center gap-2 text-red-700 dark:text-red-400 mb-1">
+              <div className="flex items-center gap-2 text-destructive dark:text-destructive mb-1">
                 <XCircle className="h-4 w-4" />
                 <span className="text-sm">Absent</span>
               </div>
@@ -303,9 +303,9 @@ export function AttendanceRegister({
             </CardContent>
           </Card>
 
-          <Card className="bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-900">
+          <Card className="bg-warning/10 dark:bg-warning/10 border-warning/40 dark:border-warning/40">
             <CardContent className="pt-6">
-              <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400 mb-1">
+              <div className="flex items-center gap-2 text-warning dark:text-warning mb-1">
                 <Clock className="h-4 w-4" />
                 <span className="text-sm">Unmarked</span>
               </div>
@@ -313,9 +313,9 @@ export function AttendanceRegister({
             </CardContent>
           </Card>
 
-          <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
+          <Card className="bg-muted dark:bg-muted border-border dark:border-border">
             <CardContent className="pt-6">
-              <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400 mb-1">
+              <div className="flex items-center gap-2 text-primary dark:text-primary mb-1">
                 <Percent className="h-4 w-4" />
                 <span className="text-sm">Rate</span>
               </div>
@@ -352,7 +352,7 @@ export function AttendanceRegister({
                     <Button
                       size="sm"
                       variant={attendance[userEmail] === true ? "default" : "outline"}
-                      className={attendance[userEmail] === true ? "bg-green-600 hover:bg-green-700" : ""}
+                      className={attendance[userEmail] === true ? "bg-primary hover:bg-primary" : ""}
                       onClick={() => handleAttendanceToggle(userEmail, true)}
                       disabled={updating === userEmail}
                     >
@@ -401,7 +401,7 @@ export function AttendanceRegister({
                 variant={filterStatus === 'present' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setFilterStatus('present')}
-                className={filterStatus === 'present' ? 'bg-green-600 hover:bg-green-700' : ''}
+                className={filterStatus === 'present' ? 'bg-primary hover:bg-primary' : ''}
               >
                 Present ({stats.present})
               </Button>
@@ -409,7 +409,7 @@ export function AttendanceRegister({
                 variant={filterStatus === 'absent' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setFilterStatus('absent')}
-                className={filterStatus === 'absent' ? 'bg-red-600 hover:bg-red-700' : ''}
+                className={filterStatus === 'absent' ? 'bg-destructive hover:bg-destructive' : ''}
               >
                 Absent ({stats.absent})
               </Button>
@@ -446,7 +446,7 @@ export function AttendanceRegister({
                 const isUpdating = updating === member.email;
                 const isCurrentUser = member.email === userEmail;
                 const statusColor = isMarked 
-                  ? (isPresent ? 'border-green-500 dark:border-green-700' : 'border-red-500 dark:border-red-700')
+                  ? (isPresent ? 'border-primary' : 'border-destructive/60')
                   : 'border-border';
 
                 return (
@@ -486,7 +486,7 @@ export function AttendanceRegister({
                       {isMarked && (
                         <Badge 
                           variant={isPresent ? 'default' : 'destructive'}
-                          className={isPresent ? 'bg-green-600' : ''}
+                          className={isPresent ? 'bg-primary' : ''}
                         >
                           {isPresent ? 'Present' : 'Absent'}
                         </Badge>
@@ -500,7 +500,7 @@ export function AttendanceRegister({
                               <Button
                                 size="sm"
                                 variant={isPresent ? "default" : "outline"}
-                                className={isPresent ? "bg-green-600 hover:bg-green-700" : ""}
+                                className={isPresent ? "bg-primary hover:bg-primary" : ""}
                                 onClick={() => handleAttendanceToggle(member.email, true)}
                                 disabled={isUpdating}
                               >

@@ -48,7 +48,7 @@ export const setUserCountry = (country: string | null | undefined) => {
   CURRENT_COUNTRY = country || null;
 };
 
-import { formatCurrency as localeCurrency, formatCurrencyByCode, formatDate as localeDate, formatDateTime as localeDateTime } from './locale';
+import { formatCurrency as localeCurrency, formatCurrencyByCode, formatDate as localeDate, formatDateTime as localeDateTime, COUNTRY_LOCALES, getLocale } from './locale';
 
 // Module-level group currency — set when a group is selected so all
 // formatCurrency calls in views use the group's currency, not the user's.
@@ -62,6 +62,26 @@ export const formatCurrency = (amount: number, country?: string | null) => {
   // Group currency takes precedence over user country
   if (GROUP_CURRENCY) return formatCurrencyByCode(amount, GROUP_CURRENCY);
   return localeCurrency(amount, country ?? CURRENT_COUNTRY);
+};
+
+/** ISO code for the active currency: the selected group's, else the user's country's. */
+export const activeCurrencyCode = (): string => GROUP_CURRENCY ?? getLocale(CURRENT_COUNTRY).currency;
+
+/** Symbol for the active currency (group first, then user country), e.g. "R", "KSh". */
+export const currencySymbol = (): string => {
+  if (GROUP_CURRENCY) {
+    const hit = Object.values(COUNTRY_LOCALES).find((l) => l.currency === GROUP_CURRENCY);
+    return hit?.currencySymbol ?? GROUP_CURRENCY;
+  }
+  return getLocale(CURRENT_COUNTRY).currencySymbol;
+};
+
+/** Short axis label: "R0", "R850", "R12.4k". */
+export const formatCompactCurrency = (value: number): string => {
+  const sym = currencySymbol();
+  if (value === 0) return `${sym}0`;
+  if (Math.abs(value) >= 1000) return `${sym}${(value / 1000).toFixed(1)}k`;
+  return `${sym}${value.toFixed(0)}`;
 };
 
 export const formatDate = (dateString: string, country?: string | null) => {

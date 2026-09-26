@@ -1,189 +1,67 @@
-import { useEffect, useState, useMemo } from 'react';
-import type { Contribution, Payout, DashboardStats, Meeting, Member, OverdueMember } from '@/domain/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/ui/card';
+import { useState } from 'react';
 import { Button } from '@/presentation/ui/button';
-import { Calendar, Wallet, Users, AlertTriangle, TrendingUp, User, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
-import { Badge } from '@/presentation/ui/badge';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/presentation/ui/dropdown-menu';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/presentation/ui/collapsible';
+import { AlertTriangle, RefreshCw, MoreHorizontal, Share2, SlidersHorizontal, Rocket, Landmark, ChevronDown } from 'lucide-react';
+import { CycleRail } from '@/presentation/brand/CycleRail';
+import { StatusChip, type ChipTone } from '@/presentation/shared/StatusChip';
 import { GroupHealthScore } from '@/presentation/components/dashboard/GroupHealthScore';
-import { EditTotalContributionsDialog } from '@/presentation/components/groups/EditTotalContributionsDialog';
-import { ThisMonthStatus } from '@/presentation/components/dashboard/ThisMonthStatus';
-import { NextTurnCard } from '@/presentation/components/dashboard/NextTurnCard';
 import { LeaderboardCard } from '@/presentation/components/dashboard/LeaderboardCard';
-import { SharePayoutImage } from '@/presentation/components/reports/SharePayoutImage';
-import { GrowthAuditButton, BankAccountAdvisorButton } from '@/presentation/components/ai/AiActions';
-import { Share2 } from 'lucide-react';
 import { AnnualProgressCard } from '@/presentation/components/dashboard/AnnualProgressCard';
-import { api } from '@/infrastructure/api';
-import { formatCurrency, formatDate } from '@/lib/export';
+import { EditTotalContributionsDialog } from '@/presentation/components/groups/EditTotalContributionsDialog';
+import { SharePayoutImage } from '@/presentation/components/reports/SharePayoutImage';
+import { AiDrawer } from '@/presentation/components/ai/AiDrawer';
+import { useDashboard } from '@/application/hooks/useDashboard';
+import { useContributions } from '@/application/hooks/queries';
+import { displayName, type RoundSummary } from '@/domain/round';
+import { money } from '@/lib/money';
+import { formatDate } from '@/lib/export';
 
 interface DashboardProps {
   groupId: string;
+  groupName?: string;
   groupType?: string;
+  groupCreatedAt?: string;
+  /** Per-member contribution expected each period, if the group set one. */
+  contributionTarget?: number | null;
   annualTarget?: number | null;
   isAdmin?: boolean;
   userEmail?: string;
+  /** Jump to another tab, e.g. 'contributions'. */
+  onNavigate?: (tab: string) => void;
 }
 
-export function Dashboard({ groupId, groupType, annualTarget, isAdmin = false, userEmail }: DashboardProps) {
-  const [stats, setStats] = useState<DashboardStats>({
-    totalContributions: 0,
-    calculatedContributions: 0,
-    contributionAdjustment: 0,
-    totalPayouts: 0,
-    netBalance: 0,
-    nextPayout: null as Payout | null,
-    completedPayoutsCount: 0,
-    scheduledPayoutsCount: 0
-  });
-  const [contributions, setContributions] = useState<Contribution[]>([]);
-  const [payouts, setPayouts] = useState<Payout[]>([]);
-  const [meetings, setMeetings] = useState<Meeting[]>([]);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [overdueMembers, setOverdueMembers] = useState<OverdueMember[]>([]);
-  const [contributionTarget, setContributionTarget] = useState<number>(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const LEDGER_PREVIEW = 6;
 
-  useEffect(() => {
-    if (groupId) loadStats();
-  }, [groupId]);
+const STATUS_CHIP: Record<RoundSummary['status'], (r: RoundSummary) => { tone: ChipTone; label: string }> = {
+  empty:    () => ({ tone: 'due', label: 'No members yet' }),
+  all_paid: () => ({ tone: 'paid', label: 'All paid' }),
+  late:     (r) => ({ tone: 'late', label: `${r.lateCount} late` }),
+  due:      (r) => ({ tone: 'due', label: `${r.outstanding} to pay` }),
+};
 
-  const loadStats = async () => {
-    if (!groupId) return;
+export function Dashboard({
+  groupId, groupName, groupType, groupCreatedAt, contributionTarget, annualTarget,
+  isAdmin = false, userEmail, onNavigate,
+}: DashboardProps) {
+  const d = useDashboard({ groupId, groupType, groupCreatedAt, contributionTarget, isAdmin, userEmail });
+  const contributions = useContributions(groupId).data?.contributions ?? [];
+  const [showAll, setShowAll] = useState(false);
+  const [dialog, setDialog] = useState<null | 'share' | 'adjust' | 'growth' | 'bank'>(null);
 
-    try {
-      setLoading(true);
-      setError(null);
-      const [contributionsData, payoutsData, adjustmentData, meetingsData, membersData, overdueData] = await Promise.all([
-        api.getContributions(groupId),
-        api.getPayouts(groupId),
-        api.getContributionAdjustment(groupId).catch(() => ({ adjustment: 0 })),
-        api.getMeetings(groupId).catch(() => ({ meetings: [] })),
-        api.getMembers(groupId).catch(() => ({ members: [] })),
-        isAdmin ? api.getOverdueMembers(groupId).catch(() => ({ members: [], target: 0 })) : Promise.resolve({ members: [], target: 0 }),
-      ]);
+  if (d.loading) return <DashboardSkeleton />;
 
-      const allContributions = contributionsData.contributions || [];
-      const allPayouts = payoutsData.payouts || [];
-      const allMeetings = meetingsData.meetings || [];
-      const allMembers = membersData.members || [];
-
-      setContributions(allContributions);
-      setPayouts(allPayouts);
-      setMeetings(allMeetings);
-      setMembers(allMembers);
-      setOverdueMembers(overdueData.members || []);
-      setContributionTarget(overdueData.target || 0);
-
-      const calculatedContributions = allContributions
-        .filter((c: Contribution) => c.paid)
-        .reduce((sum: number, c: Contribution) => sum + c.amount, 0);
-
-      const contributionAdjustment = adjustmentData.adjustment || 0;
-      const totalContributions = calculatedContributions + contributionAdjustment;
-
-      const totalPayouts = allPayouts
-        .filter((p: Payout) => p.status === 'completed')
-        .reduce((sum: number, p: Payout) => sum + p.amount, 0);
-
-      const netBalance = totalContributions - totalPayouts;
-
-      const completedPayoutsCount = allPayouts.filter((p: Payout) => p.status === 'completed').length;
-      const scheduledPayoutsCount = allPayouts.filter((p: Payout) => p.status === 'scheduled').length;
-
-      const scheduledPayouts = allPayouts
-        .filter((p: Payout) => p.status === 'scheduled')
-        .sort((a: Payout, b: Payout) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime());
-
-      setStats({
-        totalContributions,
-        calculatedContributions,
-        contributionAdjustment,
-        totalPayouts,
-        netBalance,
-        nextPayout: scheduledPayouts[0] || null,
-        completedPayoutsCount,
-        scheduledPayoutsCount
-      });
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to load dashboard data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Derive actionable insights from loaded data
-  const insights = useMemo(() => {
-    const now = new Date();
-    const thisMonth = now.getMonth();
-    const thisYear = now.getFullYear();
-
-    // Members who haven't contributed this month
-    const activeMembers = members.filter(m => m.status === 'approved');
-    const contributedThisMonth = new Set(
-      contributions
-        .filter(c => {
-          const d = new Date(c.date);
-          return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
-        })
-        .map(c => c.userEmail)
-    );
-    const notPaidThisMonth = activeMembers.filter(m => !contributedThisMonth.has(m.email));
-
-    // Next upcoming meeting
-    const upcomingMeetings = meetings
-      .filter(m => new Date(`${m.date}T${m.time || '00:00'}`) >= now)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    const nextMeeting = upcomingMeetings[0] || null;
-
-    // Days until next meeting
-    const daysUntilMeeting = nextMeeting
-      ? Math.ceil((new Date(nextMeeting.date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-      : null;
-
-    // Personal summary for current user
-    const myContributions = contributions.filter(c => c.userEmail === userEmail);
-    const myPaid = myContributions.filter(c => c.paid).reduce((s, c) => s + c.amount, 0);
-    const myUnpaid = myContributions.filter(c => !c.paid).reduce((s, c) => s + c.amount, 0);
-    const myPayoutsReceived = payouts
-      .filter(p => p.recipientEmail === userEmail && p.status === 'completed')
-      .reduce((s, p) => s + p.amount, 0);
-    const myPaidThisMonth = myContributions.some(c => {
-      const d = new Date(c.date);
-      return d.getMonth() === thisMonth && d.getFullYear() === thisYear && c.paid;
-    });
-
-    return { notPaidThisMonth, nextMeeting, daysUntilMeeting, myPaid, myUnpaid, myPayoutsReceived, myPaidThisMonth };
-  }, [contributions, members, meetings, payouts, userEmail]);
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3, 4, 5, 6].map(i => (
-            <Card key={i}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div className="h-4 w-24 bg-muted animate-pulse rounded"></div>
-              </CardHeader>
-              <CardContent>
-                <div className="h-8 w-32 bg-muted animate-pulse rounded"></div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
+  if (d.error) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
         <AlertTriangle className="h-10 w-10 text-destructive" />
         <div>
-          <p className="font-medium">Failed to load dashboard</p>
-          <p className="text-sm text-muted-foreground mt-1">{error}</p>
+          <p className="font-medium">Couldn’t load your group</p>
+          <p className="text-sm text-muted-foreground mt-1">{d.error}</p>
         </div>
-        <Button variant="outline" onClick={loadStats}>
+        <Button variant="outline" onClick={d.refresh}>
           <RefreshCw className="h-4 w-4 mr-2" />
           Try again
         </Button>
@@ -191,271 +69,271 @@ export function Dashboard({ groupId, groupType, annualTarget, isAdmin = false, u
     );
   }
 
+  const r = d.round;
+  const hasRound = d.rotating && d.position.total > 0;
+  const status = STATUS_CHIP[r.status](r);
+  const total = Math.max(r.rows.length, 1);
+  const paidPct = (r.paidCount / total) * 100;
+  const latePct = (r.lateCount / total) * 100;
+  const visibleRows = showAll ? r.rows : r.rows.slice(0, LEDGER_PREVIEW);
+
+  const primary = isAdmin
+    ? { label: 'Record a payment', tab: 'contributions' }
+    : d.me.isMember && !d.me.paidThisPeriod
+      ? { label: 'Pay my contribution', tab: 'contributions' }
+      : null;
+
   return (
-    <div className="space-y-4">
-      {/* HERO: Group Balance — the most important number on the screen */}
-      <Card className="border-0 bg-gradient-to-br from-primary/10 to-primary/[0.03] shadow-none">
-        <CardContent className="p-6">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-2">
-                <Wallet className="h-4 w-4 text-primary" />
-                <span className="text-[11px] uppercase tracking-[0.1em] text-muted-foreground font-semibold">Group balance</span>
-              </div>
-              <div className="text-4xl md:text-5xl font-bold text-primary tracking-tight leading-none">
-                {formatCurrency(stats.netBalance)}
-              </div>
-              <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1.5">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />
-                  In: {formatCurrency(stats.totalContributions)}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-orange-500" />
-                  Out: {formatCurrency(stats.totalPayouts)}
-                </span>
-              </div>
-            </div>
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:items-start">
+      <div className="space-y-4 min-w-0">
+      {/* ─── Hero: the round, before any number ─── */}
+      <section className="card space-y-4" aria-label="This round">
+        <div className="flex items-center justify-between gap-3">
+          <span className="t-label">
+            {hasRound ? `Round ${d.position.round} of ${d.position.total} · ${d.periodLabel}` : `${d.periodLabel} · ${groupName ?? 'Your group'}`}
+          </span>
+          <div className="flex items-center gap-1">
+            <StatusChip tone={status.tone} label={status.label} />
             {isAdmin && (
-              <div className="flex flex-col gap-1 shrink-0">
-                <ShareCycleButton
-                  groupId={groupId}
-                  groupName={members[0] ? 'this group' : 'this group'}
-                  totalContributed={stats.totalContributions}
-                  totalPaidOut={stats.totalPayouts}
-                  memberCount={members.length}
-                />
-              </div>
-            )}
-            {isAdmin && (
-              <EditTotalContributionsDialog
-                groupId={groupId}
-                currentTotal={stats.totalContributions}
-                calculatedTotal={stats.calculatedContributions}
-                currentAdjustment={stats.contributionAdjustment}
-                onSuccess={loadStats}
-              />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Group tools">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => setDialog('share')}><Share2 className="h-4 w-4 mr-2" />Share summary image</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setDialog('adjust')}><SlidersHorizontal className="h-4 w-4 mr-2" />Adjust total contributions</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setDialog('growth')}><Rocket className="h-4 w-4 mr-2" />Growth audit with Pilo</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setDialog('bank')}><Landmark className="h-4 w-4 mr-2" />Bank account advisor</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* AI advisors — admin-only quick access */}
-      {isAdmin && (
-        <div className="flex flex-wrap gap-2">
-          <GrowthAuditButton groupId={groupId} />
-          <BankAccountAdvisorButton groupId={groupId} groupType={groupType} />
         </div>
-      )}
 
-      {/* Whose turn? (only for rotating-style groups) */}
-      <NextTurnCard groupId={groupId} groupType={groupType} />
+        {hasRound && <CycleRail members={d.position.total} round={d.position.round} />}
 
-      {/* Annual goal progress */}
+        <div>
+          <span className="t-label">{hasRound ? 'Collected this round' : 'Group funds'}</span>
+          <div className="mt-1 flex items-baseline gap-2 flex-wrap">
+            <span className="t-figure text-[length:var(--t-display-size)] leading-none">
+              {money(hasRound ? r.collected : d.totals.balance)}
+            </span>
+            {hasRound && r.expected > 0 && (
+              <span className="t-figure text-sm text-muted-foreground">/ {money(r.expected)}</span>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground mt-2">
+            {!hasRound && <>Collected in {d.periodLabel}: {money(r.collected)} · </>}
+            {r.paidCount} of {r.rows.length} paid
+          </p>
+        </div>
+
+        {r.rows.length > 0 && (
+          <div className="meter" aria-hidden="true">
+            <i className="meter__fill" style={{ width: `${paidPct}%` }} />
+            {latePct > 0 && <i className="meter__fill meter__fill--late" style={{ width: `${latePct}%` }} />}
+          </div>
+        )}
+
+        {primary ? (
+          <Button className="w-full h-11" onClick={() => onNavigate?.(primary.tab)}>{primary.label}</Button>
+        ) : d.me.paidThisPeriod ? (
+          <p className="text-sm text-muted-foreground">You’re paid up for {d.periodLabel}. Thank you.</p>
+        ) : null}
+      </section>
+
+      {/* ─── Annual goal (grocery, goal groups) ─── */}
       {annualTarget && annualTarget > 0 && (
-        <AnnualProgressCard
-          annualTarget={annualTarget}
-          contributions={contributions}
-          userEmail={userEmail}
-        />
+        <AnnualProgressCard annualTarget={annualTarget} contributions={contributions} userEmail={userEmail} />
       )}
 
-      {/* This Month Status — replaces chart */}
-      {members.length > 0 && (
-        <ThisMonthStatus
-          members={members}
-          contributions={contributions}
-          contributionTarget={contributionTarget}
-        />
-      )}
-
-      {/* Insights row: Next Meeting + Next Payout (when relevant) */}
-      {(insights.nextMeeting || stats.nextPayout) && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {insights.nextMeeting && (
-            <Card>
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                  <Calendar className="h-4 w-4 text-primary" />
+      {/* ─── Who has paid ─── */}
+      {r.rows.length > 0 && (
+        <section className="card" aria-label="Who has paid">
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="t-heading">{hasRound ? 'This round' : d.periodLabel}</h2>
+            <span className="t-label">{r.paidCount}/{r.rows.length} paid</span>
+          </div>
+          <div className="ledger">
+            {visibleRows.map((row) => (
+              <div key={row.email} className="ledger-row">
+                <div className="min-w-0">
+                  <div className="ledger-row__who truncate">{row.name}</div>
+                  <div className={`ledger-row__meta${row.state === 'late' ? ' ledger-row__meta--late' : ''}`}>
+                    {row.state === 'paid' && row.paidOn ? `Paid ${formatDate(row.paidOn)}`
+                      : row.state === 'late' ? 'Late'
+                      : row.paid > 0 ? `Part paid · ${money(row.paid)}`
+                      : 'Not yet'}
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-muted-foreground">Next Meeting</p>
-                  <p className="text-sm font-medium">
-                    {insights.daysUntilMeeting === 0
-                      ? 'Today'
-                      : insights.daysUntilMeeting === 1
-                      ? 'Tomorrow'
-                      : `${insights.daysUntilMeeting} days away`}
-                    <span className="text-muted-foreground font-normal"> · {insights.nextMeeting.venue}</span>
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+                <div className="ledger-row__leader" />
+                {row.state === 'paid'
+                  ? <span className="ledger-row__value">{money(row.paid)}</span>
+                  : <StatusChip tone={row.state} label={row.state === 'late' ? 'Late' : 'Due'} />}
+              </div>
+            ))}
+          </div>
+          {r.rows.length > LEDGER_PREVIEW && (
+            <Button variant="ghost" size="sm" className="w-full mt-2 h-8 text-xs" onClick={() => setShowAll((s) => !s)}>
+              {showAll ? 'Show less' : `Show all ${r.rows.length}`}
+            </Button>
           )}
-          {stats.nextPayout && (
-            <Card>
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                  <TrendingUp className="h-4 w-4 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-muted-foreground">Next Payout</p>
-                  <p className="text-sm font-medium truncate">
-                    {formatCurrency(stats.nextPayout.amount)}
-                    <span className="text-muted-foreground font-normal"> → {stats.nextPayout.recipient?.fullName !== 'Unknown' && stats.nextPayout.recipient
-                      ? `${stats.nextPayout.recipient.fullName} ${stats.nextPayout.recipient.surname}`
-                      : stats.nextPayout.recipientEmail}
-                    {stats.scheduledPayoutsCount > 1 && ` (+${stats.scheduledPayoutsCount - 1})`}
-                    </span>
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+        </section>
       )}
 
-      {/* Personal Summary — compact */}
-      {userEmail && (
-        <Card>
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">My Summary</span>
-              </div>
-              {insights.myPaidThisMonth ? (
-                <Badge className="bg-green-600 text-white text-[10px] h-5">Paid this month</Badge>
-              ) : (
-                <Badge variant="outline" className="text-[10px] h-5 text-orange-600 border-orange-400">Not paid yet</Badge>
-              )}
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <div>
-                <div className="text-base font-semibold text-green-600 dark:text-green-400">{formatCurrency(insights.myPaid)}</div>
-                <p className="text-[10px] text-muted-foreground">Paid in</p>
-              </div>
-              <div>
-                <div className={`text-base font-semibold ${insights.myUnpaid > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-muted-foreground'}`}>
-                  {formatCurrency(insights.myUnpaid)}
+      </div>
+
+      <div className="space-y-4 min-w-0">
+      {/* ─── Coming up ─── */}
+      {(d.position.current || d.nextPayout || d.nextMeeting) && (
+        <section className="card" aria-label="Coming up">
+          <h2 className="t-heading mb-1">Coming up</h2>
+          <div className="ledger">
+            {hasRound && d.position.current && (
+              <div className="ledger-row">
+                <div className="min-w-0">
+                  <div className="ledger-row__who truncate">{displayName(d.position.current.fullName, d.position.current.surname, d.position.current.email)}</div>
+                  <div className="ledger-row__meta">Their turn · cycle {d.position.cycle}</div>
                 </div>
-                <p className="text-[10px] text-muted-foreground">Outstanding</p>
+                <div className="ledger-row__leader" />
+                {d.position.next && d.position.next.email !== d.position.current.email
+                  ? <span className="ledger-row__meta">then {displayName(d.position.next.fullName, d.position.next.surname, d.position.next.email)}</span>
+                  : <StatusChip tone="payout" label="Payout" />}
               </div>
-              <div>
-                <div className={`text-base font-semibold ${insights.myPayoutsReceived > 0 ? 'text-primary' : 'text-muted-foreground'}`}>
-                  {formatCurrency(insights.myPayoutsReceived)}
+            )}
+            {d.nextPayout && (
+              <div className="ledger-row">
+                <div className="min-w-0">
+                  <div className="ledger-row__who truncate">
+                    Payout to {d.nextPayout.recipient && d.nextPayout.recipient.fullName !== 'Unknown'
+                      ? displayName(d.nextPayout.recipient.fullName, d.nextPayout.recipient.surname)
+                      : d.nextPayout.recipientEmail}
+                  </div>
+                  <div className="ledger-row__meta">{formatDate(d.nextPayout.scheduledDate)}</div>
                 </div>
-                <p className="text-[10px] text-muted-foreground">Received</p>
+                <div className="ledger-row__leader" />
+                <span className="ledger-row__value ledger-row__value--out">{money(-d.nextPayout.amount)}</span>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            )}
+            {d.nextMeeting && (
+              <div className="ledger-row">
+                <div className="min-w-0">
+                  <div className="ledger-row__who truncate">Meeting{d.nextMeeting.venue ? ` · ${d.nextMeeting.venue}` : ''}</div>
+                  <div className="ledger-row__meta">{formatDate(d.nextMeeting.date)}{d.nextMeeting.time ? `, ${d.nextMeeting.time}` : ''}</div>
+                </div>
+                <div className="ledger-row__leader" />
+                <button type="button" className="ledger-row__meta underline underline-offset-2" onClick={() => onNavigate?.('meetings')}>
+                  Details
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
       )}
 
-      {/* Overdue Members — expandable to show full list with names */}
-      {isAdmin && contributionTarget > 0 && overdueMembers.length > 0 && (
-        <OverdueMembersCard
-          overdueMembers={overdueMembers}
-          contributionTarget={contributionTarget}
-        />
+      {/* ─── Me ─── */}
+      {d.me.isMember && (
+        <section className="card card--quiet" aria-label="My summary">
+          <span className="t-label">My summary</span>
+          <div className="grid grid-cols-3 gap-3 mt-2">
+            <Figure label="Paid in" value={money(d.me.paidIn)} />
+            <Figure label="Owing" value={money(d.me.owing)} late={d.me.owing > 0} />
+            <Figure label="Received" value={money(d.me.received)} />
+          </div>
+        </section>
       )}
 
-      {/* Top Contributors leaderboard */}
-      <LeaderboardCard groupId={groupId} />
+      {/* ─── Insights, out of the way until asked for ─── */}
+      <Collapsible>
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" className="w-full justify-between h-10 text-sm text-muted-foreground group">
+            Group insights
+            <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-4 pt-2">
+          <GroupHealthScore groupId={groupId} />
+          <LeaderboardCard groupId={groupId} />
+        </CollapsibleContent>
+      </Collapsible>
 
-      {/* Group Health Score */}
-      <GroupHealthScore groupId={groupId} />
+      </div>
+
+      {/* ─── Admin tool surfaces (opened from the ⋯ menu) ─── */}
+      {isAdmin && (
+        <>
+          <SharePayoutImage
+            open={dialog === 'share'}
+            onOpenChange={(o) => !o && setDialog(null)}
+            data={{
+              groupName: groupName ?? 'Our group',
+              period: String(new Date().getFullYear()),
+              totalContributedZar: d.totals.totalIn,
+              totalPaidOutZar: d.totals.totalOut,
+              memberCount: d.memberCount,
+              headline: 'A strong year, together.',
+            }}
+          />
+          <EditTotalContributionsDialog
+            groupId={groupId}
+            currentTotal={d.totals.totalIn}
+            calculatedTotal={d.totals.totalIn - d.adjustment}
+            currentAdjustment={d.adjustment}
+            onSuccess={d.refresh}
+            open={dialog === 'adjust'}
+            onOpenChange={(o) => !o && setDialog(null)}
+          />
+          <AiDrawer
+            open={dialog === 'growth'}
+            onOpenChange={(o) => !o && setDialog(null)}
+            title="Growth audit"
+            description="Pilo runs a diagnostic, applies the SA stokvel growth playbook, and recommends 3 high-leverage moves."
+            task="growth_advisor"
+            groupId={groupId}
+            autoSubmit
+          />
+          <AiDrawer
+            open={dialog === 'bank'}
+            onOpenChange={(o) => !o && setDialog(null)}
+            title="Bank account advisor"
+            description="Compare SA bank accounts for your group. Pilo uses a curated knowledge base + live web search for current rates."
+            task="ask_group"
+            groupId={groupId}
+            contextStatic={{ groupType }}
+            fields={[
+              { key: 'question', label: 'What do you want to know?', type: 'textarea', required: true,
+                initial: 'Compare bank accounts suitable for my group. Show me their structural facts (fees, signatories, fit) and search the web for current interest rates. Recommend the best 2 options for our group size and type.' },
+            ]}
+          />
+        </>
+      )}
     </div>
   );
 }
 
-function ShareCycleButton({
-  groupId: _groupId, groupName, totalContributed, totalPaidOut, memberCount,
-}: {
-  groupId: string;
-  groupName: string;
-  totalContributed: number;
-  totalPaidOut: number;
-  memberCount: number;
-}) {
-  const [open, setOpen] = useState(false);
-  const period = String(new Date().getFullYear());
+function Figure({ label, value, late = false }: { label: string; value: string; late?: boolean }) {
   return (
-    <>
-      <Button size="sm" variant="outline" className="gap-1.5 h-7 text-[11px]" onClick={() => setOpen(true)}>
-        <Share2 className="h-3 w-3" />
-        Share summary
-      </Button>
-      <SharePayoutImage
-        open={open}
-        onOpenChange={setOpen}
-        data={{
-          groupName,
-          period,
-          totalContributedZar: totalContributed,
-          totalPaidOutZar: totalPaidOut,
-          memberCount,
-          headline: 'A strong year, together.',
-        }}
-      />
-    </>
+    <div className="min-w-0">
+      <div className={`t-figure text-base truncate ${late ? 'text-warning' : ''}`}>{value}</div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+    </div>
   );
 }
 
-// Expandable overdue members card
-function OverdueMembersCard({
-  overdueMembers,
-  contributionTarget,
-}: {
-  overdueMembers: OverdueMember[];
-  contributionTarget: number;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const visible = expanded ? overdueMembers : overdueMembers.slice(0, 3);
-
+function DashboardSkeleton() {
   return (
-    <Card className="border-orange-300 dark:border-orange-800">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-orange-500" />
-            {overdueMembers.length} Overdue Member{overdueMembers.length !== 1 ? 's' : ''}
-          </CardTitle>
-          <Badge variant="outline" className="text-[10px] text-orange-600 border-orange-400">
-            Target: {formatCurrency(contributionTarget)}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="space-y-1">
-          {visible.map((m) => (
-            <div key={m.email} className="flex items-center justify-between text-sm py-1">
-              <span className="truncate max-w-[60%]">
-                {m.fullName !== 'Unknown' ? `${m.fullName} ${m.surname}` : m.email}
-              </span>
-              <div className="flex items-center gap-1.5">
-                <span className="text-green-600 dark:text-green-400 text-xs">{formatCurrency(m.totalPaid)}</span>
-                <span className="text-muted-foreground text-[10px]">/ {formatCurrency(contributionTarget)}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-        {overdueMembers.length > 3 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setExpanded((e) => !e)}
-            className="w-full mt-2 h-7 text-xs"
-          >
-            {expanded ? (
-              <><ChevronUp className="h-3 w-3 mr-1" />Show less</>
-            ) : (
-              <><ChevronDown className="h-3 w-3 mr-1" />Show all {overdueMembers.length}</>
-            )}
-          </Button>
-        )}
-      </CardContent>
-    </Card>
+    <div className="space-y-4" aria-busy="true" aria-label="Loading">
+      <div className="card space-y-4">
+        <div className="h-3 w-40 bg-muted animate-pulse rounded" />
+        <div className="h-3 w-full bg-muted animate-pulse rounded" />
+        <div className="h-10 w-48 bg-muted animate-pulse rounded" />
+        <div className="h-11 w-full bg-muted animate-pulse rounded" />
+      </div>
+      <div className="card space-y-3">
+        {[0, 1, 2, 3].map((i) => <div key={i} className="h-8 w-full bg-muted animate-pulse rounded" />)}
+      </div>
+    </div>
   );
 }
-

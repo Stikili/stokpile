@@ -109,8 +109,8 @@ export const CHANGELOG: ChangelogEntry[] = [
 
 const TYPE_COLORS: Record<ChangelogEntry['type'], string> = {
   major: 'bg-primary text-primary-foreground',
-  feature: 'bg-blue-500/15 text-blue-700 dark:text-blue-400',
-  fix: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
+  feature: 'bg-muted text-primary dark:text-primary',
+  fix: 'bg-warning/10 text-warning dark:text-warning',
 };
 
 export function ChangelogDialog({ open, onOpenChange }: ChangelogDialogProps) {

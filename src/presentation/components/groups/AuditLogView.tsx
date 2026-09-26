@@ -12,12 +12,12 @@ interface AuditLogViewProps {
 }
 
 const ACTION_LABELS: Record<string, { label: string; color: string }> = {
-  contribution_created: { label: 'Contribution added', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
-  bulk_mark_contributions: { label: 'Bulk mark', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' },
-  payout_scheduled: { label: 'Payout scheduled', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' },
-  payout_completed: { label: 'Payout completed', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
-  payout_cancelled: { label: 'Payout cancelled', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
-  member_approved: { label: 'Member approved', color: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400' },
+  contribution_created: { label: 'Contribution added', color: 'bg-accent text-primary dark:bg-accent dark:text-primary' },
+  bulk_mark_contributions: { label: 'Bulk mark', color: 'bg-muted text-primary dark:bg-muted dark:text-primary' },
+  payout_scheduled: { label: 'Payout scheduled', color: 'bg-muted text-primary dark:bg-muted dark:text-primary' },
+  payout_completed: { label: 'Payout completed', color: 'bg-accent text-primary dark:bg-accent dark:text-primary' },
+  payout_cancelled: { label: 'Payout cancelled', color: 'bg-destructive/10 text-destructive dark:bg-destructive/10 dark:text-destructive' },
+  member_approved: { label: 'Member approved', color: 'bg-accent text-primary dark:bg-accent dark:text-primary' },
 };
 
 function formatAction(entry: AuditEntry): string {

@@ -48,7 +48,7 @@ export function AnnualProgressCard({ annualTarget, contributions, userEmail }: A
               {new Date().getFullYear()} Target
             </span>
           </div>
-          <span className={`text-xs font-medium ${onTrack ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}>
+          <span className={`text-xs font-medium ${onTrack ? 'text-primary dark:text-primary' : 'text-warning dark:text-warning'}`}>
             {onTrack ? 'On track' : 'Behind'}
           </span>
         </div>
@@ -60,7 +60,7 @@ export function AnnualProgressCard({ annualTarget, contributions, userEmail }: A
 
         <div className="h-2 bg-muted rounded-full overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all ${onTrack ? 'bg-green-500' : 'bg-amber-500'}`}
+            className={`h-full rounded-full transition-all ${onTrack ? 'bg-primary' : 'bg-warning'}`}
             style={{ width: `${percent}%` }}
           />
         </div>

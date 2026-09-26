@@ -24,22 +24,7 @@ export function initAnalytics() {
     script.setAttribute('data-domain', plausibleDomain);
     document.head.appendChild(script);
   }
-
-  const sentryDsn = (import.meta as any).env?.VITE_SENTRY_DSN;
-  if (sentryDsn) {
-    // Lazy-import so the bundle stays small for users who don't need Sentry
-    import('@sentry/browser')
-      .then((Sentry) => {
-        Sentry.init({
-          dsn: sentryDsn,
-          tracesSampleRate: 0.1,
-          environment: (import.meta as any).env?.MODE || 'production',
-        });
-      })
-      .catch(() => {
-        // Sentry not installed — silently skip
-      });
-  }
+  // Sentry is initialised once in main.tsx.
 }
 
 // Track a custom event (Plausible). No-op if Plausible isn't loaded.

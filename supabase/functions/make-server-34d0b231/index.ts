@@ -6,6 +6,9 @@ import { Ratelimit } from "npm:@upstash/ratelimit@2.0.5";
 import { Redis } from "npm:@upstash/redis@1.34.3";
 import { registerExtraRoutes } from "./extra_routes.ts";
 import { registerMoreRoutes } from "./more_routes.ts";
+import { registerPayoutRoutes } from "./payout_routes.ts";
+import { registerVoteRoutes } from "./vote_routes.ts";
+import { registerLoanRoutes } from "./loan_routes.ts";
 import { registerAiRoutes } from "./ai_routes.ts";
 import { registerWhatsappRoutes } from "./whatsapp_routes.ts";
 
@@ -122,6 +125,8 @@ function toGroup(row: any, userRole?: string) {
     currency: row.currency ?? 'ZAR',
     contributionTarget: row.contribution_target ?? null,
     contributionTargetAnnual: row.contribution_target_annual ?? null,
+    quorumPercent: row.quorum_percent ?? 50,
+    loanRatePercent: row.loan_rate_percent != null ? Number(row.loan_rate_percent) : null,
     archived: row.archived ?? false,
     isDemo: row.is_demo ?? false,
     memberCount: row.member_count ?? undefined,
@@ -166,6 +171,8 @@ function toContribution(row: any) {
     amount: Number(row.amount),
     date: row.date,
     paid: row.paid,
+    paymentMethod: row.payment_method ?? null,
+    receiptNo: row.receipt_no ?? null,
     createdBy: row.created_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at ?? null,
@@ -220,29 +227,6 @@ function toNote(row: any) {
     meetingId: row.meeting_id ?? null,
     title: row.title,
     content: row.content ?? null,
-    createdBy: row.created_by,
-    createdAt: row.created_at,
-  };
-}
-
-function toVote(row: any) {
-  if (!row) return null;
-  const yesVotes: string[] = [];
-  const noVotes: string[] = [];
-  if (Array.isArray(row.vote_responses)) {
-    for (const r of row.vote_responses) {
-      if (r.response === 'yes') yesVotes.push(r.user_email);
-      else noVotes.push(r.user_email);
-    }
-  }
-  return {
-    id: row.id,
-    groupId: row.group_id,
-    meetingId: row.meeting_id ?? null,
-    question: row.question,
-    active: row.active,
-    yesVotes,
-    noVotes,
     createdBy: row.created_by,
     createdAt: row.created_at,
   };
@@ -767,7 +751,7 @@ app.put('/make-server-34d0b231/groups/:id', async (c) => {
     if (!membership || membership.role !== 'admin')
       return c.json({ error: 'Not authorized – admin only' }, 403);
 
-    const { isPublic, payoutsAllowed, name, description, currency, contributionTarget } = await c.req.json();
+    const { isPublic, payoutsAllowed, name, description, currency, contributionTarget, quorumPercent, loanRatePercent } = await c.req.json();
     const updates: Record<string, any> = {
       updated_at: new Date().toISOString(),
       updated_by: user.email,
@@ -784,6 +768,19 @@ app.put('/make-server-34d0b231/groups/:id', async (c) => {
       updates.description = description.trim();
     if (currency) updates.currency = currency;
     if (contributionTarget !== undefined) updates.contribution_target = contributionTarget;
+    if (quorumPercent !== undefined) {
+      const q = Math.round(Number(quorumPercent));
+      if (!Number.isFinite(q) || q < 1 || q > 100) return c.json({ error: 'Quorum must be between 1% and 100%' }, 400);
+      updates.quorum_percent = q;
+    }
+    if (loanRatePercent !== undefined) {
+      if (loanRatePercent === null) updates.loan_rate_percent = null;
+      else {
+        const r = Number(loanRatePercent);
+        if (!Number.isFinite(r) || r < 0 || r > 100) return c.json({ error: 'Loan rate must be between 0% and 100%' }, 400);
+        updates.loan_rate_percent = Math.round(r * 100) / 100;
+      }
+    }
 
     const { data: group, error } = await supabaseAdmin
       .from('groups').update(updates).eq('id', groupId).select().single();
@@ -1713,105 +1710,7 @@ app.put('/make-server-34d0b231/groups/:groupId/contribution-adjustment', async (
 // PAYOUTS
 // ============================================================
 
-app.post('/make-server-34d0b231/payouts', async (c) => {
-  try {
-    const user = await getAuthUser(c);
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
-
-    const { groupId, recipientEmail, amount, scheduledDate } = await c.req.json();
-    const myMembership = await getMembership(groupId, user.email!);
-    if (!myMembership || myMembership.role !== 'admin')
-      return c.json({ error: 'Not authorized – admin only' }, 403);
-
-    const { data: group } = await supabaseAdmin
-      .from('groups').select('payouts_allowed').eq('id', groupId).single();
-    if (!group.payouts_allowed) return c.json({ error: 'Payouts not allowed for this group' }, 400);
-
-    const recipientM = await getMembership(groupId, recipientEmail);
-    if (!recipientM || recipientM.status !== 'approved')
-      return c.json({ error: 'Recipient must be an approved group member' }, 400);
-
-    const { data: payout, error } = await supabaseAdmin
-      .from('payouts')
-      .insert({
-        group_id: groupId,
-        recipient_email: recipientEmail,
-        amount: parseFloat(amount),
-        scheduled_date: scheduledDate
-          ? new Date(scheduledDate).toISOString().split('T')[0]
-          : new Date().toISOString().split('T')[0],
-        status: 'scheduled',
-        created_by: user.email,
-      })
-      .select()
-      .single();
-    if (error) return c.json({ error: error.message }, 500);
-
-    return c.json({ success: true, payout: toPayout(payout) });
-  } catch (err: any) {
-    return c.json({ error: err.message }, 500);
-  }
-});
-
-app.get('/make-server-34d0b231/payouts', async (c) => {
-  try {
-    const user = await getAuthUser(c);
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
-
-    const groupId = c.req.query('groupId');
-    const myMembership = await getMembership(groupId!, user.email!);
-    if (!myMembership || myMembership.status !== 'approved')
-      return c.json({ error: 'Not a member of this group' }, 403);
-
-    const { data } = await supabaseAdmin
-      .from('payouts')
-      .select('*, profiles!payouts_recipient_email_fkey(full_name, surname, profile_picture_url)')
-      .eq('group_id', groupId!)
-      .order('scheduled_date', { ascending: false });
-
-    const payouts = (data ?? []).map((row: any) => ({
-      ...toPayout(row),
-      recipient: {
-        email: row.recipient_email,
-        fullName: row.profiles?.full_name ?? 'Unknown',
-        surname: row.profiles?.surname ?? 'User',
-        profilePictureUrl: row.profiles?.profile_picture_url ?? null,
-      },
-    }));
-
-    return c.json({ payouts });
-  } catch (err: any) {
-    return c.json({ error: err.message }, 500);
-  }
-});
-
-app.put('/make-server-34d0b231/payouts/:id', async (c) => {
-  try {
-    const user = await getAuthUser(c);
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
-
-    const payoutId = c.req.param('id');
-    const { status } = await c.req.json();
-
-    const { data: existing } = await supabaseAdmin
-      .from('payouts').select('*').eq('id', payoutId).maybeSingle();
-    if (!existing) return c.json({ error: 'Payout not found' }, 404);
-
-    const myMembership = await getMembership(existing.group_id, user.email!);
-    if (!myMembership || myMembership.role !== 'admin')
-      return c.json({ error: 'Not authorized' }, 403);
-
-    const updates: Record<string, any> = { status, updated_at: new Date().toISOString() };
-    if (status === 'completed') updates.completed_at = new Date().toISOString();
-
-    const { data: payout } = await supabaseAdmin
-      .from('payouts').update(updates).eq('id', payoutId).select().single();
-
-    return c.json({ success: true, payout: toPayout(payout) });
-  } catch (err: any) {
-    return c.json({ error: err.message }, 500);
-  }
-});
+// Payout routes live in payout_routes.ts (two-signatory release).
 
 // ============================================================
 // MEETINGS
@@ -2040,89 +1939,7 @@ app.get('/make-server-34d0b231/notes', async (c) => {
 // VOTES
 // ============================================================
 
-app.post('/make-server-34d0b231/votes', async (c) => {
-  try {
-    const user = await getAuthUser(c);
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
-
-    const { groupId, question, meetingId } = await c.req.json();
-    const myMembership = await getMembership(groupId, user.email!);
-    if (!myMembership || myMembership.role !== 'admin')
-      return c.json({ error: 'Not authorized – admin only' }, 403);
-
-    const { data: vote, error } = await supabaseAdmin
-      .from('votes')
-      .insert({ group_id: groupId, meeting_id: meetingId ?? null, question, active: true, created_by: user.email })
-      .select('*, vote_responses(*)')
-      .single();
-    if (error) return c.json({ error: error.message }, 500);
-
-    return c.json({ success: true, vote: toVote(vote) });
-  } catch (err: any) {
-    return c.json({ error: err.message }, 500);
-  }
-});
-
-app.get('/make-server-34d0b231/votes', async (c) => {
-  try {
-    const user = await getAuthUser(c);
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
-
-    const groupId = c.req.query('groupId');
-    const meetingId = c.req.query('meetingId');
-
-    const myMembership = await getMembership(groupId!, user.email!);
-    if (!myMembership || myMembership.status !== 'approved')
-      return c.json({ error: 'Not a member of this group' }, 403);
-
-    let q = supabaseAdmin
-      .from('votes')
-      .select('*, vote_responses(*)')
-      .eq('group_id', groupId!);
-    if (meetingId) q = q.eq('meeting_id', meetingId);
-
-    const { data } = await q.order('created_at', { ascending: false });
-    return c.json({ votes: (data ?? []).map(toVote) });
-  } catch (err: any) {
-    return c.json({ error: err.message }, 500);
-  }
-});
-
-app.post('/make-server-34d0b231/votes/:id/cast', async (c) => {
-  try {
-    const user = await getAuthUser(c);
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
-
-    const voteId = c.req.param('id');
-    const { answer } = await c.req.json(); // 'yes' | 'no'
-
-    const { data: vote } = await supabaseAdmin
-      .from('votes').select('*').eq('id', voteId).maybeSingle();
-    if (!vote) return c.json({ error: 'Vote not found' }, 404);
-
-    const myMembership = await getMembership(vote.group_id, user.email!);
-    if (!myMembership || myMembership.status !== 'approved')
-      return c.json({ error: 'Not a member of this group' }, 403);
-
-    // UPSERT allows changing vote
-    await supabaseAdmin.from('vote_responses').upsert({
-      vote_id: voteId,
-      user_email: user.email,
-      response: answer,
-      created_at: new Date().toISOString(),
-    }, { onConflict: 'vote_id,user_email' });
-
-    const { data: updatedVote } = await supabaseAdmin
-      .from('votes')
-      .select('*, vote_responses(*)')
-      .eq('id', voteId)
-      .single();
-
-    return c.json({ success: true, vote: toVote(updatedVote) });
-  } catch (err: any) {
-    return c.json({ error: err.message }, 500);
-  }
-});
+// Vote routes live in vote_routes.ts (resolutions, quorum, close).
 
 // ============================================================
 // CHAT
@@ -2665,6 +2482,9 @@ function cacheFor(c: any, seconds: number) {
 // ============================================================
 registerExtraRoutes(app, supabaseAdmin, getAuthUser, getMembership);
 registerMoreRoutes(app, supabaseAdmin, getAuthUser, getMembership);
+registerPayoutRoutes(app, supabaseAdmin, getAuthUser, getMembership);
+registerVoteRoutes(app, supabaseAdmin, getAuthUser, getMembership);
+registerLoanRoutes(app, supabaseAdmin, getAuthUser, getMembership);
 registerAiRoutes(app, supabaseAdmin, getAuthUser, getMembership);
 registerWhatsappRoutes(app, supabaseAdmin);
 

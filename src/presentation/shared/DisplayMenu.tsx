@@ -14,7 +14,7 @@ import { useLiteMode } from '@/application/context/LiteModeContext';
 
 const THEMES: { id: AppTheme; icon: typeof Sun; label: string }[] = [
   { id: 'light', icon: Sun,  label: 'Light' },
-  { id: 'navy',  icon: Moon, label: 'Navy'  },
+  { id: 'navy',  icon: Moon, label: 'Dark'  },
 ];
 
 interface DisplayMenuProps {
@@ -55,7 +55,7 @@ export function DisplayMenu({ className }: DisplayMenuProps) {
         <DropdownMenuSeparator />
 
         <DropdownMenuItem onClick={toggleLiteMode}>
-          <Gauge className={`h-4 w-4 mr-2 ${liteMode ? 'text-green-500' : ''}`} />
+          <Gauge className={`h-4 w-4 mr-2 ${liteMode ? 'text-primary' : ''}`} />
           Lite Mode
           {liteMode && <Check className="h-3.5 w-3.5 ml-auto text-primary" />}
         </DropdownMenuItem>

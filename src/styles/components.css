@@ -1,0 +1,229 @@
+/* =========================================================================
+   Stokpile — component layer (design kit v2)
+   Built entirely from tokens.css. No literal colours, no magic numbers.
+   Import order:  tokens.css  →  components.css  →  feature styles
+   ========================================================================= */
+
+/* ---- type roles as classes ------------------------------------------- */
+.t-wordmark {
+  font-family: var(--t-wordmark-family);
+  font-variation-settings: "wdth" var(--t-wordmark-width);
+  font-weight: var(--t-wordmark-weight);
+  letter-spacing: var(--t-wordmark-track);
+  text-transform: lowercase;
+}
+.t-display {
+  font-family: var(--t-display-family);
+  font-variation-settings: "wdth" var(--t-display-width);
+  font-weight: var(--t-display-weight);
+  letter-spacing: var(--t-display-track);
+  font-size: var(--t-display-size);
+  line-height: var(--t-display-leading);
+  text-wrap: balance;
+  margin: 0;
+}
+.t-heading {
+  font-family: var(--t-heading-family);
+  font-variation-settings: "wdth" var(--t-heading-width);
+  font-weight: var(--t-heading-weight);
+  letter-spacing: var(--t-heading-track);
+  font-size: var(--t-heading-size);
+  margin: 0;
+}
+.t-label {
+  font-family: var(--t-label-family);
+  font-weight: var(--t-label-weight);
+  font-size: var(--t-label-size);
+  letter-spacing: var(--t-label-track);
+  text-transform: uppercase;
+  color: var(--s-muted);
+}
+.t-figure {
+  font-family: var(--t-figure-family);
+  font-weight: var(--t-figure-weight);
+  font-variant-numeric: var(--t-figure-feature);
+}
+
+/* =========================================================================
+   Card — the only container. Same look as the shadcn <Card> (globals.css);
+   use the class where a plain element reads better than the component.
+   ========================================================================= */
+.card {
+  background: var(--s-card);
+  border: 1px solid var(--s-line);
+  border-radius: var(--s-radius);
+  padding: var(--sp-4);
+  box-shadow: var(--s-elev);
+  color: var(--s-ink);
+}
+.card--quiet  { background: var(--s-card-2); box-shadow: none; }
+.card--warn   { background: var(--s-warn-tint); border-color: var(--s-warn); box-shadow: none; }
+.card--payout { background: var(--s-pay-bg); border-color: var(--s-pay-line); color: var(--s-pay-ink); }
+.card--payout .t-label { color: var(--s-pay-ink); opacity: .72; }
+
+/* =========================================================================
+   Chip — status. Colour NEVER carries state alone: every chip has a shape
+   and a word.  dot = paid · square = late · ring = due · bar = bad
+   ========================================================================= */
+.chip {
+  display: inline-flex; align-items: center; gap: var(--sp-1);
+  font-family: var(--f-body);
+  font-size: var(--t-size-xs); font-weight: 600; letter-spacing: .01em; line-height: 1.4;
+  padding: 2px 7px; border-radius: var(--s-radius-pill); white-space: nowrap;
+}
+.chip__mark { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+.chip--paid { background: var(--s-tint);      color: var(--s-brand-ink); }
+.chip--paid .chip__mark { background: var(--s-brand); }
+.chip--late { background: var(--s-warn-tint); color: var(--s-warn); }
+.chip--late .chip__mark { background: var(--s-warn); border-radius: 1px; }            /* square */
+.chip--due  { background: var(--s-card-2); color: var(--s-muted); border: 1px solid var(--s-line); }
+.chip--due  .chip__mark { background: transparent; border: 1.5px solid var(--s-muted); } /* ring */
+.chip--bad  { background: var(--s-bad-tint);  color: var(--s-bad); }
+.chip--bad  .chip__mark { background: var(--s-bad); height: 2px; border-radius: 1px; }  /* bar */
+.chip--payout { background: var(--s-pay-bg); color: var(--s-pay-ink); border: 1px solid var(--s-pay-line); }
+.chip--payout .chip__mark { background: var(--s-pay-ink); }
+.chip--role {
+  background: transparent; border: 1px solid var(--s-line-2); color: var(--s-muted);
+  font-family: var(--f-mono); font-size: var(--t-size-2xs); letter-spacing: .08em;
+  text-transform: uppercase; padding: 2px 6px;
+}
+
+/* =========================================================================
+   Ledger row — name left, figure right, dotted leader binding them.
+   Never a <table> on mobile: the leader does the table's job in 358px.
+   ========================================================================= */
+.ledger { display: flex; flex-direction: column; }
+.ledger-row {
+  display: flex; align-items: flex-end; gap: 0;
+  padding: 9px 0; border-bottom: 1px solid var(--s-line);
+}
+.ledger-row:last-child { border-bottom: 0; }
+.ledger-row__who  { font-weight: var(--t-body-strong); font-size: var(--t-size-md); }
+.ledger-row__meta { font-family: var(--f-mono); font-size: var(--t-size-xs); color: var(--s-muted); }
+.ledger-row__meta--late { color: var(--s-warn); }
+.ledger-row__leader {
+  flex: 1; min-width: 10px; align-self: flex-end; margin: 0 6px 5px;
+  border-bottom: 1px dotted var(--s-line-2);
+}
+.ledger-row__value { font-family: var(--f-mono); font-variant-numeric: tabular-nums; font-size: var(--t-size-md); font-weight: 500; white-space: nowrap; }
+.ledger-row__value--out  { color: var(--s-brand); }   /* money leaving = brand, not a third hue */
+.ledger-row__value--late { color: var(--s-warn); }
+
+/* =========================================================================
+   Cycle rail — the product's signature object.
+   One tick per member. done · now · upcoming. Each tick sets --i so the
+   stagger comes from the token, not from JS.
+   ========================================================================= */
+.rail { display: flex; align-items: center; gap: 0; }
+.rail__tick {
+  width: 9px; height: 9px; border-radius: 50%; flex: none; display: block;
+  background: var(--s-line-2);
+}
+.rail__tick--done { background: var(--s-brand); }
+.rail__tick--now  {
+  width: 15px; height: 15px; background: var(--s-brand);
+  box-shadow: 0 0 0 3px var(--s-tint);
+}
+.rail__link { flex: 1; height: 3px; border-radius: 2px; background: var(--s-line-2); }
+.rail__link--done { background: var(--s-brand); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .rail--animate .rail__tick,
+  .rail--animate .rail__link {
+    animation: rail-tick var(--m-tick) var(--m-ease) backwards;
+    animation-delay: calc(var(--m-stagger) * var(--i, 0));
+  }
+  @keyframes rail-tick { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
+}
+
+/* =========================================================================
+   Meter — magnitude + state. Length AND colour.
+   ========================================================================= */
+.meter {
+  height: 7px; border-radius: 4px; background: var(--s-card-2);
+  border: 1px solid var(--s-line); display: flex; gap: 2px; overflow: hidden;
+}
+.meter__fill       { display: block; background: var(--s-brand); }
+.meter__fill--late { background: var(--s-warn); }
+
+/* =========================================================================
+   Receipt — the trust artefact. Mono throughout, dotted leaders, a stamp.
+   ========================================================================= */
+.receipt {
+  background: var(--s-card); border: 1px solid var(--s-line-2);
+  border-radius: var(--s-radius-sm); padding: var(--sp-4) var(--sp-4) 0;
+  position: relative; overflow: hidden; color: var(--s-ink);
+}
+.receipt__head  { text-align: center; padding-bottom: var(--sp-3); border-bottom: 1px dashed var(--s-line-2); }
+.receipt__title { font-family: var(--f-mono); font-size: var(--t-size-xs); font-weight: 600; letter-spacing: .22em; text-transform: uppercase; }
+.receipt__ref   { font-family: var(--f-mono); font-size: var(--t-size-xs); color: var(--s-muted); margin-top: 3px; }
+.receipt__row   { display: flex; align-items: flex-end; padding: 7px 0; font-size: var(--t-size-sm); }
+.receipt__key   { font-family: var(--f-mono); font-size: var(--t-size-xs); letter-spacing: .06em; text-transform: uppercase; color: var(--s-muted); }
+.receipt__key--fine { font-size: var(--t-size-2xs); }
+.receipt__val   { font-family: var(--f-mono); font-variant-numeric: tabular-nums; font-weight: 500; }
+.receipt__total { display: flex; align-items: baseline; justify-content: space-between;
+                  border-top: 1px solid var(--s-line-2); margin-top: 6px; padding-top: var(--sp-3); }
+.receipt__total .receipt__val { font-size: var(--t-size-xl); font-weight: 600; }
+.receipt__stamprow { display: flex; justify-content: flex-end; padding-top: var(--sp-3); }
+.receipt__stamp {
+  display: inline-block; transform: rotate(-4deg);
+  border: 2px solid var(--s-brand); color: var(--s-brand); border-radius: var(--s-radius-xs);
+  padding: 4px 10px; font-family: var(--f-mono); font-size: var(--t-size-xs); font-weight: 600; letter-spacing: .16em;
+}
+.receipt__perf {
+  display: flex; height: 12px; margin: var(--sp-3) calc(var(--sp-4) * -1) 0;
+  background: radial-gradient(circle at 6px 12px, var(--s-bg) 5px, transparent 5.5px) repeat-x;
+  background-size: 12px 12px;
+}
+
+/* =========================================================================
+   Claim track — burial society. Same primitive as the rail:
+   lodged → documents in → verified → paid.
+   ========================================================================= */
+.claim-track { display: flex; align-items: center; }
+.claim-track__step { width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--s-line-2); }
+.claim-track__step--done { background: var(--s-brand); }
+.claim-track__step--now  { width: 15px; height: 15px; background: var(--s-brand); box-shadow: 0 0 0 3px var(--s-tint); }
+.claim-track__link { flex: 1; height: 3px; border-radius: 2px; background: var(--s-line-2); }
+.claim-track__link--done { background: var(--s-brand); }
+
+/* =========================================================================
+   Loan row — chama table banking. The group sets the rate and releases the
+   loan. The platform records it: never price, never score, never fund.
+   ========================================================================= */
+.loan-row {
+  display: grid; grid-template-columns: 26px 1fr auto; gap: var(--sp-3);
+  padding: 10px 0; border-bottom: 1px solid var(--s-line); align-items: center;
+}
+.loan-row:last-child { border-bottom: 0; }
+.loan-row__seq  { font-family: var(--f-mono); font-size: var(--t-size-xs); color: var(--s-muted); text-align: right; }
+.loan-row__who  { font-weight: var(--t-body-strong); font-size: var(--t-size-md); }
+.loan-row__what { font-size: var(--t-size-xs); color: var(--s-muted); font-family: var(--f-mono); }
+.loan-row--late .loan-row__what { color: var(--s-warn); }
+.loan-row__amt  { font-family: var(--f-mono); font-variant-numeric: tabular-nums; font-size: var(--t-size-md); font-weight: 600; text-align: right; }
+
+/* =========================================================================
+   Resolution — a vote in progress. The tally is public.
+   ========================================================================= */
+.resolution { background: var(--s-warn-tint); border: 1px solid var(--s-warn); border-radius: var(--s-radius); padding: var(--sp-4); }
+.resolution__title { font-weight: var(--t-body-strong); font-size: var(--t-size-base); margin-top: 5px; }
+.resolution__tally { font-family: var(--f-mono); font-size: var(--t-size-xs); color: var(--s-warn); margin-top: var(--sp-2); }
+
+/* =========================================================================
+   Error — a failed debit. Recoverable in the room: cash, retry, defer.
+   ========================================================================= */
+.errbox {
+  background: var(--s-bad-tint); border: 1px solid var(--s-bad); color: var(--s-bad);
+  border-radius: var(--s-radius-sm); padding: var(--sp-3); font-size: var(--t-size-sm);
+  display: flex; gap: var(--sp-2); align-items: flex-start;
+}
+.errbox b { display: block; margin-bottom: 2px; }
+
+/* =========================================================================
+   Offline bar — the queue, stated plainly. Never "failed".
+   ========================================================================= */
+.offbar {
+  display: flex; align-items: center; gap: var(--sp-2); padding: 7px var(--sp-4);
+  background: var(--s-warn-tint); color: var(--s-warn);
+  font-size: var(--t-size-sm); font-weight: 600; border-bottom: 1px solid var(--s-line);
+}

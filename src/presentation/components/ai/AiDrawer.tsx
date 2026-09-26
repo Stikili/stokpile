@@ -150,9 +150,9 @@ export function AiDrawer({
 
         <div className="mt-4 space-y-4">
           {optedIn === false && (
-            <div className="rounded-xl border bg-amber-50/50 dark:bg-amber-950/20 p-4 space-y-3">
+            <div className="rounded-xl border bg-warning/10 dark:bg-warning/10 p-4 space-y-3">
               <div className="flex items-start gap-2">
-                <Shield className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                <Shield className="h-4 w-4 text-warning mt-0.5 shrink-0" />
                 <div className="text-xs">
                   <p className="font-semibold text-foreground mb-1">Enable AI features?</p>
                   <p className="text-muted-foreground">

@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/presentation/ui/alert';
 import { Upload, FileText, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
+import { trackInviteSent } from '@/application/analytics';
 
 interface BulkInviteDialogProps {
   groupId: string;
@@ -69,6 +70,7 @@ export function BulkInviteDialog({ groupId, open, onOpenChange, onSuccess }: Bul
     for (const email of emails) {
       try {
         await api.inviteUser(groupId, email);
+        trackInviteSent('csv');
         newResults.push({ email, status: 'success' });
       } catch (e) {
         newResults.push({
@@ -147,7 +149,7 @@ export function BulkInviteDialog({ groupId, open, onOpenChange, onSuccess }: Bul
             {results.map((r) => (
               <div key={r.email} className="flex items-center gap-2 text-sm p-2 rounded border bg-card">
                 {r.status === 'success' ? (
-                  <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                  <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
                 ) : (
                   <XCircle className="h-4 w-4 text-destructive shrink-0" />
                 )}

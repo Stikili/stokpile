@@ -7,7 +7,8 @@
     <!-- Primary meta -->
     <title>Stokpile — Group Savings & Payouts</title>
     <meta name="description" content="Transparent group savings management. Track contributions, schedule payouts, and organise meetings for your stokvel or savings group." />
-    <meta name="theme-color" content="#007a38" />
+    <meta name="theme-color" content="#5B1E44" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#190C13" media="(prefers-color-scheme: dark)" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -36,7 +37,7 @@
   <body>
     <!-- Apply theme before paint to prevent flash -->
     <script>
-      (function(){var t=localStorage.getItem('stokpile-theme');if(t==='light'){}else{document.documentElement.classList.add('dark')}})();
+      (function(){var t=null;try{t=localStorage.getItem('stokpile-theme')}catch(e){}var dark=t==='navy'||t==='aurora'||(t!=='light'&&window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches);if(dark)document.documentElement.classList.add('dark')})();
     </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>

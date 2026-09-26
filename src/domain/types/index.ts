@@ -27,6 +27,13 @@ export interface Profile {
 // === Groups ===
 export type GroupType = 'rotating' | 'burial' | 'grocery' | 'investment' | 'chama' | 'susu' | 'tontine' | 'vsla' | 'goal';
 
+/** Group types that pay out in a fixed member order (chama = merry-go-round). */
+const ROTATING_TYPES: readonly string[] = ['rotating', 'susu', 'tontine', 'chama'];
+export const hasRotation = (type?: string | null): boolean => ROTATING_TYPES.includes(type ?? '');
+
+/** Group types that lend to their own members (chama table banking, VSLA). */
+export const keepsLoanBook = (type?: string | null): boolean => type === 'chama' || type === 'vsla';
+
 export interface Group {
   id: string;
   name: string;
@@ -39,6 +46,10 @@ export interface Group {
   currency?: string;
   contributionTarget?: number | null;
   contributionTargetAnnual?: number | null;
+  /** Share of members that must be present for a formal resolution (1–100). */
+  quorumPercent?: number;
+  /** Flat interest the group charges on loans (chama/VSLA); null until set. */
+  loanRatePercent?: number | null;
   archived?: boolean;
   archivedAt?: string | null;
   isDemo?: boolean;
@@ -75,6 +86,10 @@ export interface Contribution {
   date: string;
   paid: boolean;
   status?: string;
+  /** How it was paid (e.g. cash, eft, paystack, flutterwave), when recorded. */
+  paymentMethod?: string | null;
+  /** Per-group receipt sequence, assigned when first marked paid. */
+  receiptNo?: number | null;
   createdAt: string;
   createdBy?: string;
   user?: {
@@ -100,6 +115,9 @@ export interface Payout {
   confirmedAt?: string;
   disputeReason?: string;
   paymentMethod?: 'eft' | 'cash' | 'paystack' | 'other';
+  createdBy?: string | null;
+  /** Admin signatures; a payout is released once it has enough (see domain/payouts). */
+  approvals?: { approverEmail: string; approvedAt: string }[];
   createdAt: string;
   recipient?: {
     fullName: string;
@@ -134,8 +152,18 @@ export interface Vote {
   groupId: string;
   question: string;
   meetingId?: string;
+  /** 'resolution' binds the group and needs a quorum; 'poll' just asks. */
+  kind?: 'poll' | 'resolution';
+  active?: boolean;
   yesVotes: string[];
   noVotes: string[];
+  outcome?: 'passed' | 'rejected' | 'no_quorum' | null;
+  closedAt?: string | null;
+  /** Frozen when the vote closed. */
+  tally?: { yes: number; no: number; present: number; eligible: number; quorum: number } | null;
+  nextStep?: string | null;
+  nextStepOwner?: string | null;
+  nextStepDue?: string | null;
   createdAt: string;
   createdBy?: string;
 }

@@ -140,7 +140,7 @@ export function ProfileMenu({
           <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
             Rewards
           </DropdownMenuLabel>
-          <DropdownMenuItem onClick={() => setShowRewards(true)} className="text-amber-600 dark:text-amber-400 focus:text-amber-600 dark:focus:text-amber-400">
+          <DropdownMenuItem onClick={() => setShowRewards(true)} className="text-warning dark:text-warning focus:text-warning dark:focus:text-warning">
             <Trophy className="h-4 w-4 mr-2" />
             My Rewards
           </DropdownMenuItem>

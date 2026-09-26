@@ -87,7 +87,7 @@ export function PaymentProofButton({ groupId, linkedType, linkedId, isAdmin }: P
           <Button
             variant="ghost"
             size="icon"
-            className={`h-7 w-7 ${hasProof ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}
+            className={`h-7 w-7 ${hasProof ? 'text-primary dark:text-primary' : 'text-muted-foreground'}`}
             onClick={handleOpen}
             aria-label={hasProof ? 'View payment proof' : 'Attach payment proof'}
           >

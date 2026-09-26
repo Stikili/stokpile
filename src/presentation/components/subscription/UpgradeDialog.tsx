@@ -29,7 +29,7 @@ const PLANS: {
     tier: 'community',
     label: 'Starter',
     icon: Sparkles,
-    color: 'text-blue-500',
+    color: 'text-primary',
     features: [
       '2 groups',
       'Up to 30 members',
@@ -61,7 +61,7 @@ const PLANS: {
     tier: 'enterprise',
     label: 'Enterprise',
     icon: Building2,
-    color: 'text-purple-500',
+    color: 'text-primary',
     features: [
       'Unlimited everything',
       'Custom branding',
@@ -141,9 +141,9 @@ export function UpgradeDialog({ open, onOpenChange, groupId, reason }: UpgradeDi
         </DialogHeader>
 
         {reason && (
-          <div className="rounded-xl border border-amber-500/40 bg-amber-50 dark:bg-amber-950/20 px-3 py-2.5 mt-1 flex items-start gap-2">
-            <Sparkles className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-900 dark:text-amber-200 leading-relaxed">{reason}</p>
+          <div className="rounded-xl border border-warning/40 bg-warning/10 dark:bg-warning/10 px-3 py-2.5 mt-1 flex items-start gap-2">
+            <Sparkles className="h-4 w-4 text-warning dark:text-warning shrink-0 mt-0.5" />
+            <p className="text-xs text-warning dark:text-warning leading-relaxed">{reason}</p>
           </div>
         )}
 
@@ -177,7 +177,7 @@ export function UpgradeDialog({ open, onOpenChange, groupId, reason }: UpgradeDi
               <ul className="space-y-1.5 flex-1">
                 {plan.features.map(f => (
                   <li key={f} className="flex items-start gap-2 text-xs text-muted-foreground">
-                    <Check className="h-3.5 w-3.5 text-green-500 shrink-0 mt-0.5" />
+                    <Check className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
                     {f}
                   </li>
                 ))}

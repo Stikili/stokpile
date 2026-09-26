@@ -118,10 +118,10 @@ export function AdminOnboarding({ groupId, memberCount = 0, onAction, onDismiss 
                 disabled={isDone}
                 className={`flex items-start gap-2.5 p-2.5 rounded-lg text-left border transition-all
                   ${isDone
-                    ? 'border-green-500/30 bg-green-500/5 opacity-70'
+                    ? 'border-primary/30 bg-accent opacity-70'
                     : 'border-border bg-background hover:border-primary hover:shadow-sm'}`}
               >
-                <Icon className={`h-4 w-4 mt-0.5 shrink-0 ${isDone ? 'text-green-500' : 'text-muted-foreground'}`} />
+                <Icon className={`h-4 w-4 mt-0.5 shrink-0 ${isDone ? 'text-primary' : 'text-muted-foreground'}`} />
                 <div className="flex-1">
                   <div className="flex items-center gap-1.5">
                     <step.icon className="h-3.5 w-3.5 text-primary" />

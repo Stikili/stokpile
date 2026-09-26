@@ -24,6 +24,7 @@ import { Logo } from "@/presentation/layout/Logo";
 import { api } from "@/infrastructure/api";
 import { PrivacyPolicy } from "@/presentation/components/legal/PrivacyPolicy";
 import { TermsOfService } from "@/presentation/components/legal/TermsOfService";
+import { trackSignup } from '@/application/analytics';
 
 const countries = [
   "Angola",
@@ -49,10 +50,13 @@ const countries = [
 
 interface AuthFormProps {
   onSuccess: () => void;
+  /** 'page' fills the screen; 'dialog' renders just the form, for a popup. */
+  variant?: 'page' | 'dialog';
+  initialMode?: 'signin' | 'signup';
 }
 
-export function AuthForm({ onSuccess }: AuthFormProps) {
-  const [isSignup, setIsSignup] = useState(false);
+export function AuthForm({ onSuccess, variant = 'page', initialMode = 'signin' }: AuthFormProps) {
+  const [isSignup, setIsSignup] = useState(initialMode === 'signup');
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -143,6 +147,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
           country,
           phone: phone.trim() || undefined,
         });
+        trackSignup();
         // Track referral if present
         const pendingRef = localStorage.getItem("pendingReferralCode");
         if (pendingRef) {
@@ -176,12 +181,16 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
     }
   };
 
+  const isDialog = variant === 'dialog';
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50/80 to-blue-50/30 dark:bg-transparent dark:bg-none dark:from-transparent dark:to-transparent p-4">
-      <div className="absolute top-4 right-4">
-        <ThemeToggle />
-      </div>
-      <Card className="w-full max-w-md">
+    <div className={isDialog ? '' : 'min-h-screen flex items-center justify-center bg-background p-4'}>
+      {!isDialog && (
+        <div className="absolute top-4 right-4">
+          <ThemeToggle />
+        </div>
+      )}
+      <Card className={isDialog ? 'w-full border-0 shadow-none bg-transparent' : 'w-full max-w-md'}>
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             <Logo showText={false} />
@@ -316,7 +325,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
                         (/[0-9]/.test(password) ? 1 : 0) +
                         (/[^A-Za-z0-9]/.test(password) ? 1 : 0)
                       ));
-                      const colors = ['bg-destructive','bg-orange-400','bg-yellow-400','bg-green-500'];
+                      const colors = ['bg-destructive','bg-warning/10','bg-warning/10','bg-primary'];
                       return <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${i <= strength ? colors[strength-1] : 'bg-muted'}`} />;
                     })}
                   </div>
@@ -371,7 +380,7 @@ export function AuthForm({ onSuccess }: AuthFormProps) {
                   />
                   <Label
                     htmlFor="consent"
-                    className="text-xs leading-relaxed cursor-pointer select-none text-muted-foreground"
+                    className="block text-xs leading-relaxed cursor-pointer select-none text-muted-foreground"
                   >
                     I agree that Stokpile may process my data to provide the service, and I accept the{' '}
                     <button type="button" onClick={(e) => { e.preventDefault(); setShowTerms(true); }} className="text-primary underline hover:no-underline">Terms of Service</button>

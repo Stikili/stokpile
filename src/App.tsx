@@ -4,7 +4,7 @@ import { queryClient } from "@/application/queryClient";
 import { AuthForm } from "@/presentation/components/auth/AuthForm";
 const LandingPage = lazy(() => import("@/presentation/components/landing/LandingPage").then(m => ({ default: m.LandingPage })));
 import { PullToRefresh } from "@/presentation/shared/PullToRefresh";
-import { DemoGroupAutoCreate } from "@/presentation/components/groups/DemoGroupAutoCreate";
+import { GetStarted } from "@/presentation/components/onboarding/GetStarted";
 import { DemoBanner } from "@/presentation/components/groups/DemoBanner";
 import { GroupSelector } from "@/presentation/components/groups/GroupSelector";
 import { JoinRequestsView } from "@/presentation/components/members/JoinRequestsView";
@@ -61,7 +61,6 @@ import { usePendingCounts } from "@/application/hooks/usePendingCounts";
 import { PushNotificationSetup } from "@/presentation/shared/PushNotificationSetup";
 import { PhonePrompt } from "@/presentation/shared/PhonePrompt";
 import { Logo } from "@/presentation/layout/Logo";
-import { OnboardingTour } from "@/presentation/shared/OnboardingTour";
 import { ContextualTips } from "@/presentation/shared/ContextualTips";
 import { Button } from "@/presentation/ui/button";
 import {
@@ -72,25 +71,7 @@ import {
 } from "@/presentation/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/presentation/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/presentation/ui/dropdown-menu";
-import {
-  PieChart,
-  DollarSign,
-  TrendingUp,
-  Users,
-  Settings,
-  Calendar,
-  Lock,
-  ClipboardList,
-  ChevronDown,
-  Search,
-  Megaphone,
-  FileBarChart,
-  Activity,
-  RefreshCw,
-  ShoppingCart,
-  HeartHandshake,
-  Gavel,
-} from "lucide-react";
+import { PieChart, Lock, ChevronDown, Search, Activity } from "lucide-react";
 
 // Keep Keyboard import out — header icon was removed (still accessible via ? shortcut)
 import { Toaster } from "@/presentation/ui/sonner";
@@ -102,6 +83,13 @@ import { api } from "@/infrastructure/api";
 import { exportToCSV, setUserCountry, setGroupCurrency } from "@/lib/export";
 import "@/lib/offlineQueue"; // registers online listener
 import { initAnalytics, track } from "@/lib/analytics";
+import { hasRotation, keepsLoanBook } from '@/domain/types';
+import { LoanBookView } from '@/presentation/components/loans/LoanBookView';
+import { navItems, itemsIn, SECTION_LABELS, type NavItem } from '@/presentation/layout/navigation';
+import { SectionTabs } from '@/presentation/layout/SectionTabs';
+import { MembersView } from '@/presentation/components/members/MembersView';
+import { AuthDialog, type AuthMode } from '@/presentation/components/auth/AuthDialog';
+import { PaymentReturnDialog, readPaymentReturn, type PaymentReturn } from '@/presentation/components/contributions/PaymentReturnDialog';
 
 export default function App() {
   const { session, loading: sessionLoading, checkSession, signOut } = useSession();
@@ -117,9 +105,16 @@ export default function App() {
     useInviteToken();
 
   const [activeTab, setActiveTab] = useState("dashboard");
+  // Contribution payment return from the provider (?payment=...). Read once,
+  // then strip from the URL so a refresh doesn't show it again.
+  const [paymentReturn, setPaymentReturn] = useState<PaymentReturn | null>(() => {
+    const result = readPaymentReturn(window.location.search);
+    if (result) window.history.replaceState({}, '', window.location.pathname);
+    return result;
+  });
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
-  const [showAuthFromLanding, setShowAuthFromLanding] = useState(() => {
+  const [showAuthFromLanding] = useState(() => {
     if (typeof window === 'undefined') return false;
     const params = new URLSearchParams(window.location.search);
     // Skip landing page if: ?signin=1, ?ref=CODE, or user has logged in before
@@ -128,15 +123,13 @@ export default function App() {
       || sessionStorage.getItem('accessToken') !== null
       || localStorage.getItem('stokpile-has-account') === 'true';
   });
+  const [authDialog, setAuthDialog] = useState<AuthMode | null>(null);
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [showGlobalSearch, setShowGlobalSearch] = useState(false);
   const [showBulkInvite, setShowBulkInvite] = useState(false);
   const [signOutLoading, setSignOutLoading] = useState(false);
   const [exportingCSV, setExportingCSV] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(
-    () => !localStorage.getItem("onboardingCompleted")
-  );
 
   // Handlers (stabilized with useCallback to prevent unnecessary child re-renders)
   const handleSignOut = useCallback(async () => {
@@ -150,11 +143,6 @@ export default function App() {
       setSignOutLoading(false);
     }
   }, [signOut]);
-
-  const handleOnboardingComplete = useCallback(() => {
-    setShowOnboarding(false);
-    localStorage.setItem("onboardingCompleted", "true");
-  }, []);
 
   const handleQuickAction = useCallback((action: string) => {
     const tabMap: Record<string, string> = {
@@ -255,7 +243,7 @@ export default function App() {
     return (
       <ThemeProvider>
         <LanguageProvider>
-          <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-50 to-blue-50/40 dark:bg-transparent dark:bg-none dark:from-transparent dark:to-transparent">
+          <div className="min-h-screen flex items-center justify-center p-4 bg-background">
             <LoadingProgress message="Loading Stokpile..." />
           </div>
         </LanguageProvider>
@@ -290,8 +278,13 @@ export default function App() {
         <LanguageProvider>
           <TooltipProvider>
             <Suspense fallback={<div className="min-h-screen" />}>
-              <LandingPage onGetStarted={() => setShowAuthFromLanding(true)} />
+              <LandingPage onGetStarted={setAuthDialog} />
             </Suspense>
+            <AuthDialog
+              mode={authDialog}
+              onClose={() => setAuthDialog(null)}
+              onSuccess={() => { setAuthDialog(null); handleAuthSuccess(); }}
+            />
             <Toaster />
           </TooltipProvider>
         </LanguageProvider>
@@ -322,7 +315,7 @@ export default function App() {
         <PiloProvider>
         <UpgradePromptProvider fallbackGroupId={selectedGroup?.id}>
           <PullToRefresh>
-          <div className="min-h-screen bg-gradient-to-br from-slate-50/80 to-blue-50/30 dark:bg-transparent dark:bg-none dark:from-transparent dark:to-transparent">
+          <div className="min-h-screen bg-background">
             {/* Skip to main content for accessibility */}
             <a
               href="#main-content"
@@ -346,13 +339,6 @@ export default function App() {
               onTabChange={setActiveTab}
               onAction={handleQuickAction}
               onSignOut={() => setShowSignOutDialog(true)}
-            />
-            <OnboardingTour
-              show={showOnboarding && !!session}
-              onComplete={handleOnboardingComplete}
-              onSkip={handleOnboardingComplete}
-              hasGroups={groups.length > 0}
-              isAdmin={isAdmin}
             />
             
             {/* Global Search */}
@@ -392,7 +378,7 @@ export default function App() {
             />
           
             {/* Header */}
-            <header role="banner" className="bg-white/70 dark:bg-[#050e1c]/80 border-b border-border dark:border-white/[0.06] sticky top-0 z-50 backdrop-blur-xl backdrop-saturate-150">
+            <header role="banner" className="bg-card/90 border-b border-border sticky top-0 z-50 backdrop-blur-xl backdrop-saturate-150">
               <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {/* Mobile: Hamburger menu on the left */}
@@ -475,56 +461,24 @@ export default function App() {
                   <LoadingProgress message="Loading group..." />
                 </div>
               ) : !selectedGroup ? (
-                <DemoGroupAutoCreate
-                  groups={groups}
-                  groupsLoading={groupsLoading}
-                  onCreated={refreshGroups}
-                />
+                groupsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <LoadingProgress message="Loading your groups..." />
+                  </div>
+                ) : (
+                  <GetStarted groups={groups} onGroupsChanged={refreshGroups} onSelectGroup={selectGroup} />
+                )
               ) : (
                 <div className="animate-slide-up">
                   <Tabs value={activeTab} onValueChange={setActiveTab}>
                     {(() => {
-                      const groupType = selectedGroup.groupType;
-                      const hasRotation = groupType === 'rotating' || groupType === 'susu' || groupType === 'tontine' || groupType === 'chama';
+                      // Home · Money · People · More, from the shared navigation model.
+                      const items = navItems(selectedGroup, isAdmin, {
+                        announcements: unreadAnnouncements,
+                        joinRequests: pendingCounts.joinRequests,
+                      });
 
-                      // 4-section IA: Home · Money · People · More.
-                      // All existing tab IDs preserved for deep-link compat
-                      // and so the existing TabsContent below keeps working.
-                      type Item = {
-                        id: string;
-                        icon: any;
-                        label: string;
-                        feature: import('@/domain/types').SubscriptionFeature;
-                        badge?: number;
-                      };
-
-                      const moneyItems: Item[] = [
-                        { id: 'contributions', icon: DollarSign,    label: 'Contributions', feature: 'announcements' },
-                        ...(selectedGroup.payoutsAllowed
-                          ? [{ id: 'payouts', icon: TrendingUp, label: 'Payouts', feature: 'announcements' as const } as Item]
-                          : []),
-                        ...(isAdmin
-                          ? [
-                              { id: 'insights',  icon: FileBarChart, label: 'Insights',  feature: 'reports' as const } as Item,
-                              { id: 'penalties', icon: Gavel,        label: 'Penalties', feature: 'penalties' as const } as Item,
-                            ]
-                          : []),
-                      ];
-
-                      const peopleItems: Item[] = [
-                        { id: 'meetings',      icon: Calendar,  label: 'Meetings',       feature: 'announcements' },
-                        { id: 'announcements', icon: Megaphone, label: 'Announcements',  feature: 'announcements', badge: unreadAnnouncements },
-                        { id: 'info',          icon: Settings,  label: 'Group settings', feature: 'announcements', badge: pendingCounts.joinRequests },
-                      ];
-
-                      const moreItems: Item[] = [
-                        ...(hasRotation ? [{ id: 'rotation', icon: RefreshCw,      label: 'Rotation',     feature: 'rotation' as const } as Item] : []),
-                        ...(groupType === 'grocery' ? [{ id: 'grocery', icon: ShoppingCart, label: 'Grocery list', feature: 'grocery' as const } as Item] : []),
-                        ...(groupType === 'burial'  ? [{ id: 'burial',  icon: HeartHandshake, label: 'Burial',     feature: 'burial' as const  } as Item] : []),
-                        ...(isAdmin ? [{ id: 'audit', icon: ClipboardList, label: 'Audit log', feature: 'audit' as const } as Item] : []),
-                      ];
-
-                      const renderSectionDropdown = (label: string, items: Item[]) => {
+                      const renderSectionDropdown = (label: string, items: NavItem[]) => {
                         if (items.length === 0) return null;
                         const active = items.some(i => i.id === activeTab);
                         const badgeSum = items.reduce((s, i) => s + (i.badge || 0), 0);
@@ -570,9 +524,11 @@ export default function App() {
                           <TabsTrigger value="dashboard" className="text-sm">
                             <PieChart className="h-3.5 w-3.5 mr-1.5" />Home
                           </TabsTrigger>
-                          {renderSectionDropdown('Money', moneyItems)}
-                          {renderSectionDropdown('People', peopleItems)}
-                          {renderSectionDropdown('More', moreItems)}
+                          {(['money', 'people', 'more'] as const).map((section) => (
+                            <span key={section} className="contents">
+                              {renderSectionDropdown(SECTION_LABELS[section], itemsIn(items, section))}
+                            </span>
+                          ))}
                           {isAdmin && !selectedGroup.payoutsAllowed && (
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -598,13 +554,16 @@ export default function App() {
                             onDismiss={() => localStorage.setItem(`onboarding-dismissed-${selectedGroup.id}`, 'true')}
                           />
                         )}
-                        <ContextualTips context="dashboard" isAdmin={isAdmin} hasData onAction={handleQuickAction} />
                         <Dashboard
                           groupId={selectedGroup.id}
+                          groupName={selectedGroup.name}
                           groupType={selectedGroup.groupType}
+                          groupCreatedAt={selectedGroup.createdAt}
+                          contributionTarget={selectedGroup.contributionTarget}
                           annualTarget={selectedGroup.contributionTargetAnnual}
                           isAdmin={isAdmin}
                           userEmail={session.user.email}
+                          onNavigate={setActiveTab}
                         />
                         {isAdmin && <JoinRequestsView groupId={selectedGroup.id} />}
                         <details className="rounded-xl border bg-card group">
@@ -622,9 +581,12 @@ export default function App() {
                       </TabsContent>
 
                       <TabsContent value="contributions" className="space-y-3">
+                        <SectionTabs items={itemsIn(navItems(selectedGroup, isAdmin), 'money')} activeTab={activeTab} onChange={setActiveTab} />
                         <ContextualTips context="contributions" isAdmin={isAdmin} hasData onAction={handleQuickAction} />
                         <ContributionsView
                           groupId={selectedGroup.id}
+                          groupName={selectedGroup.name}
+                          groupType={selectedGroup.groupType}
                           userEmail={session.user.email}
                           isAdmin={isAdmin}
                         />
@@ -632,10 +594,22 @@ export default function App() {
 
                       {selectedGroup.payoutsAllowed && (
                         <TabsContent value="payouts" className="space-y-3">
+                          <SectionTabs items={itemsIn(navItems(selectedGroup, isAdmin), 'money')} activeTab={activeTab} onChange={setActiveTab} />
                           <ContextualTips context="payouts" isAdmin={isAdmin} hasData onAction={handleQuickAction} />
                           <PayoutsView groupId={selectedGroup.id} isAdmin={isAdmin} userEmail={session.user.email} />
                         </TabsContent>
                       )}
+
+                      {keepsLoanBook(selectedGroup.groupType) && (
+                        <TabsContent value="loans" className="space-y-3">
+                          <SectionTabs items={itemsIn(navItems(selectedGroup, isAdmin), 'money')} activeTab={activeTab} onChange={setActiveTab} />
+                          <LoanBookView groupId={selectedGroup.id} isAdmin={isAdmin} userEmail={session.user.email} onOpenSettings={() => setActiveTab('info')} />
+                        </TabsContent>
+                      )}
+
+                      <TabsContent value="members" className="space-y-3">
+                        <MembersView group={selectedGroup} onGroupUpdate={refreshGroups} />
+                      </TabsContent>
 
                       <TabsContent value="meetings" className="space-y-3">
                         <ContextualTips context="meetings" isAdmin={isAdmin} hasData onAction={handleQuickAction} />
@@ -643,6 +617,7 @@ export default function App() {
                           groupId={selectedGroup.id}
                           isAdmin={isAdmin}
                           userEmail={session.user.email}
+                          quorumPercent={selectedGroup.quorumPercent}
                         />
                       </TabsContent>
 
@@ -655,7 +630,7 @@ export default function App() {
                         <AnnouncementsView groupId={selectedGroup.id} isAdmin={isAdmin} />
                       </TabsContent>
 
-                      {(selectedGroup.groupType === 'rotating' || selectedGroup.groupType === 'susu' || selectedGroup.groupType === 'tontine' || selectedGroup.groupType === 'chama') && (
+                      {hasRotation(selectedGroup.groupType) && (
                         <TabsContent value="rotation" className="space-y-3">
                           <FeatureGate feature="rotation" onUpgradeClick={() => setShowUpgradeDialog(true)}>
                             <RotationOrderView groupId={selectedGroup.id} isAdmin={isAdmin} groupType={selectedGroup.groupType || 'rotating'} />
@@ -681,6 +656,7 @@ export default function App() {
 
                       {isAdmin && (
                         <TabsContent value="penalties" className="space-y-3">
+                          <SectionTabs items={itemsIn(navItems(selectedGroup, isAdmin), 'money')} activeTab={activeTab} onChange={setActiveTab} />
                           <FeatureGate feature="penalties" onUpgradeClick={() => setShowUpgradeDialog(true)}>
                             <PenaltiesView groupId={selectedGroup.id} isAdmin={isAdmin} />
                           </FeatureGate>
@@ -689,6 +665,7 @@ export default function App() {
 
                       {isAdmin && (
                         <TabsContent value="insights" className="space-y-3">
+                          <SectionTabs items={itemsIn(navItems(selectedGroup, isAdmin), 'money')} activeTab={activeTab} onChange={setActiveTab} />
                           <FeatureGate feature="reports" onUpgradeClick={() => setShowUpgradeDialog(true)}>
                             <AnalyticsView groupId={selectedGroup.id} />
                             <FinancialReportsView groupId={selectedGroup.id} groupName={selectedGroup.name} isAdmin={isAdmin} />
@@ -731,6 +708,11 @@ export default function App() {
               groupId={selectedGroup?.id}
               groupName={selectedGroup?.name}
               isAdmin={isAdmin}
+            />
+            <PaymentReturnDialog
+              result={paymentReturn}
+              onClose={() => setPaymentReturn(null)}
+              onOpenContributions={() => setActiveTab('contributions')}
             />
           </div>
           </PullToRefresh>
