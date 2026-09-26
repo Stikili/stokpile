@@ -9,6 +9,7 @@ import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
 import type { UserSearchResult } from '@/domain/types';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
+import { trackInviteSent } from '@/application/analytics';
 
 interface InviteMembersDialogProps {
   groupId: string;
@@ -50,6 +51,7 @@ export function InviteMembersDialog({
     setInviting(email);
     try {
       await api.inviteUser(groupId, email);
+      trackInviteSent('email');
       toast.success(`Invite sent to ${email}`);
       setInvitedEmails(prev => new Set([...prev, email]));
     } catch (error) {

@@ -57,6 +57,16 @@ describe('summariseRound', () => {
     expect(r.expected).toBe(0);
   });
 
+  it('counts members added by name (managed) like joined members', () => {
+    const r = summariseRound({
+      members: [member('m@x', 'Gogo', 'managed'), member('a@x', 'Ayanda'), member('i@x', 'Gone', 'inactive')],
+      contributions: [paid('m@x', 500, '2026-09-04')],
+      now: NOW,
+    });
+    expect(r.rows.map((x) => x.email)).toEqual(['a@x', 'm@x']);
+    expect(r.paidCount).toBe(1);
+  });
+
   it('is empty with no approved members', () => {
     expect(summariseRound({ members: [], contributions: [], now: NOW }).status).toBe('empty');
   });
@@ -104,5 +114,25 @@ describe('totals', () => {
 
   it('displayName falls back when names are missing', () => {
     expect(displayName(undefined, undefined, 'x@y')).toBe('x@y');
+  });
+});
+
+import { parseMemberNames, GROUP_TYPES } from '@/domain/groupTypes';
+
+describe('parseMemberNames', () => {
+  it('splits lines and commas, trims, and drops blanks and duplicates', () => {
+    expect(parseMemberNames('Thandi M\n  sipho  d ,\n\nThandi m, Precious')).toEqual(['Thandi M', 'sipho d', 'Precious']);
+  });
+
+  it('caps the list', () => {
+    expect(parseMemberNames('a\nb\nc', 2)).toEqual(['a', 'b']);
+  });
+});
+
+describe('GROUP_TYPES', () => {
+  it('covers every group type once', () => {
+    const types = GROUP_TYPES.map((t) => t.type);
+    expect(new Set(types).size).toBe(types.length);
+    expect(types).toEqual(expect.arrayContaining(['rotating', 'burial', 'grocery', 'chama', 'investment', 'goal', 'susu', 'tontine', 'vsla']));
   });
 });

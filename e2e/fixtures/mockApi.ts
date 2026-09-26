@@ -77,15 +77,28 @@ export function sampleData(groupType = 'rotating') {
   };
 }
 
-export async function mockApi(page: Page, opts: { groupType?: string } = {}) {
-  const data = sampleData(opts.groupType);
+export interface MockApiOptions {
+  groupType?: string;
+  /** Start as a brand-new user with no groups; POST /groups creates one. */
+  newUser?: boolean;
+}
 
-  const routes: Array<[RegExp, unknown]> = [
+/** Requests the app sent that change data, for assertions. */
+export interface MockApiLog {
+  writes: Array<{ method: string; path: string; body: unknown }>;
+}
+
+export async function mockApi(page: Page, opts: MockApiOptions = {}): Promise<MockApiLog> {
+  const data = sampleData(opts.groupType);
+  const log: MockApiLog = { writes: [] };
+  let hasGroup = !opts.newUser;
+
+  const routes: Array<[RegExp, unknown | (() => unknown)]> = [
     [/\/session$/, { session: { user: { id: 'u-1', email: ME } } }],
     [/\/profile$/, { email: ME, fullName: 'Lindiwe', surname: 'Mahlangu', country: 'South Africa', phone: '+27820000000' }],
-    [/\/groups$/, { groups: [data.group] }],
+    [/\/groups$/, () => ({ groups: hasGroup ? [data.group] : [] })],
     [/\/groups\/archived$/, { groups: [] }],
-    [/\/selected-group$/, { group: data.group }],
+    [/\/selected-group$/, () => ({ group: hasGroup ? data.group : null })],
     [/\/groups\/[^/]+$/, { group: data.group }],
     [/\/groups\/[^/]+\/members$/, { members: data.members }],
     [/\/contributions$/, { contributions: data.contributions }],
@@ -109,15 +122,26 @@ export async function mockApi(page: Page, opts: { groupType?: string } = {}) {
   await page.addInitScript(() => {
     sessionStorage.setItem('accessToken', 'test-token');
     localStorage.setItem('stokpile-has-account', 'true');
-    localStorage.setItem('onboardingCompleted', 'true');
   });
 
   await page.route(/supabase\.co\//, async (route: Route) => {
     const url = new URL(route.request().url());
-    if (route.request().method() !== 'GET') return route.fulfill({ json: { message: 'ok' } });
+    const method = route.request().method();
     const path = url.pathname.replace(/^.*make-server-34d0b231/, '');
+    if (method !== 'GET') {
+      let body: unknown = null;
+      try { body = route.request().postDataJSON(); } catch { /* not JSON */ }
+      log.writes.push({ method, path, body });
+      if (method === 'POST' && path === '/groups') {
+        hasGroup = true;
+        return route.fulfill({ json: { group: data.group, groupCode: data.group.groupCode } });
+      }
+      return route.fulfill({ json: { message: 'ok', success: true } });
+    }
     const hit = routes.find(([rx]) => rx.test(path));
+    const value = hit ? (typeof hit[1] === 'function' ? (hit[1] as () => unknown)() : hit[1]) : {};
     // Unknown endpoints get an empty-but-valid shape so screens render.
-    return route.fulfill({ json: hit ? hit[1] : {} });
+    return route.fulfill({ json: value });
   });
+  return log;
 }

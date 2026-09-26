@@ -22,6 +22,7 @@ import { exportToCSV, formatCurrency, formatDate, currencySymbol } from '@/lib/e
 import { sanitizeAmount } from '@/lib/sanitize';
 import { PaymentProofButton } from '@/presentation/components/shared/PaymentProofButton';
 import { StatusChip, payoutChip } from '@/presentation/shared/StatusChip';
+import { isActiveMember } from '@/domain/round';
 
 interface PayoutsViewProps {
   groupId: string;
@@ -197,7 +198,7 @@ export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
                           Set up a new payout for approved group members
                         </DialogDescription>
                       </DialogHeader>
-                      {members.filter(m => m.status === 'approved').length === 0 && (
+                      {members.filter(isActiveMember).length === 0 && (
                         <Alert variant="destructive" className="mt-4">
                           <Info className="h-4 w-4" />
                           <AlertDescription>
@@ -214,7 +215,7 @@ export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
                             </SelectTrigger>
                             <SelectContent>
                               {members
-                                .filter(member => member.status === 'approved')
+                                .filter(isActiveMember)
                                 .sort((a, b) => `${a.fullName} ${a.surname}`.localeCompare(`${b.fullName} ${b.surname}`))
                                 .map(member => (
                                   <SelectItem key={member.email} value={member.email}>
@@ -229,7 +230,7 @@ export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
                             </SelectContent>
                           </Select>
                           <p className="text-sm text-muted-foreground">
-                            {members.filter(m => m.status === 'approved').length} approved member{members.filter(m => m.status === 'approved').length !== 1 ? 's' : ''} available
+                            {members.filter(isActiveMember).length} member{members.filter(isActiveMember).length !== 1 ? 's' : ''} available
                           </p>
                         </div>
 
@@ -261,7 +262,7 @@ export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
                         <Button
                           type="submit"
                           className="w-full"
-                          disabled={submitting || members.filter(m => m.status === 'approved').length === 0}
+                          disabled={submitting || members.filter(isActiveMember).length === 0}
                         >
                           {submitting ? 'Scheduling...' : 'Schedule Payout'}
                         </Button>

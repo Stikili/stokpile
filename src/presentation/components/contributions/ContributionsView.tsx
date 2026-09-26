@@ -23,6 +23,8 @@ import { toast } from 'sonner';
 import { exportToCSV, formatCurrency, formatDate, currencySymbol } from '@/lib/export';
 import { PaymentProofButton } from '@/presentation/components/shared/PaymentProofButton';
 import { ReceiptDialog } from '@/presentation/components/receipts/ReceiptDialog';
+import { isActiveMember } from '@/domain/round';
+import { trackContributionRecorded } from '@/application/analytics';
 
 interface ContributionsViewProps {
   groupId: string;
@@ -108,6 +110,7 @@ export function ContributionsView({ groupId, groupName, groupType, userEmail, is
         paid: false,
         userEmail: targetEmail
       });
+      trackContributionRecorded();
 
       if (targetEmail) {
         const member = members.find(m => m.email === targetEmail);
@@ -327,7 +330,7 @@ export function ContributionsView({ groupId, groupName, groupType, userEmail, is
                             <SelectContent>
                               <SelectItem value="self">Myself ({userEmail})</SelectItem>
                               {members
-                                .filter(member => member.status === 'approved' && member.email !== userEmail)
+                                .filter(member => isActiveMember(member) && member.email !== userEmail)
                                 .map(member => (
                                   <SelectItem key={member.email} value={member.email}>
                                     {member.fullName} {member.surname}

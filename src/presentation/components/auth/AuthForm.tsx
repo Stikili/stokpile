@@ -24,6 +24,7 @@ import { Logo } from "@/presentation/layout/Logo";
 import { api } from "@/infrastructure/api";
 import { PrivacyPolicy } from "@/presentation/components/legal/PrivacyPolicy";
 import { TermsOfService } from "@/presentation/components/legal/TermsOfService";
+import { trackSignup } from '@/application/analytics';
 
 const countries = [
   "Angola",
@@ -146,6 +147,7 @@ export function AuthForm({ onSuccess, variant = 'page', initialMode = 'signin' }
           country,
           phone: phone.trim() || undefined,
         });
+        trackSignup();
         // Track referral if present
         const pendingRef = localStorage.getItem("pendingReferralCode");
         if (pendingRef) {

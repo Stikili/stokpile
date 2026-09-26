@@ -4,7 +4,7 @@ import { queryClient } from "@/application/queryClient";
 import { AuthForm } from "@/presentation/components/auth/AuthForm";
 const LandingPage = lazy(() => import("@/presentation/components/landing/LandingPage").then(m => ({ default: m.LandingPage })));
 import { PullToRefresh } from "@/presentation/shared/PullToRefresh";
-import { DemoGroupAutoCreate } from "@/presentation/components/groups/DemoGroupAutoCreate";
+import { GetStarted } from "@/presentation/components/onboarding/GetStarted";
 import { DemoBanner } from "@/presentation/components/groups/DemoBanner";
 import { GroupSelector } from "@/presentation/components/groups/GroupSelector";
 import { JoinRequestsView } from "@/presentation/components/members/JoinRequestsView";
@@ -61,7 +61,6 @@ import { usePendingCounts } from "@/application/hooks/usePendingCounts";
 import { PushNotificationSetup } from "@/presentation/shared/PushNotificationSetup";
 import { PhonePrompt } from "@/presentation/shared/PhonePrompt";
 import { Logo } from "@/presentation/layout/Logo";
-import { OnboardingTour } from "@/presentation/shared/OnboardingTour";
 import { ContextualTips } from "@/presentation/shared/ContextualTips";
 import { Button } from "@/presentation/ui/button";
 import {
@@ -130,9 +129,6 @@ export default function App() {
   const [showBulkInvite, setShowBulkInvite] = useState(false);
   const [signOutLoading, setSignOutLoading] = useState(false);
   const [exportingCSV, setExportingCSV] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(
-    () => !localStorage.getItem("onboardingCompleted")
-  );
 
   // Handlers (stabilized with useCallback to prevent unnecessary child re-renders)
   const handleSignOut = useCallback(async () => {
@@ -146,11 +142,6 @@ export default function App() {
       setSignOutLoading(false);
     }
   }, [signOut]);
-
-  const handleOnboardingComplete = useCallback(() => {
-    setShowOnboarding(false);
-    localStorage.setItem("onboardingCompleted", "true");
-  }, []);
 
   const handleQuickAction = useCallback((action: string) => {
     const tabMap: Record<string, string> = {
@@ -348,13 +339,6 @@ export default function App() {
               onAction={handleQuickAction}
               onSignOut={() => setShowSignOutDialog(true)}
             />
-            <OnboardingTour
-              show={showOnboarding && !!session}
-              onComplete={handleOnboardingComplete}
-              onSkip={handleOnboardingComplete}
-              hasGroups={groups.length > 0}
-              isAdmin={isAdmin}
-            />
             
             {/* Global Search */}
             <GlobalSearchDialog
@@ -476,11 +460,13 @@ export default function App() {
                   <LoadingProgress message="Loading group..." />
                 </div>
               ) : !selectedGroup ? (
-                <DemoGroupAutoCreate
-                  groups={groups}
-                  groupsLoading={groupsLoading}
-                  onCreated={refreshGroups}
-                />
+                groupsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <LoadingProgress message="Loading your groups..." />
+                  </div>
+                ) : (
+                  <GetStarted groups={groups} onGroupsChanged={refreshGroups} onSelectGroup={selectGroup} />
+                )
               ) : (
                 <div className="animate-slide-up">
                   <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -571,6 +557,7 @@ export default function App() {
                           groupId={selectedGroup.id}
                           groupName={selectedGroup.name}
                           groupType={selectedGroup.groupType}
+                          groupCreatedAt={selectedGroup.createdAt}
                           contributionTarget={selectedGroup.contributionTarget}
                           annualTarget={selectedGroup.contributionTargetAnnual}
                           isAdmin={isAdmin}

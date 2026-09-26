@@ -2,8 +2,9 @@ import { useEffect, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { hasRotation } from '@/domain/types';
 import {
-  summariseRound, rotationPosition, groupTotals, memberTotals, nextMeeting, nextScheduledPayout,
+  summariseRound, rotationPosition, groupTotals, memberTotals, nextMeeting, nextScheduledPayout, paidPeriods,
 } from '@/domain/round';
+import { trackRoundTwo } from '@/application/analytics';
 import {
   queryKeys, useContributions, usePayouts, useMeetings, useMembers, useRotation,
   useOverdueMembers, useContributionAdjustment,
@@ -12,6 +13,7 @@ import {
 interface UseDashboardArgs {
   groupId: string;
   groupType?: string;
+  groupCreatedAt?: string;
   contributionTarget?: number | null;
   isAdmin: boolean;
   userEmail?: string;
@@ -21,7 +23,7 @@ interface UseDashboardArgs {
  * Everything the Home screen shows, derived from cached queries through the
  * pure rules in domain/round. The component only renders what this returns.
  */
-export function useDashboard({ groupId, groupType, contributionTarget, isAdmin, userEmail }: UseDashboardArgs) {
+export function useDashboard({ groupId, groupType, groupCreatedAt, contributionTarget, isAdmin, userEmail }: UseDashboardArgs) {
   const qc = useQueryClient();
   const rotating = hasRotation(groupType);
 
@@ -73,6 +75,11 @@ export function useDashboard({ groupId, groupType, contributionTarget, isAdmin, 
       periodLabel: now.toLocaleDateString(undefined, { month: 'long' }),
     };
   }, [members, contributions, payouts, meetings, overdue, adjustment, rotation, rotating, contributionTarget, userEmail]);
+
+  // Funnel: the group has kept recording into a second month.
+  useEffect(() => {
+    if (paidPeriods(contributions) >= 2) trackRoundTwo(groupId, groupCreatedAt, groupType);
+  }, [contributions, groupId, groupCreatedAt, groupType]);
 
   // Core data only; optional extras (rotation, overdue, adjustment) degrade quietly.
   const core = [contributionsQ, payoutsQ, membersQ];

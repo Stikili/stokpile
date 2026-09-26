@@ -34,6 +34,14 @@ export interface RoundSummary {
 export const displayName = (first?: string, last?: string, fallback = ''): string =>
   `${first ?? ''} ${last ?? ''}`.trim() || fallback;
 
+/**
+ * Who counts as a current member: joined members ('approved') and members
+ * the treasurer added by name without an account ('managed'). Pending,
+ * inactive and removed members don't.
+ */
+export const isActiveMember = (m: Pick<Member, 'status'>): boolean =>
+  m.status === 'approved' || m.status === 'managed';
+
 export const isInPeriod = (isoDate: string, now: Date): boolean => {
   const d = new Date(isoDate);
   return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
@@ -65,7 +73,7 @@ export function summariseRound(input: {
   }
 
   const rows: MemberRoundRow[] = input.members
-    .filter((m) => m.status === 'approved')
+    .filter(isActiveMember)
     .map((m) => {
       const p = paidBy.get(m.email);
       const paid = p?.amount ?? 0;
@@ -152,4 +160,14 @@ export function nextScheduledPayout(payouts: Payout[]): Payout | undefined {
   return payouts
     .filter((p) => p.status === 'scheduled')
     .sort((a, b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime())[0];
+}
+
+/** Distinct calendar months with at least one paid contribution. */
+export function paidPeriods(contributions: Contribution[]): number {
+  return new Set(
+    contributions.filter((c) => c.paid).map((c) => {
+      const d = new Date(c.date);
+      return `${d.getFullYear()}-${d.getMonth()}`;
+    }),
+  ).size;
 }

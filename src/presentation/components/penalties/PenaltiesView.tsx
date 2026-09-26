@@ -16,6 +16,7 @@ import { Plus, Trash2, Gavel, AlertCircle } from 'lucide-react';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
 import { formatCurrency, formatDate } from '@/lib/export';
+import { isActiveMember } from '@/domain/round';
 
 interface PenaltiesViewProps {
   groupId: string;
@@ -59,7 +60,7 @@ export function PenaltiesView({ groupId, isAdmin }: PenaltiesViewProps) {
       ]);
       setRules(penData.rules || []);
       setCharges(penData.charges || []);
-      setMembers(membersData.members.filter(m => m.status === 'approved'));
+      setMembers(membersData.members.filter(isActiveMember));
     } catch {
       toast.error('Failed to load penalties');
     } finally {

@@ -10,6 +10,7 @@ import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
 import { formatCurrency, formatDate, exportToCSV } from '@/lib/export';
 import { StatusChip, payoutChip } from '@/presentation/shared/StatusChip';
+import { isActiveMember } from '@/domain/round';
 
 interface FinancialReportsViewProps {
   groupId: string;
@@ -76,7 +77,7 @@ export function FinancialReportsView({ groupId, groupName, isAdmin }: FinancialR
 
   // Build per-member contribution summary
   const getContributionSummaryRows = () => {
-    const approvedMembers = members.filter(m => m.status === 'approved');
+    const approvedMembers = members.filter(isActiveMember);
     return approvedMembers.map(member => {
       const memberContribs = contributions.filter(c => c.userEmail === member.email);
       const totalPaid = memberContribs.filter(c => c.paid).reduce((s, c) => s + c.amount, 0);

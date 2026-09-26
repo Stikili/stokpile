@@ -1,5 +1,5 @@
 import type { Contribution, Member } from './types';
-import { displayName, isInPeriod } from './round';
+import { displayName, isActiveMember, isInPeriod } from './round';
 
 /**
  * Receipt domain — the reference printed on every receipt.
@@ -69,7 +69,7 @@ export function buildContributionReceipt(input: {
   };
 
   const monthLabel = on.toLocaleDateString(input.locale, { month: 'short', year: 'numeric' });
-  const approved = input.members.filter((m) => m.status === 'approved');
+  const approved = input.members.filter(isActiveMember);
   const paidEmails = new Set(
     input.contributions.filter((x) => x.paid && isInPeriod(x.date, on)).map((x) => x.userEmail),
   );

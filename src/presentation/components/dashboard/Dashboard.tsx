@@ -23,6 +23,7 @@ interface DashboardProps {
   groupId: string;
   groupName?: string;
   groupType?: string;
+  groupCreatedAt?: string;
   /** Per-member contribution expected each period, if the group set one. */
   contributionTarget?: number | null;
   annualTarget?: number | null;
@@ -42,10 +43,10 @@ const STATUS_CHIP: Record<RoundSummary['status'], (r: RoundSummary) => { tone: C
 };
 
 export function Dashboard({
-  groupId, groupName, groupType, contributionTarget, annualTarget,
+  groupId, groupName, groupType, groupCreatedAt, contributionTarget, annualTarget,
   isAdmin = false, userEmail, onNavigate,
 }: DashboardProps) {
-  const d = useDashboard({ groupId, groupType, contributionTarget, isAdmin, userEmail });
+  const d = useDashboard({ groupId, groupType, groupCreatedAt, contributionTarget, isAdmin, userEmail });
   const contributions = useContributions(groupId).data?.contributions ?? [];
   const [showAll, setShowAll] = useState(false);
   const [dialog, setDialog] = useState<null | 'share' | 'adjust' | 'growth' | 'bank'>(null);
