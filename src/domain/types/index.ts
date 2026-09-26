@@ -31,6 +31,9 @@ export type GroupType = 'rotating' | 'burial' | 'grocery' | 'investment' | 'cham
 const ROTATING_TYPES: readonly string[] = ['rotating', 'susu', 'tontine', 'chama'];
 export const hasRotation = (type?: string | null): boolean => ROTATING_TYPES.includes(type ?? '');
 
+/** Group types that lend to their own members (chama table banking, VSLA). */
+export const keepsLoanBook = (type?: string | null): boolean => type === 'chama' || type === 'vsla';
+
 export interface Group {
   id: string;
   name: string;
@@ -45,6 +48,8 @@ export interface Group {
   contributionTargetAnnual?: number | null;
   /** Share of members that must be present for a formal resolution (1–100). */
   quorumPercent?: number;
+  /** Flat interest the group charges on loans (chama/VSLA); null until set. */
+  loanRatePercent?: number | null;
   archived?: boolean;
   archivedAt?: string | null;
   isDemo?: boolean;

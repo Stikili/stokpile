@@ -29,6 +29,7 @@ export const queryKeys = {
   health: (groupId: string) => ['health', groupId] as const,
   overdue: (groupId: string) => ['overdue', groupId] as const,
   contributionAdjustment: (groupId: string) => ['contributionAdjustment', groupId] as const,
+  loans: (groupId: string) => ['loans', groupId] as const,
   leaderboard: (groupId: string) => ['leaderboard', groupId] as const,
   auditLog: (groupId: string) => ['auditLog', groupId] as const,
   notifications: () => ['notifications'] as const,

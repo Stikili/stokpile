@@ -83,7 +83,8 @@ import { api } from "@/infrastructure/api";
 import { exportToCSV, setUserCountry, setGroupCurrency } from "@/lib/export";
 import "@/lib/offlineQueue"; // registers online listener
 import { initAnalytics, track } from "@/lib/analytics";
-import { hasRotation } from '@/domain/types';
+import { hasRotation, keepsLoanBook } from '@/domain/types';
+import { LoanBookView } from '@/presentation/components/loans/LoanBookView';
 import { navItems, itemsIn, SECTION_LABELS, type NavItem } from '@/presentation/layout/navigation';
 import { SectionTabs } from '@/presentation/layout/SectionTabs';
 import { MembersView } from '@/presentation/components/members/MembersView';
@@ -596,6 +597,13 @@ export default function App() {
                           <SectionTabs items={itemsIn(navItems(selectedGroup, isAdmin), 'money')} activeTab={activeTab} onChange={setActiveTab} />
                           <ContextualTips context="payouts" isAdmin={isAdmin} hasData onAction={handleQuickAction} />
                           <PayoutsView groupId={selectedGroup.id} isAdmin={isAdmin} userEmail={session.user.email} />
+                        </TabsContent>
+                      )}
+
+                      {keepsLoanBook(selectedGroup.groupType) && (
+                        <TabsContent value="loans" className="space-y-3">
+                          <SectionTabs items={itemsIn(navItems(selectedGroup, isAdmin), 'money')} activeTab={activeTab} onChange={setActiveTab} />
+                          <LoanBookView groupId={selectedGroup.id} isAdmin={isAdmin} userEmail={session.user.email} onOpenSettings={() => setActiveTab('info')} />
                         </TabsContent>
                       )}
 

@@ -1,10 +1,10 @@
 import type { ElementType } from 'react';
 import {
   Home, Wallet, Users, Calendar, TrendingUp, Megaphone, Settings, RefreshCw, ShoppingCart,
-  HeartHandshake, Gavel, FileBarChart, ClipboardList, DollarSign,
+  HeartHandshake, Gavel, FileBarChart, ClipboardList, DollarSign, Landmark,
 } from 'lucide-react';
 import type { Group, SubscriptionFeature } from '@/domain/types';
-import { hasRotation } from '@/domain/types';
+import { hasRotation, keepsLoanBook } from '@/domain/types';
 
 /**
  * The app's navigation, defined once. The mobile tab bar, the mobile drawer
@@ -48,6 +48,7 @@ export function navItems(
   const items: Array<NavItem | false> = [
     { id: 'contributions', label: 'Contributions', icon: DollarSign, section: 'money', feature: 'announcements' },
     group.payoutsAllowed && { id: 'payouts', label: 'Payouts', icon: TrendingUp, section: 'money', feature: 'announcements' },
+    keepsLoanBook(type) && { id: 'loans', label: 'Loans', icon: Landmark, section: 'money', feature: 'announcements' },
     isAdmin && { id: 'insights', label: 'Insights', icon: FileBarChart, section: 'money', feature: 'reports' },
     isAdmin && { id: 'penalties', label: 'Penalties', icon: Gavel, section: 'money', feature: 'penalties' },
 

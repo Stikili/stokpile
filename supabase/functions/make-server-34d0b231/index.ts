@@ -8,6 +8,7 @@ import { registerExtraRoutes } from "./extra_routes.ts";
 import { registerMoreRoutes } from "./more_routes.ts";
 import { registerPayoutRoutes } from "./payout_routes.ts";
 import { registerVoteRoutes } from "./vote_routes.ts";
+import { registerLoanRoutes } from "./loan_routes.ts";
 import { registerAiRoutes } from "./ai_routes.ts";
 import { registerWhatsappRoutes } from "./whatsapp_routes.ts";
 
@@ -125,6 +126,7 @@ function toGroup(row: any, userRole?: string) {
     contributionTarget: row.contribution_target ?? null,
     contributionTargetAnnual: row.contribution_target_annual ?? null,
     quorumPercent: row.quorum_percent ?? 50,
+    loanRatePercent: row.loan_rate_percent != null ? Number(row.loan_rate_percent) : null,
     archived: row.archived ?? false,
     isDemo: row.is_demo ?? false,
     memberCount: row.member_count ?? undefined,
@@ -749,7 +751,7 @@ app.put('/make-server-34d0b231/groups/:id', async (c) => {
     if (!membership || membership.role !== 'admin')
       return c.json({ error: 'Not authorized – admin only' }, 403);
 
-    const { isPublic, payoutsAllowed, name, description, currency, contributionTarget, quorumPercent } = await c.req.json();
+    const { isPublic, payoutsAllowed, name, description, currency, contributionTarget, quorumPercent, loanRatePercent } = await c.req.json();
     const updates: Record<string, any> = {
       updated_at: new Date().toISOString(),
       updated_by: user.email,
@@ -770,6 +772,14 @@ app.put('/make-server-34d0b231/groups/:id', async (c) => {
       const q = Math.round(Number(quorumPercent));
       if (!Number.isFinite(q) || q < 1 || q > 100) return c.json({ error: 'Quorum must be between 1% and 100%' }, 400);
       updates.quorum_percent = q;
+    }
+    if (loanRatePercent !== undefined) {
+      if (loanRatePercent === null) updates.loan_rate_percent = null;
+      else {
+        const r = Number(loanRatePercent);
+        if (!Number.isFinite(r) || r < 0 || r > 100) return c.json({ error: 'Loan rate must be between 0% and 100%' }, 400);
+        updates.loan_rate_percent = Math.round(r * 100) / 100;
+      }
     }
 
     const { data: group, error } = await supabaseAdmin
@@ -2474,6 +2484,7 @@ registerExtraRoutes(app, supabaseAdmin, getAuthUser, getMembership);
 registerMoreRoutes(app, supabaseAdmin, getAuthUser, getMembership);
 registerPayoutRoutes(app, supabaseAdmin, getAuthUser, getMembership);
 registerVoteRoutes(app, supabaseAdmin, getAuthUser, getMembership);
+registerLoanRoutes(app, supabaseAdmin, getAuthUser, getMembership);
 registerAiRoutes(app, supabaseAdmin, getAuthUser, getMembership);
 registerWhatsappRoutes(app, supabaseAdmin);
 

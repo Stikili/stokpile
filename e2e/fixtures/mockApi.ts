@@ -57,12 +57,23 @@ export function sampleData(groupType = 'rotating') {
 
   const group = {
     id: GROUP_ID, name: 'Masakhane Umgalelo', groupCode: 'MSK123', isPublic: false, payoutsAllowed: true,
-    contributionFrequency: 'monthly', groupType, currency: 'ZAR', contributionTarget: 1200,
+    contributionFrequency: 'monthly', groupType, currency: 'ZAR', contributionTarget: 1200, loanRatePercent: 10, quorumPercent: 50,
     createdBy: ME, createdAt: monthsAgo(8), userRole: 'admin', memberCount: 10, userStatus: 'approved',
   };
 
+  const loans = [
+    { id: 'loan-req', groupId: GROUP_ID, borrowerEmail: members[3].email, principal: 5000, ratePercent: 10, termMonths: 5,
+      purpose: 'Stock', status: 'requested', requestedBy: members[3].email, createdAt: monthsAgo(0),
+      approvals: [{ approverEmail: members[1].email, approvedAt: monthsAgo(0) }], repayments: [] },
+    { id: 'loan-late', groupId: GROUP_ID, borrowerEmail: members[2].email, principal: 18000, ratePercent: 10, termMonths: 6,
+      purpose: 'School fees', status: 'active', requestedBy: members[2].email, createdAt: monthsAgo(4),
+      releasedAt: new Date(now.getFullYear(), now.getMonth() - 4, 1).toISOString(), dueDate: inDays(60),
+      approvals: [], repayments: [{ id: 'r1', amount: 3300, paidOn: monthsAgo(3), method: 'cash', recordedBy: ME }] },
+  ];
+
   return {
     group,
+    loans,
     members,
     contributions,
     payouts,
@@ -129,6 +140,7 @@ export async function mockApi(page: Page, opts: MockApiOptions = {}): Promise<Mo
     }],
     [/\/invites$/, { invites: [] }],
     [/\/votes$/, { votes: data.votes }],
+    [/\/groups\/[^/]+\/loans$/, { loans: data.loans, ratePercent: 10, activeAdminCount: 2 }],
     [/\/groups\/[^/]+\/announcements$/, { announcements: [] }],
   ];
 

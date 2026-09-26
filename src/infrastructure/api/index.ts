@@ -9,6 +9,7 @@ import type {
   BurialBeneficiary, BurialClaim, PenaltyRule, PenaltyCharge,
   Subscription, SubscriptionTier,
 } from "@/domain/types";
+import type { Loan } from '@/domain/loans';
 
 const API_URL = `https://${projectId}.supabase.co/functions/v1/make-server-34d0b231`;
 
@@ -168,7 +169,7 @@ export const api = {
   updateGroupFrequency: (groupId: string, frequency: string) =>
     request<{ message: string }>(`/groups/${groupId}/frequency`, { method: "PUT", body: { frequency } }),
 
-  updateGroup: (id: string, data: { isPublic?: boolean; payoutsAllowed?: boolean; name?: string; description?: string; currency?: string; contributionTarget?: number | null; quorumPercent?: number }) =>
+  updateGroup: (id: string, data: { isPublic?: boolean; payoutsAllowed?: boolean; name?: string; description?: string; currency?: string; contributionTarget?: number | null; quorumPercent?: number; loanRatePercent?: number | null }) =>
     request<{ message: string }>(`/groups/${id}`, { method: "PUT", body: data }),
 
   archiveGroup: (id: string) =>
@@ -284,6 +285,22 @@ export const api = {
 
   updatePayout: (id: string, data: { status: string; referenceNumber?: string; disputeReason?: string; paymentMethod?: string }) =>
     request<{ success: boolean; payout: Payout }>(`/payouts/${id}`, { method: "PUT", body: data }),
+
+  // ── Loan book (chama / VSLA) ──
+  getLoans: (groupId: string) =>
+    request<{ loans: Loan[]; ratePercent: number | null; activeAdminCount: number }>(`/groups/${groupId}/loans`),
+
+  requestLoan: (groupId: string, data: { borrowerEmail?: string; principal: number; termMonths: number; purpose?: string }) =>
+    request<{ loan: Loan }>(`/groups/${groupId}/loans`, { method: "POST", body: data }),
+
+  approveLoan: (loanId: string) =>
+    request<{ loan: Loan }>(`/loans/${loanId}/approve`, { method: "POST" }),
+
+  declineLoan: (loanId: string, reason?: string) =>
+    request<{ loan: Loan }>(`/loans/${loanId}/decline`, { method: "POST", body: { reason } }),
+
+  recordLoanRepayment: (loanId: string, data: { amount: number; paidOn?: string; method?: string }) =>
+    request<{ loan: Loan }>(`/loans/${loanId}/repayments`, { method: "POST", body: data }),
 
   /** Add this admin's signature (the second signatory releases the payout). */
   approvePayout: (id: string) =>

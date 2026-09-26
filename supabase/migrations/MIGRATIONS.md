@@ -34,3 +34,4 @@ defines the live shape of the core tables.
 | `018_receipt_numbers.sql` | Per-group receipt counter; trigger numbers contributions when first paid; backfills existing paid rows | Low — additive; backfill only fills NULL `receipt_no` |
 | `019_payout_signatories.sql` | `payout_approvals` table (two-signatory release); backfills the creator's signature on scheduled payouts | Low — additive; ON CONFLICT DO NOTHING |
 | `020_meeting_resolutions.sql` | `groups.quorum_percent`; vote kind (poll/resolution) and frozen closing record (tally, attendance, quorum, outcome, next step) | Low — additive; carries closed status over where the old `status` column exists |
+| `021_loan_book.sql` | `groups.loan_rate_percent`; `loans`, `loan_approvals`, `loan_repayments` for chama/VSLA (group lends, two signatories release) | Low — new tables only; RLS on, service role only |
