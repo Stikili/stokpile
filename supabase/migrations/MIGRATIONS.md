@@ -32,3 +32,4 @@ defines the live shape of the core tables.
 | `20260326000000_proper_schema.sql` | Adds relational tables alongside KV store | None — all IF NOT EXISTS |
 | `20260331000000_add_phone_to_profiles.sql` | Adds phone column to profiles | None — ADD COLUMN IF NOT EXISTS |
 | `018_receipt_numbers.sql` | Per-group receipt counter; trigger numbers contributions when first paid; backfills existing paid rows | Low — additive; backfill only fills NULL `receipt_no` |
+| `019_payout_signatories.sql` | `payout_approvals` table (two-signatory release); backfills the creator's signature on scheduled payouts | Low — additive; ON CONFLICT DO NOTHING |

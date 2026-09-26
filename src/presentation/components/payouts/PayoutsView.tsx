@@ -23,6 +23,7 @@ import { sanitizeAmount } from '@/lib/sanitize';
 import { PaymentProofButton } from '@/presentation/components/shared/PaymentProofButton';
 import { StatusChip, payoutChip } from '@/presentation/shared/StatusChip';
 import { isActiveMember } from '@/domain/round';
+import { signatureState, requiredApprovals as requiredApprovalsFor } from '@/domain/payouts';
 
 interface PayoutsViewProps {
   groupId: string;
@@ -43,6 +44,7 @@ export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [updateConfirm, setUpdateConfirm] = useState<{ open: boolean; payoutId: string; status: string; label: string } | null>(null);
   const [referenceNumber, setReferenceNumber] = useState('');
+  const [requiredApprovals, setRequiredApprovals] = useState(requiredApprovalsFor(1));
 
   useEffect(() => {
     loadData();
@@ -62,6 +64,7 @@ export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
 
       setPayouts(sortedPayouts);
       setMembers(membersData.members || []);
+      if (payoutsData.requiredApprovals) setRequiredApprovals(payoutsData.requiredApprovals);
     } catch (error) {
       console.error('Failed to load data:', error);
       toast.error('Failed to load payouts');
@@ -96,11 +99,21 @@ export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
     }
   };
 
+  const handleApprove = async (payoutId: string) => {
+    try {
+      await api.approvePayout(payoutId);
+      toast.success('Signed. The payout can now be released.');
+      loadData();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to approve payout');
+    }
+  };
+
   const handleUpdateStatus = async (payoutId: string, status: string, extra?: Record<string, any>) => {
     try {
       await api.updatePayout(payoutId, { status, ...extra });
       const labels: Record<string, string> = {
-        processing: 'marked as processing',
+        processing: 'released',
         awaiting_confirmation: 'proof uploaded — awaiting member confirmation',
         completed: 'confirmed as received',
         disputed: 'marked as disputed',
@@ -421,11 +434,25 @@ export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
                       <TableCell>
                         <div className="flex flex-wrap gap-1.5">
                           {/* Admin flow: scheduled → processing → awaiting_confirmation */}
+                          {payout.status === 'scheduled' && (() => {
+                            const sig = signatureState(payout.approvals, requiredApprovals, { email: userEmail, isAdmin });
+                            return (
+                              <>
+                                <StatusChip tone={sig.complete ? 'paid' : 'due'} label={`${sig.have} of ${sig.required} signed`} />
+                                {sig.canSign && (
+                                  <Button size="sm" onClick={() => handleApprove(payout.id)}>Approve</Button>
+                                )}
+                                {isAdmin && sig.complete && (
+                                  <Button size="sm" onClick={() => handleUpdateStatus(payout.id, 'processing')}>Release</Button>
+                                )}
+                                {isAdmin && !sig.complete && !sig.canSign && (
+                                  <span className="text-xs text-muted-foreground self-center">Waiting for another admin to approve</span>
+                                )}
+                              </>
+                            );
+                          })()}
                           {isAdmin && payout.status === 'scheduled' && (
                             <>
-                              <Button size="sm" onClick={() => handleUpdateStatus(payout.id, 'processing')}>
-                                Mark Processing
-                              </Button>
                               <Button size="sm" variant="outline" onClick={() => setUpdateConfirm({ open: true, payoutId: payout.id, status: 'cancelled', label: 'cancel' })}>
                                 Cancel
                               </Button>
@@ -459,6 +486,12 @@ export function PayoutsView({ groupId, isAdmin, userEmail }: PayoutsViewProps) {
                                 Dispute
                               </Button>
                             </>
+                          )}
+                          {payout.status === 'awaiting_confirmation' && isAdmin && userEmail !== payout.recipientEmail
+                            && members.find(m => m.email === payout.recipientEmail)?.status === 'managed' && (
+                            <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(payout.id, 'completed')}>
+                              <CheckCircle2 className="h-3 w-3 mr-1.5" />Confirm for them
+                            </Button>
                           )}
                           {payout.status === 'awaiting_confirmation' && userEmail !== payout.recipientEmail && !isAdmin && (
                             <span className="text-xs text-muted-foreground">Waiting for {payout.recipient?.fullName || payout.recipientEmail}</span>

@@ -280,10 +280,14 @@ export const api = {
     request<{ payout: Payout }>("/payouts", { method: "POST", body: data }),
 
   getPayouts: (groupId: string) =>
-    request<{ payouts: Payout[] }>(`/payouts?groupId=${groupId}`),
+    request<{ payouts: Payout[]; requiredApprovals?: number }>(`/payouts?groupId=${groupId}`),
 
-  updatePayout: (id: string, data: { status: string; referenceNumber?: string }) =>
-    request<{ message: string }>(`/payouts/${id}`, { method: "PUT", body: data }),
+  updatePayout: (id: string, data: { status: string; referenceNumber?: string; disputeReason?: string; paymentMethod?: string }) =>
+    request<{ success: boolean; payout: Payout }>(`/payouts/${id}`, { method: "PUT", body: data }),
+
+  /** Add this admin's signature (the second signatory releases the payout). */
+  approvePayout: (id: string) =>
+    request<{ success: boolean; payout: Payout }>(`/payouts/${id}/approve`, { method: "POST" }),
 
   // Meetings
   createMeeting: (groupId: string, data: { date: string; time: string; venue: string; agenda: string }) =>

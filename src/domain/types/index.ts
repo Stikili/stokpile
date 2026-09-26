@@ -108,6 +108,9 @@ export interface Payout {
   confirmedAt?: string;
   disputeReason?: string;
   paymentMethod?: 'eft' | 'cash' | 'paystack' | 'other';
+  createdBy?: string | null;
+  /** Admin signatures; a payout is released once it has enough (see domain/payouts). */
+  approvals?: { approverEmail: string; approvedAt: string }[];
   createdAt: string;
   recipient?: {
     fullName: string;

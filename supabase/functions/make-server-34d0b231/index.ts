@@ -6,6 +6,7 @@ import { Ratelimit } from "npm:@upstash/ratelimit@2.0.5";
 import { Redis } from "npm:@upstash/redis@1.34.3";
 import { registerExtraRoutes } from "./extra_routes.ts";
 import { registerMoreRoutes } from "./more_routes.ts";
+import { registerPayoutRoutes } from "./payout_routes.ts";
 import { registerAiRoutes } from "./ai_routes.ts";
 import { registerWhatsappRoutes } from "./whatsapp_routes.ts";
 
@@ -1715,105 +1716,7 @@ app.put('/make-server-34d0b231/groups/:groupId/contribution-adjustment', async (
 // PAYOUTS
 // ============================================================
 
-app.post('/make-server-34d0b231/payouts', async (c) => {
-  try {
-    const user = await getAuthUser(c);
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
-
-    const { groupId, recipientEmail, amount, scheduledDate } = await c.req.json();
-    const myMembership = await getMembership(groupId, user.email!);
-    if (!myMembership || myMembership.role !== 'admin')
-      return c.json({ error: 'Not authorized – admin only' }, 403);
-
-    const { data: group } = await supabaseAdmin
-      .from('groups').select('payouts_allowed').eq('id', groupId).single();
-    if (!group.payouts_allowed) return c.json({ error: 'Payouts not allowed for this group' }, 400);
-
-    const recipientM = await getMembership(groupId, recipientEmail);
-    if (!recipientM || recipientM.status !== 'approved')
-      return c.json({ error: 'Recipient must be an approved group member' }, 400);
-
-    const { data: payout, error } = await supabaseAdmin
-      .from('payouts')
-      .insert({
-        group_id: groupId,
-        recipient_email: recipientEmail,
-        amount: parseFloat(amount),
-        scheduled_date: scheduledDate
-          ? new Date(scheduledDate).toISOString().split('T')[0]
-          : new Date().toISOString().split('T')[0],
-        status: 'scheduled',
-        created_by: user.email,
-      })
-      .select()
-      .single();
-    if (error) return c.json({ error: error.message }, 500);
-
-    return c.json({ success: true, payout: toPayout(payout) });
-  } catch (err: any) {
-    return c.json({ error: err.message }, 500);
-  }
-});
-
-app.get('/make-server-34d0b231/payouts', async (c) => {
-  try {
-    const user = await getAuthUser(c);
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
-
-    const groupId = c.req.query('groupId');
-    const myMembership = await getMembership(groupId!, user.email!);
-    if (!myMembership || myMembership.status !== 'approved')
-      return c.json({ error: 'Not a member of this group' }, 403);
-
-    const { data } = await supabaseAdmin
-      .from('payouts')
-      .select('*, profiles!payouts_recipient_email_fkey(full_name, surname, profile_picture_url)')
-      .eq('group_id', groupId!)
-      .order('scheduled_date', { ascending: false });
-
-    const payouts = (data ?? []).map((row: any) => ({
-      ...toPayout(row),
-      recipient: {
-        email: row.recipient_email,
-        fullName: row.profiles?.full_name ?? 'Unknown',
-        surname: row.profiles?.surname ?? 'User',
-        profilePictureUrl: row.profiles?.profile_picture_url ?? null,
-      },
-    }));
-
-    return c.json({ payouts });
-  } catch (err: any) {
-    return c.json({ error: err.message }, 500);
-  }
-});
-
-app.put('/make-server-34d0b231/payouts/:id', async (c) => {
-  try {
-    const user = await getAuthUser(c);
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
-
-    const payoutId = c.req.param('id');
-    const { status } = await c.req.json();
-
-    const { data: existing } = await supabaseAdmin
-      .from('payouts').select('*').eq('id', payoutId).maybeSingle();
-    if (!existing) return c.json({ error: 'Payout not found' }, 404);
-
-    const myMembership = await getMembership(existing.group_id, user.email!);
-    if (!myMembership || myMembership.role !== 'admin')
-      return c.json({ error: 'Not authorized' }, 403);
-
-    const updates: Record<string, any> = { status, updated_at: new Date().toISOString() };
-    if (status === 'completed') updates.completed_at = new Date().toISOString();
-
-    const { data: payout } = await supabaseAdmin
-      .from('payouts').update(updates).eq('id', payoutId).select().single();
-
-    return c.json({ success: true, payout: toPayout(payout) });
-  } catch (err: any) {
-    return c.json({ error: err.message }, 500);
-  }
-});
+// Payout routes live in payout_routes.ts (two-signatory release).
 
 // ============================================================
 // MEETINGS
@@ -2667,6 +2570,7 @@ function cacheFor(c: any, seconds: number) {
 // ============================================================
 registerExtraRoutes(app, supabaseAdmin, getAuthUser, getMembership);
 registerMoreRoutes(app, supabaseAdmin, getAuthUser, getMembership);
+registerPayoutRoutes(app, supabaseAdmin, getAuthUser, getMembership);
 registerAiRoutes(app, supabaseAdmin, getAuthUser, getMembership);
 registerWhatsappRoutes(app, supabaseAdmin);
 

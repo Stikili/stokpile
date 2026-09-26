@@ -50,7 +50,8 @@ export function sampleData(groupType = 'rotating') {
       status: 'completed', scheduledDate: monthsAgo(6 - m, 25), completedAt: monthsAgo(6 - m, 25),
     })),
     { id: 'p-next', groupId: GROUP_ID, recipientEmail: members[6].email, amount: 12000,
-      status: 'scheduled', scheduledDate: inDays(9),
+      status: 'scheduled', scheduledDate: inDays(9), createdBy: members[1].email,
+      approvals: [{ approverEmail: members[1].email, approvedAt: monthsAgo(0) }],
       recipient: { fullName: members[6].fullName, surname: members[6].surname } },
   ];
 
@@ -103,7 +104,7 @@ export async function mockApi(page: Page, opts: MockApiOptions = {}): Promise<Mo
     [/\/groups\/[^/]+\/members$/, { members: data.members }],
     [/\/contributions$/, { contributions: data.contributions }],
     [/\/groups\/[^/]+\/contribution-adjustment$/, { adjustment: 0 }],
-    [/\/payouts$/, { payouts: data.payouts }],
+    [/\/payouts$/, { payouts: data.payouts, requiredApprovals: 2 }],
     [/\/meetings$/, { meetings: data.meetings }],
     [/\/groups\/[^/]+\/overdue$/, { members: data.overdue, target: 1200 }],
     [/\/groups\/[^/]+\/rotation$/, { rotation: data.rotation }],
