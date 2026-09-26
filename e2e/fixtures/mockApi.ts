@@ -66,7 +66,18 @@ export function sampleData(groupType = 'rotating') {
     members,
     contributions,
     payouts,
-    meetings: [{ id: 'm-1', groupId: GROUP_ID, date: inDays(4), time: '10:00', venue: 'Community hall', createdAt: monthsAgo(0) }],
+    meetings: [{
+      id: 'm-1', groupId: GROUP_ID, date: inDays(4), time: '10:00', venue: 'Community hall', createdAt: monthsAgo(0),
+      attendance: Object.fromEntries(members.map((m, i) => [m.email, i < 7])),
+    }],
+    votes: [
+      { id: 'v-open', groupId: GROUP_ID, meetingId: 'm-1', question: 'Increase the monthly contribution to R1 500',
+        kind: 'resolution', active: true, yesVotes: members.slice(1, 5).map((m) => m.email), noVotes: [members[5].email],
+        createdAt: monthsAgo(0) },
+      { id: 'v-closed', groupId: GROUP_ID, meetingId: 'm-1', question: 'Buy a gazebo for meetings',
+        kind: 'resolution', active: false, yesVotes: [], noVotes: [], outcome: 'no_quorum', closedAt: monthsAgo(1),
+        tally: { yes: 3, no: 1, present: 4, eligible: 10, quorum: 5 }, createdAt: monthsAgo(1) },
+    ],
     overdue: members.slice(7, 9).map((m) => ({
       email: m.email, fullName: m.fullName, surname: m.surname, totalPaid: 7200, unpaidAmount: 1200,
       contributionCount: 6, isOverdue: true, deficit: 1200, target: 1200,
@@ -117,6 +128,7 @@ export async function mockApi(page: Page, opts: MockApiOptions = {}): Promise<Mo
       monthlyBreakdown: Array.from({ length: 6 }, (_, i) => ({ label: monthsAgo(5 - i).slice(0, 7), paid: 10, total: 10 })),
     }],
     [/\/invites$/, { invites: [] }],
+    [/\/votes$/, { votes: data.votes }],
     [/\/groups\/[^/]+\/announcements$/, { announcements: [] }],
   ];
 

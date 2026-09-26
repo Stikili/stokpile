@@ -168,7 +168,7 @@ export const api = {
   updateGroupFrequency: (groupId: string, frequency: string) =>
     request<{ message: string }>(`/groups/${groupId}/frequency`, { method: "PUT", body: { frequency } }),
 
-  updateGroup: (id: string, data: { isPublic?: boolean; payoutsAllowed?: boolean; name?: string; description?: string; currency?: string; contributionTarget?: number | null }) =>
+  updateGroup: (id: string, data: { isPublic?: boolean; payoutsAllowed?: boolean; name?: string; description?: string; currency?: string; contributionTarget?: number | null; quorumPercent?: number }) =>
     request<{ message: string }>(`/groups/${id}`, { method: "PUT", body: data }),
 
   archiveGroup: (id: string) =>
@@ -319,8 +319,12 @@ export const api = {
   },
 
   // Votes
-  createVote: (data: { groupId: string; question: string; meetingId?: string }) =>
+  createVote: (data: { groupId: string; question: string; meetingId?: string; kind?: 'poll' | 'resolution' }) =>
     request<{ vote: Vote }>("/votes", { method: "POST", body: data }),
+
+  /** Close a vote: freezes the tally and quorum; a passed resolution records its next step. */
+  closeVote: (voteId: string, data: { nextStep?: string; nextStepOwner?: string; nextStepDue?: string } = {}) =>
+    request<{ vote: Vote }>(`/votes/${voteId}/close`, { method: "POST", body: data }),
 
   getVotes: (groupId: string, meetingId?: string) => {
     const params = new URLSearchParams({ groupId });

@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/presentation/ui/card';
 import { Label } from '@/presentation/ui/label';
 import { Switch } from '@/presentation/ui/switch';
+import { Input } from '@/presentation/ui/input';
+import { Button } from '@/presentation/ui/button';
+import { DEFAULT_QUORUM_PERCENT } from '@/domain/meetings';
 import { ConfirmationDialog } from '@/presentation/shared/ConfirmationDialog';
 import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
@@ -17,6 +20,25 @@ export function GroupSettingsCard({ group, onUpdate }: GroupSettingsCardProps) {
   const [payoutsAllowed, setPayoutsAllowed] = useState(group.payoutsAllowed);
   const [updating, setUpdating] = useState<string | null>(null);
   const [confirmDisablePayouts, setConfirmDisablePayouts] = useState(false);
+  const [quorum, setQuorum] = useState(String(group.quorumPercent ?? DEFAULT_QUORUM_PERCENT));
+
+  const saveQuorum = async () => {
+    const value = Math.round(Number(quorum));
+    if (!Number.isFinite(value) || value < 1 || value > 100) {
+      toast.error('Quorum must be between 1% and 100%');
+      return;
+    }
+    setUpdating('quorum');
+    try {
+      await api.updateGroup(group.id, { quorumPercent: value });
+      toast.success(`Quorum set to ${value}% of members`);
+      onUpdate();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update quorum');
+    } finally {
+      setUpdating(null);
+    }
+  };
 
   const handleToggleVisibility = async (checked: boolean) => {
     setUpdating('visibility');
@@ -105,6 +127,22 @@ export function GroupSettingsCard({ group, onUpdate }: GroupSettingsCardProps) {
               onCheckedChange={handleTogglePayouts}
               disabled={updating === 'payouts'}
             />
+          </div>
+        </div>
+
+        <div className="border-t pt-6 space-y-2">
+          <Label htmlFor="quorum" className="text-base">Quorum for resolutions</Label>
+          <p className="text-sm text-muted-foreground">
+            Share of members who must be present for a formal resolution to count. Most constitutions use 50%.
+          </p>
+          <div className="flex items-center gap-2">
+            <Input id="quorum" type="number" inputMode="numeric" min={1} max={100} value={quorum}
+              onChange={(e) => setQuorum(e.target.value)} className="w-24" />
+            <span className="text-sm text-muted-foreground">%</span>
+            <Button size="sm" variant="outline" onClick={saveQuorum}
+              disabled={updating === 'quorum' || Number(quorum) === (group.quorumPercent ?? DEFAULT_QUORUM_PERCENT)}>
+              Save
+            </Button>
           </div>
         </div>
 

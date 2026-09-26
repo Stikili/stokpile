@@ -21,9 +21,11 @@ interface MeetingsViewProps {
   groupId: string;
   isAdmin: boolean;
   userEmail: string;
+  /** Share of members needed for a formal resolution (group setting). */
+  quorumPercent?: number;
 }
 
-export function MeetingsView({ groupId, isAdmin, userEmail }: MeetingsViewProps) {
+export function MeetingsView({ groupId, isAdmin, userEmail, quorumPercent }: MeetingsViewProps) {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -571,6 +573,7 @@ export function MeetingsView({ groupId, isAdmin, userEmail }: MeetingsViewProps)
               groupId={groupId}
               isAdmin={isAdmin}
               userEmail={userEmail || ''}
+              quorumPercent={quorumPercent}
               onBack={() => setViewingMeeting(null)}
             />
           </DialogContent>

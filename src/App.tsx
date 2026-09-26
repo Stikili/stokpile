@@ -609,6 +609,7 @@ export default function App() {
                           groupId={selectedGroup.id}
                           isAdmin={isAdmin}
                           userEmail={session.user.email}
+                          quorumPercent={selectedGroup.quorumPercent}
                         />
                       </TabsContent>
 

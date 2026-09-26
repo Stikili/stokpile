@@ -43,6 +43,8 @@ export interface Group {
   currency?: string;
   contributionTarget?: number | null;
   contributionTargetAnnual?: number | null;
+  /** Share of members that must be present for a formal resolution (1–100). */
+  quorumPercent?: number;
   archived?: boolean;
   archivedAt?: string | null;
   isDemo?: boolean;
@@ -145,8 +147,18 @@ export interface Vote {
   groupId: string;
   question: string;
   meetingId?: string;
+  /** 'resolution' binds the group and needs a quorum; 'poll' just asks. */
+  kind?: 'poll' | 'resolution';
+  active?: boolean;
   yesVotes: string[];
   noVotes: string[];
+  outcome?: 'passed' | 'rejected' | 'no_quorum' | null;
+  closedAt?: string | null;
+  /** Frozen when the vote closed. */
+  tally?: { yes: number; no: number; present: number; eligible: number; quorum: number } | null;
+  nextStep?: string | null;
+  nextStepOwner?: string | null;
+  nextStepDue?: string | null;
   createdAt: string;
   createdBy?: string;
 }

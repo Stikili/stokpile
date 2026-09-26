@@ -39,10 +39,11 @@ interface MeetingDetailViewProps {
   groupId: string;
   isAdmin: boolean;
   userEmail: string;
+  quorumPercent?: number;
   onBack: () => void;
 }
 
-export function MeetingDetailView({ meeting, groupId, isAdmin, userEmail, onBack }: MeetingDetailViewProps) {
+export function MeetingDetailView({ meeting, groupId, isAdmin, userEmail, quorumPercent, onBack }: MeetingDetailViewProps) {
   const [members, setMembers] = useState<Member[]>([]);
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
   const [localMeeting, setLocalMeeting] = useState(meeting);
@@ -224,6 +225,9 @@ export function MeetingDetailView({ meeting, groupId, isAdmin, userEmail, onBack
             meetingId={localMeeting.id}
             isAdmin={isAdmin}
             userEmail={userEmail}
+            presentCount={Object.values(localMeeting.attendance ?? {}).filter(Boolean).length}
+            eligibleCount={members.length}
+            quorumPercent={quorumPercent}
           />
         </TabsContent>
 
