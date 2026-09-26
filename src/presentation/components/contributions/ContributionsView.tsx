@@ -22,16 +22,17 @@ import { api } from '@/infrastructure/api';
 import { toast } from 'sonner';
 import { exportToCSV, formatCurrency, formatDate, currencySymbol } from '@/lib/export';
 import { PaymentProofButton } from '@/presentation/components/shared/PaymentProofButton';
-import { printReceipt } from '@/lib/receipt';
+import { ReceiptDialog } from '@/presentation/components/receipts/ReceiptDialog';
 
 interface ContributionsViewProps {
   groupId: string;
   groupName?: string;
+  groupType?: string;
   userEmail: string;
   isAdmin?: boolean;
 }
 
-export function ContributionsView({ groupId, groupName, userEmail, isAdmin = false }: ContributionsViewProps) {
+export function ContributionsView({ groupId, groupName, groupType, userEmail, isAdmin = false }: ContributionsViewProps) {
   const [contributions, setContributions] = useState<Contribution[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +41,7 @@ export function ContributionsView({ groupId, groupName, userEmail, isAdmin = fal
   const [date, setDate] = useState<Date>(new Date());
   const [selectedMemberEmail, setSelectedMemberEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [receiptFor, setReceiptFor] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
   const [payingId, setPayingId] = useState<string | null>(null);
   const [flutterwaveId, setFlutterwaveId] = useState<string | null>(null);
@@ -601,22 +603,13 @@ export function ContributionsView({ groupId, groupName, userEmail, isAdmin = fal
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8"
-                                  onClick={() => {
-                                    const member = members.find(m => m.email === contribution.userEmail);
-                                    printReceipt({
-                                      receiptNumber: contribution.id.slice(0, 8).toUpperCase(),
-                                      groupName: groupName ?? 'Stokpile',
-                                      memberName: member ? `${member.fullName || ''} ${member.surname || ''}`.trim() || contribution.userEmail : contribution.userEmail,
-                                      memberEmail: contribution.userEmail,
-                                      amount: contribution.amount,
-                                      date: contribution.date,
-                                    });
-                                  }}
+                                  onClick={() => setReceiptFor(contribution.id)}
+                                  aria-label="Receipt"
                                 >
                                   <Receipt className="h-3.5 w-3.5" />
                                 </Button>
                               </TooltipTrigger>
-                              <TooltipContent>Print receipt</TooltipContent>
+                              <TooltipContent>Receipt</TooltipContent>
                             </Tooltip>
                           )}
                           {(contribution.userEmail === userEmail || isAdmin) && (
@@ -667,6 +660,13 @@ export function ContributionsView({ groupId, groupName, userEmail, isAdmin = fal
           setDuplicateWarning({ open: false, pendingSubmit: null });
           if (duplicateWarning.pendingSubmit) await duplicateWarning.pendingSubmit();
         }}
+      />
+      <ReceiptDialog
+        groupId={groupId}
+        groupName={groupName ?? 'Stokpile'}
+        groupType={groupType}
+        contributionId={receiptFor}
+        onClose={() => setReceiptFor(null)}
       />
     </>
   );

@@ -103,6 +103,7 @@ import { exportToCSV, setUserCountry, setGroupCurrency } from "@/lib/export";
 import "@/lib/offlineQueue"; // registers online listener
 import { initAnalytics, track } from "@/lib/analytics";
 import { hasRotation } from '@/domain/types';
+import { AuthDialog, type AuthMode } from '@/presentation/components/auth/AuthDialog';
 import { PaymentReturnDialog, readPaymentReturn, type PaymentReturn } from '@/presentation/components/contributions/PaymentReturnDialog';
 
 export default function App() {
@@ -128,7 +129,7 @@ export default function App() {
   });
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
-  const [showAuthFromLanding, setShowAuthFromLanding] = useState(() => {
+  const [showAuthFromLanding] = useState(() => {
     if (typeof window === 'undefined') return false;
     const params = new URLSearchParams(window.location.search);
     // Skip landing page if: ?signin=1, ?ref=CODE, or user has logged in before
@@ -137,6 +138,7 @@ export default function App() {
       || sessionStorage.getItem('accessToken') !== null
       || localStorage.getItem('stokpile-has-account') === 'true';
   });
+  const [authDialog, setAuthDialog] = useState<AuthMode | null>(null);
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [showGlobalSearch, setShowGlobalSearch] = useState(false);
@@ -299,8 +301,13 @@ export default function App() {
         <LanguageProvider>
           <TooltipProvider>
             <Suspense fallback={<div className="min-h-screen" />}>
-              <LandingPage onGetStarted={() => setShowAuthFromLanding(true)} />
+              <LandingPage onGetStarted={setAuthDialog} />
             </Suspense>
+            <AuthDialog
+              mode={authDialog}
+              onClose={() => setAuthDialog(null)}
+              onSuccess={() => { setAuthDialog(null); handleAuthSuccess(); }}
+            />
             <Toaster />
           </TooltipProvider>
         </LanguageProvider>
@@ -637,6 +644,7 @@ export default function App() {
                         <ContributionsView
                           groupId={selectedGroup.id}
                           groupName={selectedGroup.name}
+                          groupType={selectedGroup.groupType}
                           userEmail={session.user.email}
                           isAdmin={isAdmin}
                         />

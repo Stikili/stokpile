@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { money, toCents } from '@/lib/money';
-import { receiptRef, receiptRefFromId } from '@/domain/receipt';
+import { receiptRef, receiptRefFromId, buildContributionReceipt, receiptText } from '@/domain/receipt';
 import { setGroupCurrency } from '@/lib/export';
 
 const NNBSP = ' ';
@@ -50,5 +50,36 @@ describe('receiptRef', () => {
 
   it('derives an interim code from a record id', () => {
     expect(receiptRefFromId('a3f2-9b1c-uuid', new Date(2026, 8, 18))).toBe('STK-0926-A3F2');
+  });
+});
+
+describe('buildContributionReceipt', () => {
+  const members = [
+    { email: 'a@x', fullName: 'Ayanda', surname: 'M', role: 'admin', status: 'approved' },
+    { email: 'b@x', fullName: 'Busi', surname: 'K', role: 'member', status: 'approved' },
+  ] as never[];
+  const c = (id: string, userEmail: string, date: string, createdBy?: string) =>
+    ({ id, groupId: 'g', userEmail, amount: 1200, date, paid: true, createdAt: `${date}T19:42:00`, createdBy });
+
+  it('builds the receipt the member forwards', () => {
+    const contributions = [c('a3f2-1', 'b@x', '2026-09-18', 'a@x'), c('x', 'a@x', '2026-09-02')];
+    const r = buildContributionReceipt({
+      contribution: contributions[0], groupName: 'Masakhane', members, contributions,
+      round: { number: 7, of: 10 },
+      penalties: [{ label: 'Late penalty', clause: '3.3', amount: 50 }],
+      locale: 'en-ZA',
+    });
+    expect(r.ref).toBe('STK-0926-A3F2');
+    expect(r.memberName).toBe('Busi K');
+    expect(r.capturedBy).toBe('Ayanda M');
+    expect(r.period.startsWith('Round 7 / 10')).toBe(true);
+    expect(r.total).toBe(1250);
+    expect([r.paidCount, r.memberCount]).toEqual([2, 2]);
+    expect(receiptText(r, String)).toContain('Late penalty (clause 3.3): 50');
+  });
+
+  it('omits "captured by" when the member recorded it themselves', () => {
+    const own = c('b1', 'b@x', '2026-09-18', 'b@x');
+    expect(buildContributionReceipt({ contribution: own, groupName: 'G', members, contributions: [own] }).capturedBy).toBeUndefined();
   });
 });

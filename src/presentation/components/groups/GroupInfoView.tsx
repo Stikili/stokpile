@@ -1,10 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/presentation/ui/table';
 import { Badge } from '@/presentation/ui/badge';
 import { Button } from '@/presentation/ui/button';
-import { Skeleton } from '@/presentation/ui/skeleton';
-import { AdminAddMembersMenu } from '@/presentation/components/members/AdminAddMembersMenu';
 import { ShareInviteDialog } from '@/presentation/components/members/ShareInviteDialog';
 import { BulkInviteDialog } from '@/presentation/components/members/BulkInviteDialog';
 import { ConstitutionGeneratorDialog } from '@/presentation/components/groups/ConstitutionGeneratorDialog';
@@ -12,22 +9,17 @@ import { GroupSettingsCard } from '@/presentation/components/groups/GroupSetting
 import { EditGroupNameDialog } from '@/presentation/components/groups/EditGroupNameDialog';
 import { EditGroupDescriptionDialog } from '@/presentation/components/groups/EditGroupDescriptionDialog';
 import { EditContributionFrequencyDialog } from '@/presentation/components/groups/EditContributionFrequencyDialog';
-import { UserAvatar } from '@/presentation/components/profile/UserAvatar';
-import { MemberStatsDialog } from '@/presentation/components/members/MemberStatsDialog';
-import { MemberDetailsDialog } from '@/presentation/components/members/MemberDetailsDialog';
-import { EmptyState } from '@/presentation/shared/EmptyState';
 import { ConfirmationDialog } from '@/presentation/shared/ConfirmationDialog';
 import { DeleteGroupDialog } from '@/presentation/components/groups/DeleteGroupDialog';
-import { Copy, ArrowUp, ArrowDown, Loader2, Users, FileText, Upload, Download, Trash2, File, UserX, UserCheck, X, Check, ExternalLink, Archive, ArchiveRestore, ShieldAlert, UploadCloud, Wand2 } from 'lucide-react';
+import { Copy, Loader2, FileText, Upload, Trash2, File, Check, ExternalLink, Archive, ArchiveRestore, ShieldAlert, UploadCloud, Wand2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/presentation/ui/dropdown-menu';
-import { MoreHorizontal } from 'lucide-react';
 import { Input } from '@/presentation/ui/input';
 import { Label } from '@/presentation/ui/label';
 import { api } from '@/infrastructure/api';
+import { useInvalidate } from '@/application/hooks/queries';
 import { toast } from 'sonner';
 import { formatDate } from '@/lib/export';
-import type { Group, Member, Constitution } from '@/domain/types';
+import type { Group, Constitution } from '@/domain/types';
 
 interface GroupInfoViewProps {
   group: Group;
@@ -36,15 +28,9 @@ interface GroupInfoViewProps {
 }
 
 export function GroupInfoView({ group, onGroupUpdate, userEmail }: GroupInfoViewProps) {
-  const [members, setMembers] = useState<Member[]>([]);
-  const [loading, setLoading] = useState(true);
+  const invalidate = useInvalidate();
   const [showBulkInvite, setShowBulkInvite] = useState(false);
   const [showConstitutionGen, setShowConstitutionGen] = useState(false);
-  const [promotingEmail, setPromotingEmail] = useState<string | null>(null);
-  const [demotingEmail, setDemotingEmail] = useState<string | null>(null);
-  const [removingEmail, setRemovingEmail] = useState<string | null>(null);
-  const [deactivatingEmail, setDeactivatingEmail] = useState<string | null>(null);
-  const [reactivatingEmail, setReactivatingEmail] = useState<string | null>(null);
   const [constitution, setConstitution] = useState<Constitution | null>(null);
   const [constitutionLoading, setConstitutionLoading] = useState(false);
   const [uploadingConstitution, setUploadingConstitution] = useState(false);
@@ -56,8 +42,6 @@ export function GroupInfoView({ group, onGroupUpdate, userEmail }: GroupInfoView
   const [transferEmail, setTransferEmail] = useState('');
   const [transferring, setTransferring] = useState(false);
   const [transferConfirm, setTransferConfirm] = useState(false);
-  const [deactivateConfirm, setDeactivateConfirm] = useState<{ open: boolean; email: string | null; name: string }>({ open: false, email: null, name: '' });
-  const [removeConfirm, setRemoveConfirm] = useState<{ open: boolean; email: string | null; name: string }>({ open: false, email: null, name: '' });
   const [deleteConstitutionConfirm, setDeleteConstitutionConfirm] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [downloadingConstitution, setDownloadingConstitution] = useState(false);
@@ -66,100 +50,9 @@ export function GroupInfoView({ group, onGroupUpdate, userEmail }: GroupInfoView
   useEffect(() => {
     // Only load if user is confirmed member
     if (group && group.id) {
-      loadMembers();
       loadConstitution();
     }
   }, [group.id]);
-
-  const loadMembers = async () => {
-    // Don't attempt to load if no valid group
-    if (!group || !group.id) {
-      setLoading(false);
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      const data = await api.getMembers(group.id);
-      setMembers(data.members || []);
-    } catch (error) {
-      console.error('Failed to load members:', error);
-      // Don't show toast for expected permission errors
-      setMembers([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePromote = async (memberEmail: string) => {
-    setPromotingEmail(memberEmail);
-    try {
-      await api.promoteMember(group.id, memberEmail);
-      toast.success('Member promoted to admin successfully');
-      loadMembers();
-      if (onGroupUpdate) onGroupUpdate();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to promote member');
-    } finally {
-      setPromotingEmail(null);
-    }
-  };
-
-  const handleDemote = async (memberEmail: string) => {
-    setDemotingEmail(memberEmail);
-    try {
-      await api.demoteMember(group.id, memberEmail);
-      toast.success('Admin demoted to member successfully');
-      loadMembers();
-      if (onGroupUpdate) onGroupUpdate();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to demote admin');
-    } finally {
-      setDemotingEmail(null);
-    }
-  };
-
-  const handleRemove = async (memberEmail: string, memberName: string) => {
-    setRemovingEmail(memberEmail);
-    try {
-      await api.removeMember(group.id, memberEmail);
-      toast.success(`${memberName} has been removed from the group`);
-      loadMembers();
-      if (onGroupUpdate) onGroupUpdate();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to remove member');
-    } finally {
-      setRemovingEmail(null);
-    }
-  };
-
-  const handleDeactivate = async (memberEmail: string, memberName: string) => {
-    setDeactivatingEmail(memberEmail);
-    try {
-      await api.deactivateMember(group.id, memberEmail);
-      toast.success(`${memberName} has been deactivated`);
-      loadMembers();
-      if (onGroupUpdate) onGroupUpdate();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to deactivate member');
-    } finally {
-      setDeactivatingEmail(null);
-    }
-  };
-
-  const handleReactivate = async (memberEmail: string, memberName: string) => {
-    setReactivatingEmail(memberEmail);
-    try {
-      await api.reactivateMember(group.id, memberEmail);
-      toast.success(`${memberName} has been reactivated`);
-      loadMembers();
-      if (onGroupUpdate) onGroupUpdate();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to reactivate member');
-    } finally {
-      setReactivatingEmail(null);
-    }
-  };
 
   const copyToClipboard = (text: string, label: string, fieldKey: string) => {
     navigator.clipboard.writeText(text);
@@ -568,248 +461,6 @@ export function GroupInfoView({ group, onGroupUpdate, userEmail }: GroupInfoView
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Members ({members.length})</CardTitle>
-            {members.length > 0 && (
-              <div className="flex gap-2 mt-2">
-                <Badge variant="default">
-                  {members.filter(m => m.status !== 'inactive').length} Active
-                </Badge>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge variant="secondary" className="cursor-default">
-                      {members.filter(m => m.role === 'admin' && m.status !== 'inactive').length}/3 Admins
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent>Groups can have a maximum of 3 admins</TooltipContent>
-                </Tooltip>
-                {members.filter(m => m.status === 'inactive').length > 0 && (
-                  <Badge variant="destructive">
-                    {members.filter(m => m.status === 'inactive').length} Inactive
-                  </Badge>
-                )}
-              </div>
-            )}
-          </div>
-          {group.userRole === 'admin' && (
-            <AdminAddMembersMenu groupId={group.id} onSuccess={loadMembers} />
-          )}
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="flex items-center gap-3">
-                  <Skeleton className="h-10 w-10 rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-3 w-48" />
-                  </div>
-                  <Skeleton className="h-6 w-16" />
-                </div>
-              ))}
-            </div>
-          ) : members.length === 0 ? (
-            <EmptyState
-              icon={Users}
-              title="No members yet"
-              description="Invite members to join your group. You can share an invite link or upload a CSV with multiple emails at once."
-              action={group.userRole === 'admin' ? {
-                label: 'Bulk Invite (CSV)',
-                icon: UploadCloud,
-                onClick: () => setShowBulkInvite(true),
-              } : undefined}
-            />
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Member</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Joined</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {members.map((member) => {
-                    const isCreator = member.email === group.createdBy && group.admin1 === member.email;
-                    const adminCount = members.filter(m => m.role === 'admin' && m.status !== 'inactive').length;
-                    const canPromote = group.userRole === 'admin' && member.role === 'member' && member.status !== 'inactive' && adminCount < 3;
-                    const canDemote = group.userRole === 'admin' && member.role === 'admin' && !isCreator;
-                    const canRemove = group.userRole === 'admin' && !isCreator;
-                    const canDeactivate = group.userRole === 'admin' && !isCreator && member.status !== 'inactive';
-                    const canReactivate = group.userRole === 'admin' && !isCreator && member.status === 'inactive';
-                    const memberName = member.fullName !== 'Unknown'
-                      ? `${member.fullName} ${member.surname}`
-                      : member.email;
-
-                    return (
-                      <TableRow key={member.email} className={member.status === 'inactive' ? 'bg-muted/40 text-muted-foreground' : ''}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <UserAvatar 
-                              name={memberName}
-                              email={member.email}
-                              profilePictureUrl={member.profilePictureUrl}
-                            />
-                            <div>
-                              <div>
-                                {member.fullName !== 'Unknown'
-                                  ? `${member.fullName} ${member.surname}`
-                                  : member.email}
-                              </div>
-                              {member.fullName === 'Unknown' && (
-                                <span className="text-xs text-muted-foreground">Profile not found</span>
-                              )}
-                              {isCreator && (
-                                <Badge variant="outline" className="text-xs mt-1">
-                                  Creator
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="max-w-[200px] truncate">{member.email}</TableCell>
-                        <TableCell>
-                          <Badge variant={member.role === 'admin' ? 'default' : 'secondary'}>
-                            {member.role}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {member.managed || member.status === 'managed' ? (
-                            <Badge variant="outline" className="border-warning/40 text-warning dark:text-warning">
-                              Managed
-                            </Badge>
-                          ) : (
-                            <Badge variant={member.status === 'inactive' ? 'destructive' : 'default'}>
-                              {member.status === 'inactive' ? 'Inactive' : 'Active'}
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>{formatDate(member.joinedAt)}</TableCell>
-                        <TableCell className="text-right">
-                          {/* Desktop: icon buttons with tooltips */}
-                          <div className="hidden md:flex items-center justify-end gap-1">
-                            <MemberDetailsDialog member={member} groupCreatedBy={group.createdBy} />
-                            <MemberStatsDialog groupId={group.id} memberEmail={member.email} memberName={memberName} />
-                            {canPromote && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="sm" onClick={() => handlePromote(member.email)} disabled={promotingEmail === member.email}>
-                                    {promotingEmail === member.email ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Promote to admin</TooltipContent>
-                              </Tooltip>
-                            )}
-                            {!canPromote && group.userRole === 'admin' && member.role === 'member' && member.status !== 'inactive' && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="inline-flex">
-                                    <Button variant="ghost" size="sm" disabled><ArrowUp className="h-4 w-4 opacity-40" /></Button>
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>Admin limit reached (3/3). Demote an admin first.</TooltipContent>
-                              </Tooltip>
-                            )}
-                            {canDemote && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="sm" onClick={() => handleDemote(member.email)} disabled={demotingEmail === member.email}>
-                                    {demotingEmail === member.email ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowDown className="h-4 w-4" />}
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Demote to member</TooltipContent>
-                              </Tooltip>
-                            )}
-                            {canReactivate && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="sm" onClick={() => handleReactivate(member.email, memberName)} disabled={reactivatingEmail === member.email}>
-                                    {reactivatingEmail === member.email ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4 text-primary" />}
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Reactivate member</TooltipContent>
-                              </Tooltip>
-                            )}
-                            {canDeactivate && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="sm" disabled={deactivatingEmail === member.email} onClick={() => setDeactivateConfirm({ open: true, email: member.email, name: memberName })}>
-                                    {deactivatingEmail === member.email ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserX className="h-4 w-4 text-warning" />}
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Deactivate — pauses membership, preserves history</TooltipContent>
-                              </Tooltip>
-                            )}
-                            {canRemove && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="sm" disabled={removingEmail === member.email} onClick={() => setRemoveConfirm({ open: true, email: member.email, name: memberName })}>
-                                    {removingEmail === member.email ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4 text-destructive" />}
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Remove — permanently deletes all membership data</TooltipContent>
-                              </Tooltip>
-                            )}
-                          </div>
-
-                          {/* Mobile: dropdown menu */}
-                          <div className="md:hidden">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm"><MoreHorizontal className="h-4 w-4" /></Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <div className="px-1 py-0.5 flex gap-1">
-                                  <MemberDetailsDialog member={member} groupCreatedBy={group.createdBy} />
-                                  <MemberStatsDialog groupId={group.id} memberEmail={member.email} memberName={memberName} />
-                                </div>
-                                {(canPromote || canDemote || canReactivate || canDeactivate || canRemove) && <DropdownMenuSeparator />}
-                                {canPromote && (
-                                  <DropdownMenuItem onClick={() => handlePromote(member.email)}>
-                                    <ArrowUp className="h-4 w-4 mr-2" />Promote to admin
-                                  </DropdownMenuItem>
-                                )}
-                                {canDemote && (
-                                  <DropdownMenuItem onClick={() => handleDemote(member.email)}>
-                                    <ArrowDown className="h-4 w-4 mr-2" />Demote to member
-                                  </DropdownMenuItem>
-                                )}
-                                {canReactivate && (
-                                  <DropdownMenuItem onClick={() => handleReactivate(member.email, memberName)}>
-                                    <UserCheck className="h-4 w-4 mr-2 text-primary" />Reactivate
-                                  </DropdownMenuItem>
-                                )}
-                                {canDeactivate && (
-                                  <DropdownMenuItem onClick={() => setDeactivateConfirm({ open: true, email: member.email, name: memberName })}>
-                                    <UserX className="h-4 w-4 mr-2 text-warning" />Deactivate (pause)
-                                  </DropdownMenuItem>
-                                )}
-                                {canRemove && (
-                                  <DropdownMenuItem className="text-destructive" onClick={() => setRemoveConfirm({ open: true, email: member.email, name: memberName })}>
-                                    <X className="h-4 w-4 mr-2" />Remove permanently
-                                  </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Admin Actions - Archive & Transfer (Admin Only) */}
       {group.userRole === 'admin' && (
         <Card>
@@ -958,43 +609,11 @@ export function GroupInfoView({ group, onGroupUpdate, userEmail }: GroupInfoView
         onConfirm={handleConstitutionDelete}
       />
 
-      {/* Deactivate Member Confirmation */}
-      <ConfirmationDialog
-        open={deactivateConfirm.open}
-        onOpenChange={(open) => setDeactivateConfirm({ ...deactivateConfirm, open })}
-        title="Deactivate Member"
-        description={`Are you sure you want to deactivate ${deactivateConfirm.name}? They will no longer be able to participate in group activities, but their history will be preserved.`}
-        onConfirm={() => {
-          if (deactivateConfirm.email) {
-            handleDeactivate(deactivateConfirm.email, deactivateConfirm.name);
-            setDeactivateConfirm({ open: false, email: null, name: '' });
-          }
-        }}
-        confirmText="Deactivate"
-        variant="warning"
-      />
-
-      {/* Remove Member Confirmation */}
-      <ConfirmationDialog
-        open={removeConfirm.open}
-        onOpenChange={(open) => setRemoveConfirm({ ...removeConfirm, open })}
-        title="Remove Member"
-        description={`Are you sure you want to permanently remove ${removeConfirm.name} from the group? This action cannot be undone and will delete all their membership data.`}
-        onConfirm={() => {
-          if (removeConfirm.email) {
-            handleRemove(removeConfirm.email, removeConfirm.name);
-            setRemoveConfirm({ open: false, email: null, name: '' });
-          }
-        }}
-        confirmText="Remove"
-        variant="destructive"
-      />
-
       <BulkInviteDialog
         groupId={group.id}
         open={showBulkInvite}
         onOpenChange={setShowBulkInvite}
-        onSuccess={loadMembers}
+        onSuccess={() => invalidate.members(group.id)}
       />
 
       <ConstitutionGeneratorDialog

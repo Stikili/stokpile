@@ -24,10 +24,21 @@ test.describe('Landing Page', () => {
     ).toBeVisible();
   });
 
-  test('clicking Sign In shows auth form', async ({ page }) => {
+  test('Sign In opens a popup over the landing page', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Sign In' }).click();
-    await expect(page.getByText('Welcome to Stokpile')).toBeVisible({ timeout: 5000 });
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByText('Welcome to Stokpile')).toBeVisible({ timeout: 5000 });
+    // The landing page is still underneath — no navigation happened.
+    await expect(page.locator('h1', { hasText: 'Run your stokvel the modern way' }).first()).toBeAttached();
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+  });
+
+  test('Start Free opens the popup on sign-up', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: /Start Free/i }).first().click();
+    await expect(page.getByRole('dialog').getByLabel(/First Name/i)).toBeVisible({ timeout: 5000 });
   });
 
   test('has theme toggle', async ({ page }) => {

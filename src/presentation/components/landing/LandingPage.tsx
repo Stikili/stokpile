@@ -24,7 +24,8 @@ const REWARD_TIERS = [
 ];
 
 interface LandingPageProps {
-  onGetStarted: () => void;
+  /** Open sign-in ('signin') or account creation ('signup'). */
+  onGetStarted: (mode: 'signin' | 'signup') => void;
 }
 
 const FEATURES = [
@@ -135,7 +136,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
               <TooltipContent>{theme === 'navy' ? 'Light theme' : 'Dark theme'}</TooltipContent>
             </Tooltip>
             <Button
-              onClick={onGetStarted}
+              onClick={() => onGetStarted('signin')}
               size="sm"
               className="tap-none font-semibold shadow-md shadow-primary/20"
             >
@@ -262,7 +263,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                 <Button
                   className="w-full h-12 tap-none font-semibold text-base"
                   variant={p.highlight ? 'default' : 'outline'}
-                  onClick={onGetStarted}
+                  onClick={() => onGetStarted('signup')}
                 >
                   {p.cta}
                 </Button>
@@ -356,7 +357,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
         <div className="flex sm:flex-row justify-center gap-2.5 mt-7">
           <Button
             size="lg"
-            onClick={onGetStarted}
+            onClick={() => onGetStarted('signup')}
             className="h-12 text-base font-semibold tap-none shadow-lg shadow-primary/20"
           >
             Start Free
@@ -572,7 +573,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
                 <Button
                   className="w-full h-11 tap-none font-semibold mt-auto"
                   variant={p.highlight ? 'default' : 'outline'}
-                  onClick={onGetStarted}
+                  onClick={() => onGetStarted('signup')}
                 >
                   {p.cta}
                 </Button>
@@ -612,7 +613,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
           <p className="opacity-90 mb-6 text-base">No credit card. Free forever for small groups.</p>
           <Button
             size="lg"
-            onClick={onGetStarted}
+            onClick={() => onGetStarted('signup')}
             className="h-12 text-base bg-white text-primary hover:bg-white/95 font-semibold tap-none shadow-lg px-10"
           >
             Get Started Free
@@ -645,7 +646,7 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
         <div className="pb-3">
           <Button
             size="lg"
-            onClick={onGetStarted}
+            onClick={() => onGetStarted('signup')}
             className="w-full h-12 text-base font-semibold tap-none shadow-lg shadow-primary/30"
           >
             Get Started Free
