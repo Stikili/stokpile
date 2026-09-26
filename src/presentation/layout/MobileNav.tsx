@@ -2,12 +2,7 @@ import { useState } from 'react';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/presentation/ui/sheet';
 import { Button } from '@/presentation/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
-import {
-  Menu, Home, DollarSign, TrendingUp, Calendar, Settings, LogOut, User,
-  Moon, Sun, Megaphone, RefreshCw, ShoppingCart,
-  HeartHandshake, Gavel, FileBarChart, Activity, ClipboardList, Gauge,
-  Sparkles,
-} from 'lucide-react';
+import { Menu, LogOut, Moon, Sun, Gauge, Sparkles } from 'lucide-react';
 import { usePilo } from '@/presentation/components/ai/PiloContext';
 import { CreateGroupDialog } from '@/presentation/components/groups/CreateGroupDialog';
 import { JoinGroupDialog } from '@/presentation/components/groups/JoinGroupDialog';
@@ -17,7 +12,7 @@ import { UserAvatar } from '@/presentation/components/profile/UserAvatar';
 import { useTheme } from '@/presentation/shared/ThemeProvider';
 import { useLiteMode } from '@/application/context/LiteModeContext';
 import type { Session, Group } from '@/domain/types';
-import { hasRotation } from '@/domain/types';
+import { navItems, itemsIn, tabBar, SECTION_LABELS, type TabBarItem } from '@/presentation/layout/navigation';
 
 interface MobileNavProps {
   session: Session;
@@ -33,30 +28,6 @@ interface MobileNavProps {
 }
 
 // All possible tab definitions
-const ALL_TABS = (group: Group | null, isAdmin: boolean) => {
-  if (!group) return [];
-  const groupType = group.groupType;
-  const showRotation = hasRotation(groupType);
-
-  return [
-    { id: 'dashboard',      icon: Home,           label: 'Home',         section: 'main' },
-    { id: 'contributions',  icon: DollarSign,     label: 'Contribute',   section: 'main' },
-    ...(group.payoutsAllowed ? [{ id: 'payouts', icon: TrendingUp, label: 'Payouts', section: 'main' }] : []),
-    { id: 'meetings',       icon: Calendar,       label: 'Meetings',     section: 'main' },
-    { id: 'announcements',  icon: Megaphone,      label: 'Announcements',section: 'more' },
-    ...(showRotation       ? [{ id: 'rotation',   icon: RefreshCw,       label: 'Rotation',     section: 'more' }] : []),
-    ...(groupType === 'grocery' ? [{ id: 'grocery', icon: ShoppingCart,  label: 'Grocery',      section: 'more' }] : []),
-    ...(groupType === 'burial'  ? [{ id: 'burial',  icon: HeartHandshake, label: 'Burial',      section: 'more' }] : []),
-    { id: 'info',           icon: Settings,       label: 'Settings',     section: 'more' },
-    ...(isAdmin ? [
-      { id: 'penalties',    icon: Gavel,          label: 'Penalties',    section: 'admin' },
-      { id: 'reports',      icon: FileBarChart,   label: 'Reports',      section: 'admin' },
-      { id: 'analytics',    icon: Activity,       label: 'Analytics',    section: 'admin' },
-      { id: 'audit',        icon: ClipboardList,  label: 'Audit Log',    section: 'admin' },
-    ] : []),
-  ] as { id: string; icon: React.ElementType; label: string; section: string }[];
-};
-
 export function MobileNav({
   session,
   selectedGroup,
@@ -73,9 +44,8 @@ export function MobileNav({
   const { openPilo } = usePilo();
 
   const isAdmin = selectedGroup?.userRole === 'admin';
-  const allTabs = ALL_TABS(selectedGroup, isAdmin ?? false);
-  const mainTabs = allTabs.filter(t => t.section === 'main');
-  const moreTabs = allTabs.filter(t => t.section === 'more' || t.section === 'admin');
+  const items = selectedGroup ? navItems(selectedGroup, isAdmin ?? false) : [];
+  const bar = tabBar(items);
 
   const nav = (tab: string) => { onTabChange(tab); setOpen(false); };
 
@@ -129,71 +99,30 @@ export function MobileNav({
           {/* All navigation tabs, split by section */}
           {selectedGroup && (
             <div className="mb-2 space-y-3">
-              {/* Main tabs (Home, Contribute, Payouts, Meetings) */}
-              {mainTabs.length > 0 && (
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium px-1 mb-1.5">Navigate</p>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {mainTabs.map(t => (
-                      <button
-                        key={t.id}
-                        onClick={() => nav(t.id)}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left
-                          ${activeTab === t.id
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted/50 hover:bg-muted text-foreground'}`}
-                      >
-                        <t.icon className="h-4 w-4 shrink-0" />
-                        <span className="truncate">{t.label}</span>
-                      </button>
-                    ))}
+              {(['money', 'people', 'more'] as const).map((section) => {
+                const sectionItems = itemsIn(items, section);
+                if (sectionItems.length === 0) return null;
+                return (
+                  <div key={section}>
+                    <p className="text-xs text-muted-foreground font-medium px-1 mb-1.5">{SECTION_LABELS[section]}</p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {sectionItems.map(t => (
+                        <button
+                          key={t.id}
+                          onClick={() => nav(t.id)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left
+                            ${activeTab === t.id
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted/50 hover:bg-muted text-foreground'}`}
+                        >
+                          <t.icon className="h-4 w-4 shrink-0" />
+                          <span className="truncate">{t.label}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-
-              {/* More sections (Rotation, Grocery, Burial, Announcements, Settings) */}
-              {moreTabs.filter(t => t.section === 'more').length > 0 && (
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium px-1 mb-1.5">Sections</p>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {moreTabs.filter(t => t.section === 'more').map(t => (
-                      <button
-                        key={t.id}
-                        onClick={() => nav(t.id)}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left
-                          ${activeTab === t.id
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted/50 hover:bg-muted text-foreground'}`}
-                      >
-                        <t.icon className="h-4 w-4 shrink-0" />
-                        <span className="truncate">{t.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Admin-only tabs (Insights, Penalties, Audit) */}
-              {moreTabs.filter(t => t.section === 'admin').length > 0 && (
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium px-1 mb-1.5">Admin</p>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {moreTabs.filter(t => t.section === 'admin').map(t => (
-                      <button
-                        key={t.id}
-                        onClick={() => nav(t.id)}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left
-                          ${activeTab === t.id
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted/50 hover:bg-muted text-foreground'}`}
-                      >
-                        <t.icon className="h-4 w-4 shrink-0" />
-                        <span className="truncate">{t.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+                );
+              })}
             </div>
           )}
 
@@ -249,32 +178,33 @@ export function MobileNav({
   }
 
   // ─── Bottom nav ────────────────────────────────────────────────────────────
-  // Layout on mobile: [Home] [Contribute] [Pilo] [Payouts] [Meetings]
-  // Pilo sits in the centre as a prominent circular button. All overflow
-  // navigation (rotation, grocery, burial, admin tabs, settings) lives in
-  // the hamburger drawer at the top-left.
-  const leftTabs = mainTabs.slice(0, 2);
-  const rightTabs = mainTabs.slice(2, 4);
+  // Layout on mobile: [Home] [Money] [Pilo] [Members] [Meet] — a word under
+  // every icon, Pilo raised in the centre. Everything else lives in the
+  // hamburger drawer, grouped by section.
+  const renderTab = (item: TabBarItem) => {
+    const active = item.match.includes(activeTab);
+    return (
+      <button
+        key={item.label}
+        className={`flex flex-col items-center gap-0.5 min-w-0 flex-1 py-1.5 px-1 rounded-xl transition-all
+          ${active ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+        onClick={() => onTabChange(item.target)}
+        aria-label={item.label}
+        aria-current={active ? 'page' : undefined}
+      >
+        <item.icon className="h-5 w-5" />
+        <span className="text-[10px] font-semibold truncate w-full text-center leading-tight mt-0.5">
+          {item.label}
+        </span>
+      </button>
+    );
+  };
   return (
     <div className="bg-card/95 border-t border-border backdrop-blur-sm">
       <div className="flex items-center justify-around px-2 py-2 max-w-lg mx-auto">
         {selectedGroup ? (
           <>
-            {leftTabs.map((item) => (
-              <button
-                key={item.id}
-                className={`flex flex-col items-center gap-0.5 min-w-0 flex-1 py-1.5 px-1 rounded-xl transition-all
-                  ${activeTab === item.id ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                onClick={() => onTabChange(item.id)}
-                aria-label={item.label}
-                aria-current={activeTab === item.id ? 'page' : undefined}
-              >
-                <item.icon className={`h-5 w-5 transition-transform ${activeTab === item.id ? 'scale-110' : ''}`} />
-                <span className="text-[10px] font-medium truncate w-full text-center leading-tight mt-0.5">
-                  {item.label}
-                </span>
-              </button>
-            ))}
+            {bar.left.map(renderTab)}
 
             {/* Pilo — prominent centre button */}
             <div className="flex-1 flex justify-center">
@@ -288,21 +218,7 @@ export function MobileNav({
               </button>
             </div>
 
-            {rightTabs.map((item) => (
-              <button
-                key={item.id}
-                className={`flex flex-col items-center gap-0.5 min-w-0 flex-1 py-1.5 px-1 rounded-xl transition-all
-                  ${activeTab === item.id ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                onClick={() => onTabChange(item.id)}
-                aria-label={item.label}
-                aria-current={activeTab === item.id ? 'page' : undefined}
-              >
-                <item.icon className={`h-5 w-5 transition-transform ${activeTab === item.id ? 'scale-110' : ''}`} />
-                <span className="text-[10px] font-medium truncate w-full text-center leading-tight mt-0.5">
-                  {item.label}
-                </span>
-              </button>
-            ))}
+            {bar.right.map(renderTab)}
           </>
         ) : (
           <div className="flex-1 flex justify-center">

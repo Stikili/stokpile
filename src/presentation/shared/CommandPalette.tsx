@@ -139,10 +139,10 @@ export function CommandPalette({
                   <CommandItem onSelect={() => run(() => onTabChange('penalties'))}>
                     <Gavel /> Penalties &amp; Fines
                   </CommandItem>
-                  <CommandItem onSelect={() => run(() => onTabChange('reports'))}>
+                  <CommandItem onSelect={() => run(() => onTabChange('insights'))}>
                     <FileBarChart /> Financial Reports
                   </CommandItem>
-                  <CommandItem onSelect={() => run(() => onTabChange('analytics'))}>
+                  <CommandItem onSelect={() => run(() => onTabChange('insights'))}>
                     <Activity /> Analytics
                   </CommandItem>
                   <CommandItem onSelect={() => run(() => onTabChange('audit'))}>

@@ -97,6 +97,11 @@ export async function mockApi(page: Page, opts: { groupType?: string } = {}) {
     [/\/groups\/[^/]+\/requests$/, { requests: [] }],
     [/\/groups\/[^/]+\/subscription$/, { groupId: GROUP_ID, tier: 'pro', trialStartedAt: null, trialEndsAt: null, paystackSubscriptionCode: 'SUB_test', paystackCustomerCode: 'CUS_test', nextBillingDate: inDays(20), updatedAt: monthsAgo(1) }],
     [/\/notifications$/, { notifications: [] }],
+    [/\/groups\/[^/]+\/health$/, {
+      score: 86, paymentRate: 93.3, streak: 6, trend: 'up', memberCount: 10,
+      totalContributions: 70, paidContributions: 67,
+      monthlyBreakdown: Array.from({ length: 6 }, (_, i) => ({ label: monthsAgo(5 - i).slice(0, 7), paid: 10, total: 10 })),
+    }],
     [/\/invites$/, { invites: [] }],
     [/\/groups\/[^/]+\/announcements$/, { announcements: [] }],
   ];

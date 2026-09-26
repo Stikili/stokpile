@@ -72,25 +72,7 @@ import {
 } from "@/presentation/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/presentation/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/presentation/ui/dropdown-menu";
-import {
-  PieChart,
-  DollarSign,
-  TrendingUp,
-  Users,
-  Settings,
-  Calendar,
-  Lock,
-  ClipboardList,
-  ChevronDown,
-  Search,
-  Megaphone,
-  FileBarChart,
-  Activity,
-  RefreshCw,
-  ShoppingCart,
-  HeartHandshake,
-  Gavel,
-} from "lucide-react";
+import { PieChart, Lock, ChevronDown, Search, Activity } from "lucide-react";
 
 // Keep Keyboard import out — header icon was removed (still accessible via ? shortcut)
 import { Toaster } from "@/presentation/ui/sonner";
@@ -103,6 +85,9 @@ import { exportToCSV, setUserCountry, setGroupCurrency } from "@/lib/export";
 import "@/lib/offlineQueue"; // registers online listener
 import { initAnalytics, track } from "@/lib/analytics";
 import { hasRotation } from '@/domain/types';
+import { navItems, itemsIn, SECTION_LABELS, type NavItem } from '@/presentation/layout/navigation';
+import { SectionTabs } from '@/presentation/layout/SectionTabs';
+import { MembersView } from '@/presentation/components/members/MembersView';
 import { AuthDialog, type AuthMode } from '@/presentation/components/auth/AuthDialog';
 import { PaymentReturnDialog, readPaymentReturn, type PaymentReturn } from '@/presentation/components/contributions/PaymentReturnDialog';
 
@@ -500,47 +485,13 @@ export default function App() {
                 <div className="animate-slide-up">
                   <Tabs value={activeTab} onValueChange={setActiveTab}>
                     {(() => {
-                      const groupType = selectedGroup.groupType;
-                      const showRotation = hasRotation(groupType);
+                      // Home · Money · People · More, from the shared navigation model.
+                      const items = navItems(selectedGroup, isAdmin, {
+                        announcements: unreadAnnouncements,
+                        joinRequests: pendingCounts.joinRequests,
+                      });
 
-                      // 4-section IA: Home · Money · People · More.
-                      // All existing tab IDs preserved for deep-link compat
-                      // and so the existing TabsContent below keeps working.
-                      type Item = {
-                        id: string;
-                        icon: any;
-                        label: string;
-                        feature: import('@/domain/types').SubscriptionFeature;
-                        badge?: number;
-                      };
-
-                      const moneyItems: Item[] = [
-                        { id: 'contributions', icon: DollarSign,    label: 'Contributions', feature: 'announcements' },
-                        ...(selectedGroup.payoutsAllowed
-                          ? [{ id: 'payouts', icon: TrendingUp, label: 'Payouts', feature: 'announcements' as const } as Item]
-                          : []),
-                        ...(isAdmin
-                          ? [
-                              { id: 'insights',  icon: FileBarChart, label: 'Insights',  feature: 'reports' as const } as Item,
-                              { id: 'penalties', icon: Gavel,        label: 'Penalties', feature: 'penalties' as const } as Item,
-                            ]
-                          : []),
-                      ];
-
-                      const peopleItems: Item[] = [
-                        { id: 'meetings',      icon: Calendar,  label: 'Meetings',       feature: 'announcements' },
-                        { id: 'announcements', icon: Megaphone, label: 'Announcements',  feature: 'announcements', badge: unreadAnnouncements },
-                        { id: 'info',          icon: Settings,  label: 'Group settings', feature: 'announcements', badge: pendingCounts.joinRequests },
-                      ];
-
-                      const moreItems: Item[] = [
-                        ...(showRotation ? [{ id: 'rotation', icon: RefreshCw,      label: 'Rotation',     feature: 'rotation' as const } as Item] : []),
-                        ...(groupType === 'grocery' ? [{ id: 'grocery', icon: ShoppingCart, label: 'Grocery list', feature: 'grocery' as const } as Item] : []),
-                        ...(groupType === 'burial'  ? [{ id: 'burial',  icon: HeartHandshake, label: 'Burial',     feature: 'burial' as const  } as Item] : []),
-                        ...(isAdmin ? [{ id: 'audit', icon: ClipboardList, label: 'Audit log', feature: 'audit' as const } as Item] : []),
-                      ];
-
-                      const renderSectionDropdown = (label: string, items: Item[]) => {
+                      const renderSectionDropdown = (label: string, items: NavItem[]) => {
                         if (items.length === 0) return null;
                         const active = items.some(i => i.id === activeTab);
                         const badgeSum = items.reduce((s, i) => s + (i.badge || 0), 0);
@@ -586,9 +537,11 @@ export default function App() {
                           <TabsTrigger value="dashboard" className="text-sm">
                             <PieChart className="h-3.5 w-3.5 mr-1.5" />Home
                           </TabsTrigger>
-                          {renderSectionDropdown('Money', moneyItems)}
-                          {renderSectionDropdown('People', peopleItems)}
-                          {renderSectionDropdown('More', moreItems)}
+                          {(['money', 'people', 'more'] as const).map((section) => (
+                            <span key={section} className="contents">
+                              {renderSectionDropdown(SECTION_LABELS[section], itemsIn(items, section))}
+                            </span>
+                          ))}
                           {isAdmin && !selectedGroup.payoutsAllowed && (
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -640,6 +593,7 @@ export default function App() {
                       </TabsContent>
 
                       <TabsContent value="contributions" className="space-y-3">
+                        <SectionTabs items={itemsIn(navItems(selectedGroup, isAdmin), 'money')} activeTab={activeTab} onChange={setActiveTab} />
                         <ContextualTips context="contributions" isAdmin={isAdmin} hasData onAction={handleQuickAction} />
                         <ContributionsView
                           groupId={selectedGroup.id}
@@ -652,10 +606,15 @@ export default function App() {
 
                       {selectedGroup.payoutsAllowed && (
                         <TabsContent value="payouts" className="space-y-3">
+                          <SectionTabs items={itemsIn(navItems(selectedGroup, isAdmin), 'money')} activeTab={activeTab} onChange={setActiveTab} />
                           <ContextualTips context="payouts" isAdmin={isAdmin} hasData onAction={handleQuickAction} />
                           <PayoutsView groupId={selectedGroup.id} isAdmin={isAdmin} userEmail={session.user.email} />
                         </TabsContent>
                       )}
+
+                      <TabsContent value="members" className="space-y-3">
+                        <MembersView group={selectedGroup} onGroupUpdate={refreshGroups} />
+                      </TabsContent>
 
                       <TabsContent value="meetings" className="space-y-3">
                         <ContextualTips context="meetings" isAdmin={isAdmin} hasData onAction={handleQuickAction} />
@@ -701,6 +660,7 @@ export default function App() {
 
                       {isAdmin && (
                         <TabsContent value="penalties" className="space-y-3">
+                          <SectionTabs items={itemsIn(navItems(selectedGroup, isAdmin), 'money')} activeTab={activeTab} onChange={setActiveTab} />
                           <FeatureGate feature="penalties" onUpgradeClick={() => setShowUpgradeDialog(true)}>
                             <PenaltiesView groupId={selectedGroup.id} isAdmin={isAdmin} />
                           </FeatureGate>
@@ -709,6 +669,7 @@ export default function App() {
 
                       {isAdmin && (
                         <TabsContent value="insights" className="space-y-3">
+                          <SectionTabs items={itemsIn(navItems(selectedGroup, isAdmin), 'money')} activeTab={activeTab} onChange={setActiveTab} />
                           <FeatureGate feature="reports" onUpgradeClick={() => setShowUpgradeDialog(true)}>
                             <AnalyticsView groupId={selectedGroup.id} />
                             <FinancialReportsView groupId={selectedGroup.id} groupName={selectedGroup.name} isAdmin={isAdmin} />

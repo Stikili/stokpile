@@ -20,17 +20,13 @@ export function UserAvatar({ name, email, profilePictureUrl, className, size = '
 
   // Generate consistent color from email/name
   const getAvatarColor = (seed: string) => {
+    // Identity, not status: quiet steps of the brand family only. Warn and
+    // bad are reserved for late and failed, so they never appear here.
     const colors = [
-      'bg-primary',
-      'bg-primary',
-      'bg-warning',
-      'bg-primary',
-      'bg-primary',
-      'bg-primary',
-      'bg-destructive',
-      'bg-warning',
-      'bg-primary',
-      'bg-primary',
+      'bg-[var(--s-brand)]',
+      'bg-[var(--s-chart-2)]',
+      'bg-[var(--s-brand-ink)]',
+      'bg-[var(--s-chart-4)]',
     ];
     
     let hash = 0;
@@ -53,7 +49,7 @@ export function UserAvatar({ name, email, profilePictureUrl, className, size = '
   return (
     <Avatar className={`${sizeClasses[size]} ${className || ''}`}>
       {profilePictureUrl && <AvatarImage src={profilePictureUrl} alt={name} />}
-      <AvatarFallback className={`${colorClass} text-white`}>
+      <AvatarFallback className={`${colorClass} text-[var(--s-on-brand)]`}>
         {initials}
       </AvatarFallback>
     </Avatar>
