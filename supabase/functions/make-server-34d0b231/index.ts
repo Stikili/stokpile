@@ -166,6 +166,8 @@ function toContribution(row: any) {
     amount: Number(row.amount),
     date: row.date,
     paid: row.paid,
+    paymentMethod: row.payment_method ?? null,
+    receiptNo: row.receipt_no ?? null,
     createdBy: row.created_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at ?? null,

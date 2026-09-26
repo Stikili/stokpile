@@ -19,10 +19,11 @@ supabase functions deploy make-server-34d0b231   # deploys function code only, n
 4. Take a Supabase dashboard backup (Settings → Database → Backups) first.
 
 ## Primary data store
-All application data lives in the `kv_store_34d0b231` table (JSONB key-value pairs).
-The `profiles` table holds user metadata synced from Supabase Auth.
-
-Losing `kv_store_34d0b231` = losing all groups, contributions, payouts, meetings, and memberships.
+The edge function reads and writes the relational tables (`groups`,
+`group_memberships`, `contributions`, `payouts`, `meetings`, `votes`, …). The
+`kv_store_34d0b231` table is legacy and no longer used by the server.
+Numbered files (`001_…`) sort before timestamped ones, so `001_create_tables.sql`
+defines the live shape of the core tables.
 
 ## Migration files (in order)
 | File | What it does | Risk |
@@ -30,3 +31,4 @@ Losing `kv_store_34d0b231` = losing all groups, contributions, payouts, meetings
 | `20251012000000_create_kv_store.sql` | Creates KV store table + index | None — IF NOT EXISTS |
 | `20260326000000_proper_schema.sql` | Adds relational tables alongside KV store | None — all IF NOT EXISTS |
 | `20260331000000_add_phone_to_profiles.sql` | Adds phone column to profiles | None — ADD COLUMN IF NOT EXISTS |
+| `018_receipt_numbers.sql` | Per-group receipt counter; trigger numbers contributions when first paid; backfills existing paid rows | Low — additive; backfill only fills NULL `receipt_no` |

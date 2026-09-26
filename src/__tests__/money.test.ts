@@ -83,3 +83,14 @@ describe('buildContributionReceipt', () => {
     expect(buildContributionReceipt({ contribution: own, groupName: 'G', members, contributions: [own] }).capturedBy).toBeUndefined();
   });
 });
+
+describe('stored receipt numbers', () => {
+  const members = [{ email: 'b@x', fullName: 'Busi', surname: 'K', role: 'member', status: 'approved' }] as never[];
+  it('uses the stored per-group number and payment method when present', () => {
+    const c = { id: 'zz', groupId: 'g', userEmail: 'b@x', amount: 100, date: '2026-09-18', paid: true,
+      createdAt: '2026-09-18T10:00:00', receiptNo: 147, paymentMethod: 'eft' };
+    const r = buildContributionReceipt({ contribution: c, groupName: 'G', members, contributions: [c] });
+    expect(r.ref).toBe('STK-0926-0147');
+    expect(r.method).toBe('EFT');
+  });
+});

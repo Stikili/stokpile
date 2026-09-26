@@ -79,6 +79,10 @@ export interface Contribution {
   date: string;
   paid: boolean;
   status?: string;
+  /** How it was paid (e.g. cash, eft, paystack, flutterwave), when recorded. */
+  paymentMethod?: string | null;
+  /** Per-group receipt sequence, assigned when first marked paid. */
+  receiptNo?: number | null;
   createdAt: string;
   createdBy?: string;
   user?: {

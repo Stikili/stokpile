@@ -5,14 +5,23 @@ import { displayName, isActiveMember, isInPeriod } from './round';
  * Receipt domain — the reference printed on every receipt.
  *
  * Format: STK-MMYY-NNNN. Short, stable, quotable over the phone. NNNN is a
- * per-group sequence number; until the stored counter exists, callers pass a
- * short code derived from the record id (see receiptRefFromId).
+ * per-group sequence number stored on the contribution (receipt_no). Records
+ * from before numbering existed fall back to a code from the id.
  */
 export function receiptRef(seq: number, on: Date = new Date()): string {
   return `STK-${monthYear(on)}-${String(seq).padStart(4, '0')}`;
 }
 
 /** Interim reference from a record id: STK-MMYY-XXXX (first 4 hex chars). */
+/** How a stored payment method reads on a receipt. */
+export function methodLabel(method?: string | null): string | undefined {
+  if (!method) return undefined;
+  const known: Record<string, string> = {
+    cash: 'Cash', eft: 'EFT', paystack: 'Card', flutterwave: 'Mobile money', sms: 'SMS', other: 'Other',
+  };
+  return known[method.toLowerCase()] ?? method;
+}
+
 export function receiptRefFromId(id: string, on: Date): string {
   const code = id.replace(/[^a-z0-9]/gi, '').slice(0, 4).toUpperCase().padEnd(4, '0');
   return `STK-${monthYear(on)}-${code}`;
@@ -76,11 +85,11 @@ export function buildContributionReceipt(input: {
   const lines: ReceiptLine[] = [{ label: 'Contribution', amount: c.amount }, ...(input.penalties ?? [])];
 
   return {
-    ref: receiptRefFromId(c.id, on),
+    ref: c.receiptNo ? receiptRef(c.receiptNo, on) : receiptRefFromId(c.id, on),
     groupName: input.groupName,
     memberName: nameOf(c.userEmail) ?? c.userEmail,
     period: input.round ? `Round ${input.round.number} / ${input.round.of} · ${monthLabel}` : monthLabel,
-    method: input.method,
+    method: input.method ?? methodLabel(c.paymentMethod),
     capturedBy: c.createdBy && c.createdBy !== c.userEmail ? nameOf(c.createdBy) : undefined,
     recordedAt: new Date(c.createdAt || c.date),
     lines,
