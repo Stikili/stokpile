@@ -1,43 +1,36 @@
 import { test, expect } from '@playwright/test';
 
-// The landing page renders mobile and desktop variants in parallel (one is
-// `md:hidden`, the other `hidden md:block`). Tests scope to visible elements
-// so they're deterministic on the default desktop viewport.
-
 test.describe('Landing Page', () => {
-  test('displays hero headline', async ({ page }) => {
+  test('leads with the tagline', async ({ page }) => {
     await page.goto('/');
-    await expect(
-      page.locator('h1:visible', { hasText: 'Run your stokvel the modern way' }),
-    ).toBeVisible();
+    await expect(page.locator('h1', { hasText: 'Nobody’s turn gets forgotten.' })).toBeVisible();
   });
 
-  test('has Sign In button', async ({ page }) => {
+  test('hero shows a round in progress, not a balance', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('button', { name: 'Sign In' })).toBeVisible();
+    await expect(page.getByRole('img', { name: 'Round 7 of 10' })).toBeVisible();
+    await expect(page.getByText('Collected this round')).toBeVisible();
   });
 
-  test('has Start Free CTA', async ({ page }) => {
+  test('has Sign In and Start Free', async ({ page }) => {
     await page.goto('/');
-    await expect(
-      page.getByRole('button', { name: /Start Free/i }).first(),
-    ).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Start free' }).first()).toBeVisible();
   });
 
   test('Sign In opens a popup over the landing page', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'Sign In' }).click();
+    await page.getByRole('button', { name: 'Sign in' }).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByText('Welcome to Stokpile')).toBeVisible({ timeout: 5000 });
-    // The landing page is still underneath — no navigation happened.
-    await expect(page.locator('h1', { hasText: 'Run your stokvel the modern way' }).first()).toBeAttached();
+    await expect(page.locator('h1', { hasText: 'Nobody’s turn gets forgotten.' })).toBeAttached();
     await page.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
   });
 
-  test('Start Free opens the popup on sign-up', async ({ page }) => {
+  test('Start your group opens the popup on sign-up', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: /Start Free/i }).first().click();
+    await page.getByRole('button', { name: 'Start your group' }).first().click();
     await expect(page.getByRole('dialog').getByLabel(/First Name/i)).toBeVisible({ timeout: 5000 });
   });
 
@@ -46,22 +39,23 @@ test.describe('Landing Page', () => {
     await expect(page.getByRole('button', { name: /theme/i })).toBeVisible();
   });
 
-  test('displays pricing section', async ({ page }) => {
+  test('pricing is per group, and rewards sit below it', async ({ page }) => {
     await page.goto('/');
-    await expect(
-      page.locator('h2:visible', { hasText: 'Honest African pricing' }),
-    ).toBeVisible();
+    const pricing = page.getByRole('heading', { name: 'Priced per group, not per person' });
+    const rewards = page.getByRole('heading', { name: 'Stokpile pays you back' });
+    await expect(pricing).toBeVisible();
+    const [p, r] = await Promise.all([pricing.boundingBox(), rewards.boundingBox()]);
+    expect(r!.y).toBeGreaterThan(p!.y);
   });
 
-  test('displays rewards section', async ({ page }) => {
+  test('Pilo is described as included per plan, not free', async ({ page }) => {
     await page.goto('/');
-    await expect(
-      page.locator('h2:visible', { hasText: 'Stokpile pays you back' }),
-    ).toBeVisible();
+    await expect(page.getByText(/5 questions a month on Free, 30 on Starter, 200 on Pro/)).toBeVisible();
   });
 
-  test('displays country strip', async ({ page }) => {
+  test('country band', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByText('South Africa').first()).toBeVisible();
+    await expect(page.getByText('+ 10 more')).toBeVisible();
   });
 });

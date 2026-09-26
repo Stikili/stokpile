@@ -1,45 +1,30 @@
 import { test, expect, devices } from '@playwright/test';
 
-// Mobile viewport regression tests. Landing page renders a parallel set
-// of mobile-only elements (md:hidden) that don't appear on desktop viewports.
-// Uses Pixel 7 because its browser is Chromium (already installed in CI).
-
+// Mobile viewport regression tests. Uses Pixel 7 (Chromium).
 test.use({ ...devices['Pixel 7'] });
 
 test.describe('Mobile Landing Page', () => {
-  test('hero and Sign In button are visible on mobile', async ({ page }) => {
+  test('hero and sign-in are visible', async ({ page }) => {
     await page.goto('/');
-    await expect(
-      page.locator('h1:visible', { hasText: 'Run your stokvel the modern way' }),
-    ).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Sign In' })).toBeVisible();
+    await expect(page.locator('h1', { hasText: 'Nobody’s turn gets forgotten.' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
   });
 
-  test('mobile sticky CTA bar is visible at the bottom', async ({ page }) => {
+  test('no sticky call-to-action bar covers the page', async ({ page }) => {
     await page.goto('/');
-    await expect(
-      page.getByRole('button', { name: /Get Started Free/i }).first(),
-    ).toBeVisible();
+    const fixedBottom = await page.evaluate(() =>
+      [...document.querySelectorAll('body *')].filter((el) => {
+        const s = getComputedStyle(el);
+        return s.position === 'fixed' && s.bottom === '0px' && el.getBoundingClientRect().height > 0;
+      }).length,
+    );
+    expect(fixedBottom).toBe(0);
   });
 
-  test('mobile rewards section renders', async ({ page }) => {
+  test('sections render', async ({ page }) => {
     await page.goto('/');
-    await expect(
-      page.locator('h2:visible', { hasText: 'Stokpile pays you back' }),
-    ).toBeVisible();
-  });
-
-  test('mobile features section renders', async ({ page }) => {
-    await page.goto('/');
-    await expect(
-      page.locator('h2:visible', { hasText: 'Everything your group needs' }),
-    ).toBeVisible();
-  });
-
-  test('mobile pricing section renders', async ({ page }) => {
-    await page.goto('/');
-    await expect(
-      page.locator('h2:visible', { hasText: 'Honest African pricing' }),
-    ).toBeVisible();
+    for (const name of ['How a cycle works', 'What the treasurer stops doing', 'Priced per group, not per person', 'Questions groups ask']) {
+      await expect(page.getByRole('heading', { name })).toBeAttached();
+    }
   });
 });

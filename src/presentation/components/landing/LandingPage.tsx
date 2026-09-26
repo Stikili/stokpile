@@ -1,668 +1,331 @@
-import { useEffect, useState } from 'react';
-import { Button } from '@/presentation/ui/button';
-import { Badge } from '@/presentation/ui/badge';
+import { useState, type ReactNode } from 'react';
+import './landing.css';
+import { Moon, Sun } from 'lucide-react';
 import { Logo } from '@/presentation/layout/Logo';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/presentation/ui/tooltip';
+import { CycleRail } from '@/presentation/brand/CycleRail';
+import { StatusChip } from '@/presentation/shared/StatusChip';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/presentation/ui/accordion';
 import { useTheme } from '@/presentation/shared/ThemeProvider';
 import { PrivacyPolicy } from '@/presentation/components/legal/PrivacyPolicy';
 import { TermsOfService } from '@/presentation/components/legal/TermsOfService';
 import { RefundPolicy } from '@/presentation/components/legal/RefundPolicy';
 import { CancellationPolicy } from '@/presentation/components/legal/CancellationPolicy';
-import {
-  Check, Sparkles, Shield, Globe, Users, TrendingUp,
-  HeartHandshake, ShoppingCart, RefreshCw, MessageCircle, FileText,
-  ArrowRight, Star, Sun, Moon, Trophy, Gift, Coins,
-} from 'lucide-react';
+import { money } from '@/lib/money';
+
+/**
+ * Marketing page (design kit v2).
+ *  · no scroll-reveal gating — everything is in the DOM and visible at rest
+ *  · no mobile sticky CTA — it ate ~12% of a small phone's viewport
+ *  · the hero shows a round in progress, not a static balance
+ *  · one tagline, used here and in the app
+ *  · rewards sit below pricing
+ * Copy only claims what the product does today.
+ */
 
 type LegalKey = 'privacy' | 'terms' | 'refund' | 'cancel' | null;
-
-const REWARD_TIERS = [
-  { name: 'Bronze',   points: '0 pts',       rate: '15%', color: 'from-amber-700 to-amber-900',     ring: 'ring-amber-700/30',  glow: '' },
-  { name: 'Silver',   points: '500 pts',     rate: '18%', color: 'from-slate-400 to-slate-600',     ring: 'ring-slate-400/30',  glow: '' },
-  { name: 'Gold',     points: '2,000 pts',   rate: '20%', color: 'from-yellow-400 to-amber-500',    ring: 'ring-yellow-400/40', glow: 'shadow-yellow-500/20' },
-  { name: 'Platinum', points: '10,000 pts',  rate: '22%', color: 'from-cyan-300 via-sky-400 to-indigo-500', ring: 'ring-cyan-400/50', glow: 'shadow-cyan-500/30' },
-];
+type Mode = 'signin' | 'signup';
 
 interface LandingPageProps {
   /** Open sign-in ('signin') or account creation ('signup'). */
-  onGetStarted: (mode: 'signin' | 'signup') => void;
+  onGetStarted: (mode: Mode) => void;
 }
 
-const FEATURES = [
-  { icon: Users, title: 'Member tracking', desc: 'See who has paid, who owes, and who is on a streak.', color: 'from-blue-500 to-blue-600' },
-  { icon: TrendingUp, title: 'Payouts & rotation', desc: 'Schedule payouts, manage cycle order, track balances.', color: 'from-primary to-primary' },
-  { icon: HeartHandshake, title: 'Burial societies', desc: 'Beneficiaries, dependents, and claims management built-in.', color: 'from-rose-500 to-rose-600' },
-  { icon: ShoppingCart, title: 'Grocery stokvels', desc: 'Plan year-end bulk buys with shopping list coordination.', color: 'from-orange-500 to-orange-600' },
-  { icon: RefreshCw, title: 'Rotating stokvels', desc: 'Automatic payout order and cycle reminders.', color: 'from-purple-500 to-purple-600' },
-  { icon: FileText, title: 'Reports & receipts', desc: 'PDF receipts, financial reports, audit logs.', color: 'from-indigo-500 to-indigo-600' },
-  { icon: MessageCircle, title: 'SMS & WhatsApp', desc: 'Reach members where they actually are.', color: 'from-primary to-primary' },
-  { icon: Shield, title: 'POPIA compliant', desc: 'Privacy-first with full data export and deletion.', color: 'from-slate-500 to-slate-600' },
+// Real member quotes only. The section stays hidden while this is empty.
+// Shape: { quote: '…', name: 'Thandi M.', role: 'Treasurer, Soweto burial society' }
+const TESTIMONIALS: { quote: string; name: string; role: string }[] = [];
+
+// Keep in sync with the country list in AuthForm.
+const COUNTRIES = [
+  'South Africa', 'Botswana', 'Namibia', 'Lesotho', 'Eswatini', 'Zimbabwe',
+  'Zambia', 'Mozambique', 'Malawi', 'Angola', 'DRC', 'Kenya',
+  'Tanzania', 'Uganda', 'Rwanda', 'Ethiopia', 'Nigeria', 'Ghana',
+];
+const SHOWN_COUNTRIES = ['South Africa', 'Botswana', 'Namibia', 'Zimbabwe', 'Zambia', 'Kenya', 'Nigeria', 'Ghana'];
+
+const TREASURER_JOBS: { title: string; body: string }[] = [
+  { title: 'Chasing from memory', body: 'See who owes what this round, and send a WhatsApp reminder with the amount already written.' },
+  { title: 'Rewriting the book', body: 'Receipts, the ledger and an audit trail are produced as you record, not at month end.' },
+  { title: 'Arguing about turns', body: 'The payout order is set once and visible to everyone. Only admins can change it, and every change is logged.' },
+  { title: 'Typing up minutes', body: 'Agenda, attendance, votes and notes live together in one meeting record.' },
+  { title: 'Being the bad guy', body: 'Penalties follow the rules your group set, not the treasurer’s mood.' },
+  { title: 'Losing the proof', body: 'Photos of EFT slips attach to the payment itself, not to a WhatsApp thread.' },
 ];
 
-const COUNTRIES: { name: string; code: string }[] = [
-  { name: 'South Africa', code: 'za' },
-  { name: 'Botswana',     code: 'bw' },
-  { name: 'Namibia',      code: 'na' },
-  { name: 'Zimbabwe',     code: 'zw' },
-  { name: 'Zambia',       code: 'zm' },
-  { name: 'Mozambique',   code: 'mz' },
-  { name: 'Kenya',        code: 'ke' },
-  { name: 'Nigeria',      code: 'ng' },
-  { name: 'Ghana',        code: 'gh' },
-  { name: 'Uganda',       code: 'ug' },
-  { name: 'Tanzania',     code: 'tz' },
-  { name: 'Malawi',       code: 'mw' },
+const PLANS = [
+  {
+    name: 'Free', price: 'R0', period: 'forever', cta: 'Start free',
+    features: ['1 group · up to 8 members', 'Contributions, payouts, meetings', 'Rotation manager and receipts', 'Pilo AI · 5 questions a month'],
+  },
+  {
+    name: 'Starter', price: 'R19', period: 'per group / month', cta: 'Try free for 90 days',
+    features: ['2 groups · 30 members each', 'Payment proofs · 50 SMS a month', 'Burial and grocery tools', 'Mobile money payments', 'Pilo AI · 30 questions a month'],
+  },
+  {
+    name: 'Pro', price: 'R39', period: 'per group / month', cta: 'Try free for 90 days', featured: true,
+    features: ['Unlimited groups · 100 members each', 'Reports, analytics and audit log', 'Penalty rules', 'Unlimited SMS', 'Pilo AI · 200 questions and deeper analysis'],
+  },
 ];
 
-const PRICING = [
-  {
-    name: 'Free',
-    price: 'R0',
-    period: 'forever',
-    features: [
-      '1 group · up to 8 members',
-      'Contributions, payouts, meetings',
-      'Rotation manager',
-      'Announcements',
-      'Pilo AI — 5 questions/month',
-    ],
-    cta: 'Start Free',
-  },
-  {
-    name: 'Starter',
-    price: 'R19',
-    period: 'per month',
-    features: [
-      '2 groups · 30 members each',
-      'Everything in Free, plus:',
-      'Payment proofs · SMS (50/mo)',
-      'Burial & grocery workflows',
-      'Mobile money payments',
-      'Pilo AI — 30 questions/month',
-    ],
-    cta: 'Try Free for 90 Days',
-  },
-  {
-    name: 'Pro',
-    price: 'R39',
-    period: 'per month',
-    features: [
-      'Unlimited groups · 100 members each',
-      'Everything in Starter, plus:',
-      'Reports, analytics & audit log',
-      'Penalty rules & enforcement',
-      'Unlimited SMS',
-      'Pilo AI — 200 questions + deep financial analysis',
-    ],
-    cta: 'Try Free for 90 Days',
-    highlight: true,
-  },
+const FAQS = [
+  { q: 'Does Stokpile hold our group’s money?', a: 'No. Stokpile is not a bank and never holds contributions or payouts. Your money stays where your group already keeps it. Stokpile keeps the record so everyone can see where it is.' },
+  { q: 'Who pays: the admin or every member?', a: 'Plans are per group, not per person. One plan covers the whole group and members join for free.' },
+  { q: 'What happens after the 90-day trial?', a: 'Choose a plan or drop back to Free. Nothing is deleted: contributions, payouts and history stay intact either way.' },
+  { q: 'Can we cancel any time?', a: 'Yes, from the app. Billing stops and your group keeps access until the end of the month you’ve paid for.' },
+  { q: 'Is Pilo free?', a: 'Every plan includes Pilo questions each month: 5 on Free, 30 on Starter and 200 on Pro.' },
+  { q: 'Does it work for burial societies and grocery stokvels?', a: 'Yes. Burial societies track beneficiaries, dependents and claims. Grocery stokvels plan bulk buys with a shared list. Rotating stokvels and chamas get a fixed payout order.' },
+  { q: 'Is our members’ information safe?', a: 'Stokpile is built to comply with POPIA. Every change is recorded in an audit log, and members can export or delete their personal data.' },
+  { q: 'Which countries is Stokpile available in?', a: `Groups in ${COUNTRIES.length} African countries use Stokpile, and each group keeps its own currency.` },
 ];
+
+const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
 
 export function LandingPage({ onGetStarted }: LandingPageProps) {
   const { theme, toggleTheme } = useTheme();
   const [legal, setLegal] = useState<LegalKey>(null);
-
-  // Disable pull-to-refresh and overscroll bounce so the page feels native.
-  useEffect(() => {
-    document.documentElement.classList.add('no-overscroll');
-    document.body.classList.add('no-overscroll');
-    return () => {
-      document.documentElement.classList.remove('no-overscroll');
-      document.body.classList.remove('no-overscroll');
-    };
-  }, []);
+  const dark = theme === 'navy';
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-blue-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-blue-950/30 no-overscroll pb-24 md:pb-0">
+    <div className="mk">
+      <nav className="mk-nav" aria-label="Main">
+        <Logo size={26} />
+        <span className="mk-navlinks">
+          <button type="button" onClick={() => scrollTo('how')}>How it works</button>
+          <button type="button" onClick={() => scrollTo('pilo')}>Pilo</button>
+          <button type="button" onClick={() => scrollTo('pricing')}>Pricing</button>
+          <button type="button" onClick={() => scrollTo('faq')}>FAQ</button>
+        </span>
+        <span className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="text-[var(--s-muted)] hover:text-[var(--s-ink)] p-1"
+            aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'}
+          >
+            {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
+          <button type="button" className="mk-signin" onClick={() => onGetStarted('signin')}>Sign in</button>
+          <button type="button" className="mk-btn mk-btn--primary mk-btn--sm" onClick={() => onGetStarted('signup')}>Start free</button>
+        </span>
+      </nav>
 
-      {/* ─── Header (sticky, with safe area for iOS notch) ─── */}
-      <header className="sticky top-0 z-50 bg-white/85 dark:bg-[#050e1c]/85 backdrop-blur-xl border-b border-border/40 pt-safe">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Logo showText />
-          <div className="flex items-center gap-1.5">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={toggleTheme}
-                  size="icon"
-                  variant="ghost"
-                  className="tap-none"
-                  aria-label={theme === 'navy' ? 'Switch to light theme' : 'Switch to dark theme'}
-                >
-                  {theme === 'navy' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{theme === 'navy' ? 'Light theme' : 'Dark theme'}</TooltipContent>
-            </Tooltip>
-            <Button
-              onClick={() => onGetStarted('signin')}
-              size="sm"
-              className="tap-none font-semibold shadow-md shadow-primary/20"
-            >
-              Sign In
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* ═══════════════════════════════════════════════════════════════
-          MOBILE — full-bleed, fills viewport, uses every pixel
-          ═══════════════════════════════════════════════════════════════ */}
-
-      {/* HERO — fills the visible viewport between sticky header & sticky bar */}
-      <section
-        className="md:hidden flex flex-col px-6 text-center"
-        style={{ minHeight: 'calc(100dvh - 56px - 96px)' }}
-      >
-        {/* Top spacer + badge */}
-        <div className="pt-6">
-          <Badge className="bg-primary/10 text-primary border-primary/20 px-3 py-1 text-[11px]">
-            <Sparkles className="h-3 w-3 mr-1" />
-            90 days free trial
-          </Badge>
-        </div>
-
-        {/* Headline group — vertically centered in remaining space */}
-        <div className="flex-1 flex flex-col justify-center -mt-2">
-          <h1 className="text-[2.6rem] leading-[1] font-extrabold tracking-tight bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">
-            Run your stokvel the modern way
-          </h1>
-          <p className="text-base text-muted-foreground mt-5 px-2 leading-relaxed">
-            Track contributions, payouts and members for your stokvel, burial society or chama.
-          </p>
-
-          {/* 3 trust chips */}
-          <div className="flex justify-center gap-2 mt-6">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border text-xs text-muted-foreground">
-              <Shield className="h-3 w-3 text-primary" />POPIA
-            </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border text-xs text-muted-foreground">
-              <Globe className="h-3 w-3 text-primary" />19 countries
-            </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border text-xs text-muted-foreground">
-              <Trophy className="h-3 w-3 text-amber-500" />Earn rewards
-            </div>
-          </div>
-        </div>
-
-        {/* Scroll hint at bottom of hero */}
-        <button
-          onClick={() => document.getElementById('mobile-features')?.scrollIntoView({ behavior: 'smooth' })}
-          className="pb-4 text-[11px] text-muted-foreground tap-none animate-bounce"
-        >
-          Swipe up to explore ↓
-        </button>
-      </section>
-
-      {/* FEATURES — full-bleed swipeable carousel, cards almost fill the screen */}
-      <section
-        id="mobile-features"
-        className="md:hidden flex flex-col py-8"
-        style={{ minHeight: 'calc(100dvh - 96px)' }}
-      >
-        <div className="px-6 mb-5">
-          <h2 className="text-2xl font-bold tracking-tight">Everything your group needs</h2>
-          <p className="text-sm text-muted-foreground mt-1">Swipe through to see what's included.</p>
-        </div>
-
-        <div className="flex-1 flex items-center">
-          <div className="flex gap-4 overflow-x-auto scrollbar-none snap-x-mandatory px-6 pb-4 w-full">
-            {FEATURES.map((f) => (
-              <div
-                key={f.title}
-                className="snap-center shrink-0 w-[85vw] max-w-[360px] rounded-3xl border bg-card p-6 tap-none shadow-sm"
-                style={{ minHeight: '60vh' }}
-              >
-                <div className={`h-16 w-16 rounded-2xl bg-gradient-to-br ${f.color} flex items-center justify-center mb-5 shadow-lg`}>
-                  <f.icon className="h-8 w-8 text-white" />
-                </div>
-                <h3 className="font-bold text-2xl mb-3">{f.title}</h3>
-                <p className="text-base text-muted-foreground leading-relaxed">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* PRICING — full-bleed swipeable carousel */}
-      <section
-        className="md:hidden bg-muted/20 border-y border-border/40 py-8 flex flex-col"
-        style={{ minHeight: 'calc(100dvh - 96px)' }}
-      >
-        <div className="px-6 mb-5">
-          <h2 className="text-2xl font-bold tracking-tight">Honest African pricing</h2>
-          <p className="text-sm text-muted-foreground mt-1">All paid plans get a 90-day Pro trial.</p>
-        </div>
-
-        <div className="flex-1 flex items-center">
-          <div className="flex gap-4 overflow-x-auto scrollbar-none snap-x-mandatory px-6 pb-4 w-full">
-            {PRICING.map((p) => (
-              <div
-                key={p.name}
-                className={`snap-center shrink-0 w-[85vw] max-w-[360px] rounded-3xl border bg-card p-6 tap-none ${
-                  p.highlight ? 'border-primary shadow-xl shadow-primary/20 ring-2 ring-primary/30' : 'shadow-sm'
-                }`}
-              >
-                {p.highlight && (
-                  <Badge className="mb-3 bg-primary text-primary-foreground text-xs">Most Popular</Badge>
-                )}
-                <h3 className="font-bold text-2xl">{p.name}</h3>
-                <div className="mt-2 mb-5 flex items-baseline gap-1.5">
-                  <span className="text-5xl font-extrabold tracking-tight">{p.price}</span>
-                  <span className="text-muted-foreground text-base">/{p.period}</span>
-                </div>
-                <ul className="space-y-2.5 mb-5">
-                  {p.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-sm">
-                      <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Button
-                  className="w-full h-12 tap-none font-semibold text-base"
-                  variant={p.highlight ? 'default' : 'outline'}
-                  onClick={() => onGetStarted('signup')}
-                >
-                  {p.cta}
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* MOBILE Rewards — tier ladder */}
-      <section
-        className="md:hidden px-6 py-10 flex flex-col"
-        style={{ minHeight: 'calc(100dvh - 96px)' }}
-      >
-        <div className="mb-5">
-          <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 mb-3 px-3 py-1 text-[11px]">
-            <Trophy className="h-3 w-3 mr-1" />
-            Lifetime rewards
-          </Badge>
-          <h2 className="text-2xl font-bold tracking-tight">Stokpile pays you back</h2>
-          <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-            Earn points every month you subscribe. Refer a group and earn up to <span className="font-semibold text-foreground">22% lifetime commission</span> on their subscription — for 24 months.
-          </p>
-        </div>
-
-        <div className="flex-1 flex items-center">
-          <div className="flex gap-3 overflow-x-auto scrollbar-none snap-x-mandatory pb-4 w-full">
-            {REWARD_TIERS.map((t) => (
-              <div
-                key={t.name}
-                className={`snap-center shrink-0 w-[72vw] max-w-[280px] rounded-3xl border bg-card p-5 tap-none shadow-lg ${t.glow} ring-1 ${t.ring}`}
-                style={{ minHeight: '48vh' }}
-              >
-                <div className={`h-14 w-14 rounded-2xl bg-gradient-to-br ${t.color} flex items-center justify-center mb-4 shadow-lg`}>
-                  <Trophy className="h-7 w-7 text-white" />
-                </div>
-                <h3 className="font-bold text-xl">{t.name}</h3>
-                <p className="text-xs text-muted-foreground mt-1 mb-4">Reach at {t.points}</p>
-                <div className="rounded-xl bg-muted/40 border p-3">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Referral rate</p>
-                  <p className="text-3xl font-extrabold tracking-tight mt-1">{t.rate}</p>
-                  <p className="text-[10px] text-muted-foreground mt-1">of every referred subscription, lifetime</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-4 rounded-2xl border bg-gradient-to-br from-primary/5 to-primary/5 p-4 flex items-start gap-3">
-          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-            <Coins className="h-5 w-5 text-primary" />
-          </div>
+      <div className="mk-in">
+        <header className="mk-hero">
           <div>
-            <p className="text-sm font-semibold">Redeem points for subscription credit</p>
-            <p className="text-xs text-muted-foreground mt-0.5">100 points = R1. Wipe out your monthly bill when you hit Gold.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* MOBILE compact footer */}
-      <footer className="md:hidden py-4 px-5 text-center text-[10px] text-muted-foreground">
-        <div className="flex flex-wrap justify-center gap-3 mb-2">
-          <button type="button" onClick={() => setLegal('terms')} className="hover:text-foreground underline-offset-2 hover:underline">Terms</button>
-          <button type="button" onClick={() => setLegal('privacy')} className="hover:text-foreground underline-offset-2 hover:underline">Privacy</button>
-          <button type="button" onClick={() => setLegal('refund')} className="hover:text-foreground underline-offset-2 hover:underline">Refunds</button>
-          <button type="button" onClick={() => setLegal('cancel')} className="hover:text-foreground underline-offset-2 hover:underline">Cancellation</button>
-        </div>
-        © {new Date().getFullYear()} Stokpile
-      </footer>
-
-      {/* ═══════════════════════════════════════════════════════════════
-          DESKTOP — full multi-section layout
-          ═══════════════════════════════════════════════════════════════ */}
-
-      {/* ─── DESKTOP Hero ─── */}
-      <section className="hidden md:block px-5 pt-16 pb-12 text-center max-w-3xl mx-auto">
-        <Badge className="mb-5 bg-primary/10 text-primary border-primary/20 hover:bg-primary/15 px-3 py-1 text-xs">
-          <Sparkles className="h-3 w-3 mr-1" />
-          90 days free for new groups
-        </Badge>
-
-        <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">
-          Run your stokvel the modern way
-        </h1>
-
-        <p className="text-lg md:text-xl text-muted-foreground mt-5 max-w-2xl mx-auto px-2">
-          Track contributions, payouts, and members for your stokvel,
-          burial society, or chama — built for your phone.
-        </p>
-
-        <div className="flex sm:flex-row justify-center gap-2.5 mt-7">
-          <Button
-            size="lg"
-            onClick={() => onGetStarted('signup')}
-            className="h-12 text-base font-semibold tap-none shadow-lg shadow-primary/20"
-          >
-            Start Free
-            <ArrowRight className="h-4 w-4 ml-1.5" />
-          </Button>
-          <Button
-            size="lg"
-            variant="outline"
-            onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
-            className="h-12 text-base tap-none"
-          >
-            See How It Works
-          </Button>
-        </div>
-
-        <p className="text-[11px] text-muted-foreground mt-4 px-4">
-          No credit card required · Works offline · POPIA compliant
-        </p>
-      </section>
-
-      {/* ─── DESKTOP App preview / phone mockup ─── */}
-      <section className="hidden md:block px-4 pb-10">
-        <div className="max-w-md mx-auto relative">
-          <div className="aspect-[9/19] rounded-[2.5rem] bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 dark:from-slate-700 dark:via-slate-800 dark:to-slate-900 p-1.5 shadow-2xl shadow-slate-900/20 mx-auto max-w-[280px]">
-            <div className="h-full w-full rounded-[2.1rem] bg-card flex flex-col p-4 overflow-hidden">
-              <div className="flex items-center justify-between text-[10px] font-semibold text-muted-foreground mb-3">
-                <span>9:41</span>
-                <span className="flex items-center gap-1">
-                  <span className="h-1.5 w-1.5 rounded-full bg-foreground/60" />
-                  <span className="h-1.5 w-2 rounded-sm bg-foreground/60" />
-                </span>
-              </div>
-              <div className="flex-1 space-y-2">
-                <div className="rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 p-3">
-                  <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">Group Balance</p>
-                  <p className="text-2xl font-bold text-primary tracking-tight">R 12,400</p>
-                  <p className="text-[9px] text-muted-foreground mt-0.5">8 of 10 paid this month</p>
-                </div>
-                <div className="rounded-xl border bg-card p-2.5 space-y-1.5">
-                  {[
-                    { name: 'Thandi M.', paid: true, amt: 'R500' },
-                    { name: 'Sipho D.', paid: true, amt: 'R500' },
-                    { name: 'Precious K.', paid: true, amt: 'R500' },
-                    { name: 'Kagiso T.', paid: false, amt: '—' },
-                  ].map((m, i) => (
-                    <div key={i} className="flex items-center gap-2 text-[10px]">
-                      <span className={`h-2 w-2 rounded-full ${m.paid ? 'bg-primary' : 'bg-muted'}`} />
-                      <span className="flex-1 truncate">{m.name}</span>
-                      <span className={m.paid ? 'text-primary dark:text-primary font-semibold' : 'text-muted-foreground'}>{m.amt}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="rounded-xl border border-amber-300 dark:border-amber-900 bg-amber-50/40 dark:bg-amber-950/10 p-2.5">
-                  <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">Next payout</p>
-                  <p className="text-sm font-semibold mt-0.5">Thandi M.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="absolute -top-2 -right-4 bg-card rounded-2xl border shadow-xl px-3 py-2">
-            <div className="flex items-center gap-1.5 text-xs">
-              <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
-              <span className="font-semibold">90 days free</span>
-            </div>
-          </div>
-          <div className="absolute -bottom-2 -left-4 bg-card rounded-2xl border shadow-xl px-3 py-2">
-            <div className="flex items-center gap-1.5 text-xs">
-              <Shield className="h-3 w-3 text-primary" />
-              <span className="font-semibold">POPIA</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── DESKTOP Country strip ─── */}
-      <section className="hidden md:block border-y border-border/40 bg-muted/20 py-4">
-        <p className="text-[10px] text-center text-muted-foreground uppercase tracking-wider font-semibold mb-3 px-4">
-          Built for groups across Africa
-        </p>
-        <div className="flex justify-center flex-wrap text-sm px-4 text-muted-foreground">
-          {COUNTRIES.map((c, i) => (
-            <span key={c.code} className="whitespace-nowrap">
-              {i > 0 && <span className="mx-3 text-border">|</span>}
-              {c.name}
-            </span>
-          ))}
-        </div>
-      </section>
-
-      {/* ─── DESKTOP Features grid ─── */}
-      <section id="features" className="hidden md:block py-16">
-        <div className="text-center mb-10 px-5">
-          <h2 className="text-3xl font-bold tracking-tight">Everything your group needs</h2>
-          <p className="text-base text-muted-foreground mt-2">From rotating savings to burial societies.</p>
-        </div>
-        <div className="grid max-w-6xl mx-auto px-4 grid-cols-2 lg:grid-cols-4 gap-3">
-          {FEATURES.map((f) => (
-            <div key={f.title} className="rounded-2xl border bg-card p-4">
-              <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${f.color} flex items-center justify-center mb-3 shadow-md`}>
-                <f.icon className="h-5 w-5 text-white" />
-              </div>
-              <h3 className="font-semibold text-sm mb-1">{f.title}</h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">{f.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ─── DESKTOP Rewards ─── */}
-      <section className="hidden md:block py-16 bg-gradient-to-b from-transparent via-amber-50/30 to-transparent dark:via-amber-950/10">
-        <div className="max-w-5xl mx-auto px-5">
-          <div className="text-center mb-10">
-            <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30 mb-4 px-3 py-1 text-xs">
-              <Trophy className="h-3 w-3 mr-1" />
-              Lifetime rewards program
-            </Badge>
-            <h2 className="text-3xl font-bold tracking-tight">Stokpile pays you back</h2>
-            <p className="text-base text-muted-foreground mt-2 max-w-2xl mx-auto">
-              Earn points every month you subscribe. Refer a group and earn up to{' '}
-              <span className="font-semibold text-foreground">22% lifetime commission</span>{' '}
-              on their subscription — for 24 months. Redeem points for subscription credit.
+            <span className="mk-kicker">Stokvels · Burial societies · Chamas</span>
+            <h1 className="t-display mk-title">Nobody’s turn gets forgotten.</h1>
+            <p className="mk-sub">
+              Your group already trusts each other. Stokpile keeps the record that protects it:
+              who paid, whose turn it is, and where every rand went. Free for groups of eight.
             </p>
+            <div className="mk-cta">
+              <button type="button" className="mk-btn mk-btn--primary" onClick={() => onGetStarted('signup')}>Start your group</button>
+              <button type="button" className="mk-btn mk-btn--ghost" onClick={() => scrollTo('how')}>See how it works</button>
+            </div>
+            <p className="mk-fine">No credit card · POPIA compliant · We never hold your money</p>
           </div>
 
-          <div className="grid grid-cols-4 gap-3 mb-8">
-            {REWARD_TIERS.map((t) => (
-              <div
-                key={t.name}
-                className={`rounded-2xl border bg-card p-4 shadow-md ${t.glow} ring-1 ${t.ring}`}
-              >
-                <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${t.color} flex items-center justify-center mb-3 shadow-md`}>
-                  <Trophy className="h-5 w-5 text-white" />
-                </div>
-                <h3 className="font-semibold text-base">{t.name}</h3>
-                <p className="text-[11px] text-muted-foreground mt-0.5 mb-3">Reach at {t.points}</p>
-                <div className="rounded-lg bg-muted/40 border p-2.5">
-                  <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">Referral rate</p>
-                  <p className="text-2xl font-extrabold tracking-tight mt-0.5">{t.rate}</p>
-                  <p className="text-[9px] text-muted-foreground mt-0.5">lifetime</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-2xl border bg-card p-4 flex items-start gap-3">
-              <div className="h-10 w-10 rounded-xl bg-accent flex items-center justify-center shrink-0">
-                <Gift className="h-5 w-5 text-primary dark:text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold">Earn by using the app</p>
-                <p className="text-xs text-muted-foreground mt-0.5">50 pts per subscription month, bonus pts for streaks, treasurer duties, and milestones.</p>
+          {/* The product doing its job: a round in progress. */}
+          <aside className="card mk-shot" aria-label="Example group">
+            <div className="mk-between">
+              <span className="t-label">Round 7 of 10 · September</span>
+              <StatusChip tone="late" label="1 late" />
+            </div>
+            <CycleRail members={10} round={7} label="Round 7 of 10" />
+            <div className="mt-4">
+              <span className="t-label">Collected this round</span>
+              <div className="mk-bal">
+                {money(9600, { currency: 'ZAR' })}
+                <span className="mk-bal__of"> / {money(12000, { currency: 'ZAR' })}</span>
               </div>
             </div>
-            <div className="rounded-2xl border bg-card p-4 flex items-start gap-3">
-              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <TrendingUp className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold">Refer and earn for life</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Up to 22% commission on every group you refer, every month, for 24 months.</p>
-              </div>
+            <div className="meter" aria-hidden="true">
+              <i className="meter__fill" style={{ width: '80%' }} />
+              <i className="meter__fill meter__fill--late" style={{ width: '10%' }} />
             </div>
-            <div className="rounded-2xl border bg-card p-4 flex items-start gap-3">
-              <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
-                <Coins className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold">Redeem for credit</p>
-                <p className="text-xs text-muted-foreground mt-0.5">100 points = R1 off your group's subscription. Gold-tier referrers can go free.</p>
-              </div>
+            <div className="ledger mt-3">
+              <LedgerRow who="Precious K." meta="EFT · 11 Sep" value={`+${money(1200, { currency: 'ZAR' })}`} />
+              <LedgerRow who="Kagiso T." meta="7 days late" value={`${money(1200, { currency: 'ZAR' })} due`} late />
             </div>
-          </div>
-        </div>
-      </section>
+          </aside>
+        </header>
+      </div>
 
-      {/* ─── DESKTOP Pricing ─── */}
-      <section className="hidden md:block bg-muted/20 py-16">
-        <div className="px-5 max-w-5xl mx-auto">
-          <div className="text-center mb-10">
-            <h2 className="text-3xl font-bold tracking-tight">Honest African pricing</h2>
-            <p className="text-base text-muted-foreground mt-2">All paid plans include a 90-day Pro trial.</p>
-          </div>
-          <div className="grid grid-cols-3 gap-4 items-stretch">
-            {PRICING.map((p) => (
-              <div
-                key={p.name}
-                className={`rounded-2xl border bg-card p-5 flex flex-col h-full ${
-                  p.highlight
-                    ? 'border-primary shadow-xl shadow-primary/15 ring-1 ring-primary/30'
-                    : ''
-                }`}
-              >
-                {/* Reserve fixed badge slot so headers align across all cards */}
-                <div className="h-6 mb-3 flex items-start">
-                  {p.highlight && (
-                    <Badge className="bg-primary text-primary-foreground text-[10px]">Most Popular</Badge>
-                  )}
-                </div>
-                <h3 className="font-semibold text-lg">{p.name}</h3>
-                <div className="mt-2 mb-4 flex items-baseline gap-1">
-                  <span className="text-3xl font-bold tracking-tight">{p.price}</span>
-                  <span className="text-muted-foreground text-sm">/{p.period}</span>
-                </div>
-                <ul className="space-y-2 mb-5 flex-1">
-                  {p.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-sm">
-                      <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Button
-                  className="w-full h-11 tap-none font-semibold mt-auto"
-                  variant={p.highlight ? 'default' : 'outline'}
-                  onClick={() => onGetStarted('signup')}
-                >
-                  {p.cta}
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── DESKTOP Trust ─── */}
-      <section className="hidden md:block px-5 py-16 max-w-3xl mx-auto text-center">
-        <h2 className="text-3xl font-bold tracking-tight mb-3">Trusted by communities</h2>
-        <p className="text-base text-muted-foreground mb-6 px-2">
-          Stokpile is not a bank. Funds stay where you trust them — your group.
-          We give you the tools to keep everything transparent.
-        </p>
-        <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border">
-            <Shield className="h-3.5 w-3.5" />
-            POPIA compliant
-          </div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border">
-            <Globe className="h-3.5 w-3.5" />
-            19 countries
-          </div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card border">
-            <Trophy className="h-3.5 w-3.5 text-amber-500" />
-            Lifetime rewards
-          </div>
-        </div>
-      </section>
-
-      {/* ─── DESKTOP Final CTA ─── */}
-      <section className="hidden md:block bg-gradient-to-br from-primary via-primary to-primary text-primary-foreground py-16">
-        <div className="max-w-2xl mx-auto px-5 text-center">
-          <h2 className="text-3xl font-bold mb-3">Start your group in 2 minutes</h2>
-          <p className="opacity-90 mb-6 text-base">No credit card. Free forever for small groups.</p>
-          <Button
-            size="lg"
-            onClick={() => onGetStarted('signup')}
-            className="h-12 text-base bg-white text-primary hover:bg-white/95 font-semibold tap-none shadow-lg px-10"
-          >
-            Get Started Free
-            <ArrowRight className="h-4 w-4 ml-1.5" />
-          </Button>
-        </div>
-      </section>
-
-      {/* ─── DESKTOP Footer ─── */}
-      <footer className="hidden md:block border-t border-border/40 py-6 px-5">
-        <div className="max-w-6xl mx-auto flex flex-col items-center gap-3 text-xs text-muted-foreground">
-          <div className="flex items-center gap-4">
-            <button type="button" onClick={() => setLegal('terms')} className="hover:text-foreground transition-colors">Terms of Service</button>
-            <span className="text-border">·</span>
-            <button type="button" onClick={() => setLegal('privacy')} className="hover:text-foreground transition-colors">Privacy Policy</button>
-            <span className="text-border">·</span>
-            <button type="button" onClick={() => setLegal('refund')} className="hover:text-foreground transition-colors">Refund Policy</button>
-            <span className="text-border">·</span>
-            <button type="button" onClick={() => setLegal('cancel')} className="hover:text-foreground transition-colors">Cancellation</button>
-          </div>
-          <div className="flex items-center gap-2">
-            <Logo showText={false} />
-            <span>© {new Date().getFullYear()} Stokpile</span>
-          </div>
-        </div>
-      </footer>
-
-      {/* ─── Sticky bottom CTA bar (mobile only, native-app style) ─── */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-[#050e1c]/95 backdrop-blur-xl border-t border-border/60 px-4 pt-3 pb-safe shadow-[0_-4px_24px_rgba(0,0,0,0.08)]">
-        <div className="pb-3">
-          <Button
-            size="lg"
-            onClick={() => onGetStarted('signup')}
-            className="w-full h-12 text-base font-semibold tap-none shadow-lg shadow-primary/30"
-          >
-            Get Started Free
-            <ArrowRight className="h-4 w-4 ml-1.5" />
-          </Button>
-          <p className="text-[10px] text-center text-muted-foreground mt-1.5">
-            Free forever · No credit card · 90-day Pro trial
-          </p>
+      <div className="mk-band speckle">
+        <div className="strip">
+          {SHOWN_COUNTRIES.map((c) => <span key={c}>{c}</span>)}
+          <span>+ {COUNTRIES.length - SHOWN_COUNTRIES.length} more</span>
         </div>
       </div>
 
-      {/* Legal policies — opened from the footer links */}
-      <TermsOfService      open={legal === 'terms'}   onOpenChange={(o) => !o && setLegal(null)} />
-      <PrivacyPolicy       open={legal === 'privacy'} onOpenChange={(o) => !o && setLegal(null)} />
-      <RefundPolicy        open={legal === 'refund'}  onOpenChange={(o) => !o && setLegal(null)} />
-      <CancellationPolicy  open={legal === 'cancel'}  onOpenChange={(o) => !o && setLegal(null)} />
+      <div className="mk-in">
+        <section className="mk-sec" id="how">
+          <h2 className="mk-h2">How a cycle works</h2>
+          <p className="mk-lead">Three steps, in this order, every round.</p>
+          <div className="mk-steps">
+            <Step n="01" title="Fix the order">
+              Set the payout order once, when the group starts. Everyone can see it, so nobody’s turn is a matter of memory.
+            </Step>
+            <Step n="02" title="Collect and record">
+              Log cash at the meeting or an EFT when it lands. Every payment gets a numbered receipt the member can keep or forward.
+            </Step>
+            <Step n="03" title="Pay out and prove it">
+              One payout per round, with proof of payment attached and the member confirming they received it.
+            </Step>
+          </div>
+        </section>
+
+        <section className="mk-sec">
+          <h2 className="mk-h2">What the treasurer stops doing</h2>
+          <p className="mk-lead">The job is unpaid and thankless. Stokpile takes six things off it.</p>
+          <div className="mk-feat">
+            {TREASURER_JOBS.map((j) => (
+              <div key={j.title}>
+                <Tick />
+                <span><b>{j.title}</b><span>{j.body}</span></span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="mk-sec" id="pilo">
+          <div className="mk-two">
+            <div>
+              <h2 className="mk-h2">Meet Pilo, who knows your group’s book</h2>
+              <p className="mk-lead">
+                Ask in plain language: who hasn’t paid, whose turn is next, what the constitution says about
+                late payments. Pilo can also run a growth check on your group and compare bank accounts that suit it.
+              </p>
+              <p className="mk-fine">Included on every plan: 5 questions a month on Free, 30 on Starter, 200 on Pro.</p>
+            </div>
+            <div className="card mk-chat" aria-label="Example Pilo conversation">
+              <p className="mk-chat__me">Who hasn’t paid for September?</p>
+              <p className="mk-chat__bot">2 of 10 are outstanding: Kagiso T. and Lerato N., R1 200 each. Want me to draft a friendly reminder?</p>
+              <p className="mk-chat__me">Yes, keep it kind.</p>
+              <p className="mk-chat__bot">“Hi Kagiso, a gentle reminder that your R1 200 for September is still open. Thanks for keeping the group strong.”</p>
+            </div>
+          </div>
+        </section>
+
+        {TESTIMONIALS.length > 0 && (
+          <section className="mk-sec">
+            {TESTIMONIALS.map((t) => (
+              <blockquote key={t.name} className="card card--quiet mk-quote">
+                <p className="mk-quote__text">“{t.quote}”</p>
+                <footer className="t-label">{t.name} · {t.role}</footer>
+              </blockquote>
+            ))}
+          </section>
+        )}
+
+        <section className="mk-sec" id="pricing">
+          <h2 className="mk-h2">Priced per group, not per person</h2>
+          <p className="mk-lead">A ten-member group on Pro pays R3.90 per member a month. Paid plans start with 90 days free.</p>
+          <div className="mk-plans">
+            {PLANS.map((p) => (
+              <div key={p.name} className={`card mk-plan${p.featured ? ' mk-plan--featured' : ''}`}>
+                <div className="flex items-center justify-between">
+                  <h3 className="t-heading">{p.name}</h3>
+                  {p.featured && <StatusChip tone="payout" label="Most popular" />}
+                </div>
+                <div className="mk-plan__price">{p.price} <small>{p.period}</small></div>
+                <ul>
+                  {p.features.map((f) => <li key={f}><Tick />{f}</li>)}
+                </ul>
+                <button
+                  type="button"
+                  className={`mk-btn mk-btn--block ${p.featured ? 'mk-btn--primary' : 'mk-btn--ghost'}`}
+                  onClick={() => onGetStarted('signup')}
+                >
+                  {p.cta}
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="mk-sec">
+          <div className="card card--quiet">
+            <h2 className="mk-h2">Stokpile pays you back</h2>
+            <p className="mk-lead">
+              Earn points every month you subscribe and redeem them for subscription credit (100 points = R1).
+              Refer another group and earn a share of their subscription for 24 months.
+            </p>
+          </div>
+        </section>
+
+        <section className="mk-sec" id="faq">
+          <h2 className="mk-h2">Questions groups ask</h2>
+          <Accordion type="single" collapsible className="card mk-faq mt-4 !py-0">
+            {FAQS.map((f) => (
+              <AccordionItem key={f.q} value={f.q}>
+                <AccordionTrigger className="text-left text-[length:var(--t-size-md)] font-semibold hover:no-underline">{f.q}</AccordionTrigger>
+                <AccordionContent className="text-[length:var(--t-size-md)] text-[var(--s-ink-2)] leading-relaxed">{f.a}</AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </section>
+
+        <section className="mk-sec mk-sec--last">
+          <div className="card card--quiet">
+            <h2 className="mk-h2">Stokpile is not a bank</h2>
+            <p className="mk-lead">
+              Your money stays where your group already keeps it: the account, the tin, the treasurer’s hands.
+              Stokpile keeps the record, and the record is what the group argues about.
+            </p>
+            <div className="mk-cta">
+              <button type="button" className="mk-btn mk-btn--primary" onClick={() => onGetStarted('signup')}>Start your group</button>
+            </div>
+          </div>
+        </section>
+
+        <footer className="mk-foot">
+          <span className="flex items-center gap-2">
+            <Logo showText={false} size={16} /> © {new Date().getFullYear()} Stokpile
+          </span>
+          <nav aria-label="Legal">
+            <button type="button" onClick={() => setLegal('terms')}>Terms</button>
+            <button type="button" onClick={() => setLegal('privacy')}>Privacy</button>
+            <button type="button" onClick={() => setLegal('refund')}>Refunds</button>
+            <button type="button" onClick={() => setLegal('cancel')}>Cancellation</button>
+          </nav>
+        </footer>
+      </div>
+
+      <TermsOfService     open={legal === 'terms'}   onOpenChange={(o) => !o && setLegal(null)} />
+      <PrivacyPolicy      open={legal === 'privacy'} onOpenChange={(o) => !o && setLegal(null)} />
+      <RefundPolicy       open={legal === 'refund'}  onOpenChange={(o) => !o && setLegal(null)} />
+      <CancellationPolicy open={legal === 'cancel'}  onOpenChange={(o) => !o && setLegal(null)} />
+    </div>
+  );
+}
+
+function Step({ n, title, children }: { n: string; title: string; children: ReactNode }) {
+  return (
+    <div className="card mk-step">
+      <span className="t-label">Step {n}</span>
+      <h3 className="t-heading mt-2 mb-1.5">{title}</h3>
+      <p>{children}</p>
+    </div>
+  );
+}
+
+function Tick() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M3 8.4l3 3 7-7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function LedgerRow({ who, meta, value, late = false }: { who: string; meta: string; value: string; late?: boolean }) {
+  return (
+    <div className="ledger-row">
+      <div>
+        <div className="ledger-row__who">{who}</div>
+        <div className={`ledger-row__meta${late ? ' ledger-row__meta--late' : ''}`}>{meta}</div>
+      </div>
+      <div className="ledger-row__leader" />
+      <div className={`ledger-row__value${late ? ' ledger-row__value--late' : ''}`}>{value}</div>
     </div>
   );
 }
